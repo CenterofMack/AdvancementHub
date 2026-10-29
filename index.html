@@ -93,6 +93,11 @@
   tbody tr:hover{background:#F7F9FC}
   td.name{font-weight:500;max-width:280px;overflow:hidden;text-overflow:ellipsis}
   td.zero{color:#B6BDC8}
+  td.name a{color:var(--navy);text-decoration:none;border-bottom:1px solid #BFD0EA}
+  td.name a:hover{border-bottom-color:var(--navy)}
+  .more{display:flex;gap:8px;justify-content:center;margin:14px 0 4px}
+  .more[hidden]{display:none}
+  .tablewrap table{contain:content}
   tfoot td{position:sticky;bottom:0;background:#F0F3F8;font-weight:700;border-top:2px solid var(--navy)}
 
   /* ---- states ---- */
@@ -107,7 +112,7 @@
   @media print{
     @page{size:landscape;margin:0.4in}
     body{background:#fff;font-size:10px}
-    .bar,.actions,.controls{display:none!important}
+    .bar,.actions,.controls,.more{display:none!important}
     main{padding:0;max-width:none}
     .hero,.ledger,.tablewrap{break-inside:avoid;border-color:#bbb}
     .tablewrap{max-height:none;overflow:visible}
@@ -163,6 +168,10 @@
         </div>
       </div>
       <div class="tablewrap"><table id="hh"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+      <div class="more" id="more" hidden>
+        <button class="btn" id="btn-more">Show 100 more</button>
+        <button class="btn" id="btn-all">Show all</button>
+      </div>
     </div>
   </section>
 
@@ -174,6 +183,9 @@
 /* ===== Settings ===== */
 const FLOW_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/24/workflows/bffe634be4ee4f0a88f09facc45f4340/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tr64EO3kpi3AVQYb_F3tQHyGG1KcOpgoltkR8F1YGn0";
 const OWNER = "Chris Smith";
+const ENV_ID = "p-6dq4GyJXXEarYflLLsQhUA";
+const RECORD_URL = id => `https://host.nxt.blackbaud.com/constituent/records/${encodeURIComponent(id)}?envid=${ENV_ID}&svcid=renxt`;
+const PAGE = 100;
 
 /* ===== Helpers ===== */
 const $ = id => document.getElementById(id);
@@ -276,7 +288,7 @@ function render(data) {
 }
 
 /* ===== Households table ===== */
-let ROWS = [], COLS = [], sortKey = null, sortDir = -1;
+let ROWS = [], COLS = [], sortKey = null, sortDir = -1, shown = PAGE;
 function buildTable(rows) {
   ROWS = rows;
   const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -284,6 +296,7 @@ function buildTable(rows) {
   const moneyYears = keys.filter(k => /^Money In \d{4}$/.test(k)).sort().reverse();
   COLS = [
     { key: "Name", label: "Name", type: "name" },
+    { key: "ID", label: "Constituent ID", type: "text" },
     { key: "Solicitor", label: "Fundraiser", type: "text" },
     { key: "Q1", label: "Q1", type: "money" }, { key: "Q2", label: "Q2", type: "money" },
     { key: "Q3", label: "Q3", type: "money" }, { key: "Q4", label: "Q4", type: "money" },
@@ -300,7 +313,7 @@ function buildTable(rows) {
 
   const funds = [...new Set(rows.map(r => r.Solicitor).filter(Boolean))].sort();
   $("f-fundraiser").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
-  ["f-fundraiser", "f-search", "f-open"].forEach(id => $(id).addEventListener("input", drawTable));
+  ["f-fundraiser", "f-search", "f-open"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; drawTable(); }));
   drawTable();
 }
 function filtered() {
@@ -322,33 +335,51 @@ function drawTable() {
   t.tHead.innerHTML = "<tr>" + COLS.map(c => `<th class="${c.type === "money" ? "" : "txt"}" data-k="${esc(c.key)}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(c.label)}</th>`).join("") + "</tr>";
   t.tHead.querySelectorAll("th").forEach(th => th.onclick = () => {
     const k = th.dataset.k; if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = COLS.find(c => c.key === k).type === "money" ? -1 : 1; } drawTable(); });
-  t.tBodies[0].innerHTML = rows.map(r => "<tr>" + COLS.map(c => {
+  t.tBodies[0].innerHTML = rows.slice(0, shown).map(r => "<tr>" + COLS.map(c => {
     const v = r[c.key];
     if (c.type === "money") { const n = num(v); return `<td class="${n === 0 ? "zero" : n < 0 ? "neg" : ""}">${n === 0 ? "–" : money(n)}</td>`; }
     if (c.type === "date") return `<td class="txt">${fmtDate(v)}</td>`;
-    return `<td class="${c.type === "name" ? "name txt" : "txt"}" title="${esc(v)}">${esc(v)}</td>`;
+    if (c.type === "name") {
+      const sid = String(r["System Record ID"] || "").trim();
+      return sid ? `<td class="name txt" title="Open ${esc(v)} in Raiser's Edge"><a class="rec" href="${RECORD_URL(sid)}" target="_blank" rel="noopener" data-url="${RECORD_URL(sid)}">${esc(v)}</a></td>`
+                 : `<td class="name txt" title="${esc(v)}">${esc(v)}</td>`;
+    }
+    return `<td class="txt" title="${esc(v)}">${esc(v)}</td>`;
   }).join("") + "</tr>").join("");
   t.tFoot.innerHTML = "<tr>" + COLS.map((c, i) => {
     if (i === 0) return `<td>Total (${rows.length.toLocaleString()})</td>`;
     if (c.type !== "money") return "<td></td>";
     return `<td>${money(rows.reduce((s, r) => s + num(r[c.key]), 0))}</td>`;
   }).join("") + "</tr>";
-  $("hh-count").textContent = `${rows.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households`;
+  t.tBodies[0].querySelectorAll("a.rec").forEach(a => a.onclick = e => {
+    e.preventDefault();
+    const w = window.open(a.dataset.url, "_blank");
+    if (w) { try { w.opener = null; } catch (_) {} }
+    else if (client && client.navigate) client.navigate({ url: a.dataset.url });
+  });
+  const showing = Math.min(shown, rows.length);
+  $("hh-count").textContent = `${rows.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households` + (showing < rows.length ? ` (showing ${showing.toLocaleString()})` : "");
+  $("more").hidden = showing >= rows.length;
 }
 
+$("btn-more").onclick = () => { shown += PAGE; drawTable(); };
+$("btn-all").onclick = () => { shown = Infinity; drawTable(); };
+
 /* ===== Print & PDF ===== */
-$("btn-print").onclick = () => window.print();
+const withAllRows = fn => { const prev = shown; shown = Infinity; drawTable(); return Promise.resolve(fn()).finally(() => { shown = prev; drawTable(); }); };
+$("btn-print").onclick = () => withAllRows(() => window.print());
 $("btn-pdf").onclick = () => {
   const btn = $("btn-pdf"); btn.disabled = true; btn.textContent = "Building PDF…";
   const name = ($("proj-title").textContent || "Projections").replace(/[^\w\s-]/g, "").trim() + ".pdf";
   document.body.classList.add("pdf");
   const wrap = document.querySelector(".tablewrap"); const old = wrap.style.maxHeight; wrap.style.maxHeight = "none";
+  const prev = shown; shown = Infinity; drawTable();
   html2pdf().set({ margin: 0.3, filename: name, image: { type: "jpeg", quality: 0.95 },
       html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: "in", format: "letter", orientation: "landscape" },
       pagebreak: { mode: ["css", "legacy"] } })
     .from($("proj-body")).save()
     .catch(() => alert("The PDF couldn't be created here. Use Print and choose Save as PDF instead."))
-    .finally(() => { wrap.style.maxHeight = old; btn.disabled = false; btn.textContent = "Download PDF"; });
+    .finally(() => { shown = prev; drawTable(); wrap.style.maxHeight = old; btn.disabled = false; btn.textContent = "Download PDF"; });
 };
 
 /* ===== Start ===== */
