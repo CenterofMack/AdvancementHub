@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Advancement Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<script src="https://sky.blackbaudcdn.net/static/sky-addin-client/1/sky-addin-client.global.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --navy:#213A63; --navy-deep:#172A49; --sky:#8FB3E0; --sky-soft:#DCE7F5;
+    --gold:#C9A33F; --ink:#1C2533; --muted:#5E6878; --line:#D9DFE8;
+    --page:#F5F7FA; --white:#FFFFFF; --red:#B3261E; --green:#2E6B47;
+    --serif:"Source Serif 4", Georgia, serif;
+    --sans:"Public Sans", "Segoe UI", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+  button,select,input{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+  /* ---- top bar ---- */
+  .bar{background:var(--navy-deep);color:#fff;padding:0 28px;display:flex;align-items:flex-end;gap:32px;min-height:64px}
+  .brand{font-family:var(--serif);font-weight:600;font-size:21px;padding:16px 0 14px;white-space:nowrap}
+  .tabs{display:flex;gap:4px;flex:1}
+  .tab{background:none;border:0;color:#C9D4E6;padding:12px 16px 13px;cursor:pointer;border-bottom:3px solid transparent;font-weight:500}
+  .tab:hover{color:#fff}
+  .tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
+  .tab[hidden]{display:none}
+  .who{font-size:12px;color:#AFC0DA;padding-bottom:16px;white-space:nowrap}
+
+  main{max-width:1320px;margin:0 auto;padding:28px}
+  .panel[hidden]{display:none}
+
+  /* ---- heading row ---- */
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  h1{font-family:var(--serif);font-weight:600;font-size:30px;line-height:1.15;margin:0;color:var(--navy-deep)}
+  .asof{color:var(--muted);margin-top:4px}
+  .actions{display:flex;gap:8px}
+  .btn{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500}
+  .btn:hover{border-color:var(--navy)}
+  .btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn.primary:hover{background:var(--navy-deep)}
+
+  /* ---- hero: projection vs goal ---- */
+  .hero{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:24px 28px 22px;margin-bottom:24px}
+  .hero-top{display:flex;justify-content:space-between;align-items:baseline;gap:24px;flex-wrap:wrap}
+  .hero-figure{font-family:var(--serif);font-weight:700;font-size:44px;line-height:1;color:var(--navy-deep)}
+  .hero-sub{color:var(--muted);margin-top:6px}
+  .hero-pct{text-align:right}
+  .hero-pct .big{font-family:var(--serif);font-weight:700;font-size:32px;color:var(--navy)}
+  .hero-pct .big.under{color:var(--red)}
+  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:22px 0 8px;overflow:visible}
+  .seg{position:absolute;top:0;bottom:0}
+  .seg.in{background:var(--navy);border-radius:5px 0 0 5px}
+  .seg.proj{background:repeating-linear-gradient(135deg,var(--sky) 0 7px,#A7C3E7 7px 14px)}
+  .goal{position:absolute;top:-8px;bottom:-8px;width:3px;background:var(--gold);border-radius:2px}
+  .goal span{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;color:#8A6D1E;white-space:nowrap}
+  .legend{display:flex;gap:22px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:12px}
+  .legend b{color:var(--ink);font-weight:600}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+  /* ---- ledgers ---- */
+  .ledgers{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-bottom:34px}
+  .ledger{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .ledger h3{margin:0;padding:11px 16px;font-size:14px;font-weight:600;color:#fff;background:var(--navy)}
+  .ledger dl{margin:0;padding:4px 16px 8px}
+  .ledger .row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #EDF0F4}
+  .ledger .row:last-child{border-bottom:0}
+  .ledger .row.key{border-top:2px solid var(--navy);border-bottom:0;margin-top:2px;font-weight:600}
+  .ledger dt{color:var(--ink)}
+  .ledger dd{margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .neg{color:var(--red)}
+
+  /* ---- households ---- */
+  h2{font-family:var(--serif);font-weight:600;font-size:22px;margin:0 0 4px;color:var(--navy-deep)}
+  .hh-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+  .count{color:var(--muted)}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .controls select,.controls input[type=search]{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:#fff}
+  .controls input[type=search]{width:220px}
+  .controls label{display:flex;gap:6px;align-items:center;color:var(--muted)}
+  .tablewrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:70vh}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid #EDF0F4}
+  th:first-child,td:first-child,th.txt,td.txt{text-align:left}
+  thead th{position:sticky;top:0;background:#F0F3F8;color:var(--navy-deep);font-weight:600;font-size:12.5px;cursor:pointer;user-select:none;z-index:1;border-bottom:1px solid var(--line)}
+  thead th[aria-sort="ascending"]::after{content:" ▲";font-size:9px}
+  thead th[aria-sort="descending"]::after{content:" ▼";font-size:9px}
+  tbody tr:hover{background:#F7F9FC}
+  td.name{font-weight:500;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  td.zero{color:#B6BDC8}
+  tfoot td{position:sticky;bottom:0;background:#F0F3F8;font-weight:700;border-top:2px solid var(--navy)}
+
+  /* ---- states ---- */
+  .notice{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:22px 24px;max-width:640px}
+  .notice h2{margin-bottom:6px}
+  .notice.err{border-left-color:var(--red)}
+  .soon{color:var(--muted)}
+  .loading{color:var(--muted);padding:40px 0}
+  @media (prefers-reduced-motion:no-preference){ .seg{transition:width .6s ease-out} }
+
+  /* ---- print / PDF ---- */
+  @media print{
+    @page{size:landscape;margin:0.4in}
+    body{background:#fff;font-size:10px}
+    .bar,.actions,.controls{display:none!important}
+    main{padding:0;max-width:none}
+    .hero,.ledger,.tablewrap{break-inside:avoid;border-color:#bbb}
+    .tablewrap{max-height:none;overflow:visible}
+    thead th{position:static}
+    tfoot td{position:static}
+    .ledgers{grid-template-columns:repeat(3,1fr)}
+  }
+  @media (max-width:720px){
+    .bar{flex-wrap:wrap;padding:0 16px;gap:8px}
+    main{padding:18px 14px}
+    .hero-figure{font-size:34px}
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">Advancement Hub</div>
+  <nav class="tabs" role="tablist" aria-label="Reports">
+    <button class="tab" role="tab" data-tab="Projections" aria-selected="true">Projections</button>
+    <button class="tab" role="tab" data-tab="Board Slides" aria-selected="false" hidden>Board Slides</button>
+    <button class="tab" role="tab" data-tab="Retention" aria-selected="false" hidden>Donor Retention</button>
+  </nav>
+  <div class="who" id="who"></div>
+</header>
+
+<main>
+  <section class="panel" id="panel-Projections">
+    <div class="loading" id="proj-loading">Loading projections…</div>
+    <div id="proj-body" hidden>
+      <div class="head">
+        <div>
+          <h1 id="proj-title">Projections</h1>
+          <div class="asof" id="proj-asof"></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-print">Print</button>
+          <button class="btn primary" id="btn-pdf">Download PDF</button>
+        </div>
+      </div>
+
+      <div class="hero" id="hero"></div>
+      <div class="ledgers" id="ledgers"></div>
+
+      <div class="hh-head">
+        <div>
+          <h2>Households</h2>
+          <div class="count" id="hh-count"></div>
+        </div>
+        <div class="controls">
+          <select id="f-fundraiser" aria-label="Fundraiser"><option value="">All fundraisers</option></select>
+          <input type="search" id="f-search" placeholder="Search name or ID" aria-label="Search households">
+          <label><input type="checkbox" id="f-open"> Open projections only</label>
+        </div>
+      </div>
+      <div class="tablewrap"><table id="hh"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-Board Slides" hidden><p class="soon">Board Slides is coming next.</p></section>
+  <section class="panel" id="panel-Retention" hidden><p class="soon">Donor Retention is coming next.</p></section>
+</main>
+
+<script>
+/* ===== Settings ===== */
+const FLOW_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/24/workflows/bffe634be4ee4f0a88f09facc45f4340/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tr64EO3kpi3AVQYb_F3tQHyGG1KcOpgoltkR8F1YGn0";
+const OWNER = "Chris Smith";
+
+/* ===== Helpers ===== */
+const $ = id => document.getElementById(id);
+const num = v => { if (v === null || v === undefined || v === "") return 0; const n = Number(String(v).replace(/[$,\s]/g, "")); return isFinite(n) ? n : 0; };
+const money = n => (n < 0 ? "−$" : "$") + Math.round(Math.abs(n)).toLocaleString("en-US");
+const short = n => { const a = Math.abs(n), s = n < 0 ? "−$" : "$";
+  if (a >= 1e6) return s + (a/1e6).toFixed(1) + "M"; if (a >= 1e3) return s + Math.round(a/1e3) + "K"; return s + Math.round(a); };
+const pct = n => (n*100).toFixed(1) + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtDate = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return esc(v);
+  return (d.getUTCMonth()+1) + "/" + d.getUTCDate() + "/" + d.getUTCFullYear(); };
+const fmtVal = (v, f) => f === "pct" ? pct(num(v)) : f === "money" ? money(num(v)) : esc(v);
+
+/* ===== Tabs ===== */
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+  document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + t.dataset.tab);
+}));
+function applyAccess(access) {
+  if (!access) return;
+  document.querySelectorAll(".tab").forEach(t => {
+    const ok = String(access[t.dataset.tab] || "").trim().toLowerCase() === "yes";
+    if (t.dataset.tab !== "Projections") t.hidden = !ok;
+  });
+}
+
+/* ===== Messages ===== */
+function showNotice(title, text, isErr, retry) {
+  $("proj-loading").hidden = true;
+  $("proj-body").hidden = true;
+  const box = document.createElement("div");
+  box.className = "notice" + (isErr ? " err" : "");
+  box.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>` + (retry ? `<button class="btn" id="retry">Try again</button>` : "");
+  $("panel-Projections").appendChild(box);
+  if (retry) $("retry").onclick = () => { box.remove(); $("proj-loading").hidden = false; load(); };
+}
+
+/* ===== Data load ===== */
+let client = null;
+function load() {
+  client.getUserIdentityToken()
+    .then(token => fetch(FLOW_URL + "&tab=Projections", { method: "POST", body: token }))
+    .then(async res => {
+      if (res.status === 403) { showNotice("You don't have access to Projections", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      if (!res.ok) { showNotice("Projections didn't load", `The data service returned an error (status ${res.status}).`, true, true); return; }
+      const data = await res.json();
+      $("who").textContent = data.user || "";
+      applyAccess(data.access);
+      render(data);
+    })
+    .catch(err => showNotice("Projections didn't load", "The data service couldn't be reached. Check your connection and try again.", true, true));
+}
+
+/* ===== Overview ===== */
+function render(data) {
+  const ov = (data.overview || []).map(r => ({ section: r.Section, label: r.Label, value: r.Value, format: (r.Format || "").trim() }));
+  const header = ov.find(r => r.section === "Header");
+  if (header) { $("proj-title").textContent = header.label; $("proj-asof").textContent = header.value; }
+
+  const fr = ov.filter(r => r.section === "Fundraising");
+  const v = i => num(fr[i] && fr[i].value);
+  const goal = v(1), moneyIn = v(2), projected = v(3), ye = v(4), vsGoal = v(5), pctGoal = v(6);
+  const scale = Math.max(goal, ye) * 1.08 || 1;
+  $("hero").innerHTML = `
+    <div class="hero-top">
+      <div>
+        <div class="hero-figure">${short(ye)}</div>
+        <div class="hero-sub">${esc(fr[4] ? fr[4].label : "Year-end projection")} against a ${short(goal)} goal</div>
+      </div>
+      <div class="hero-pct">
+        <div class="big ${pctGoal < 1 ? "under" : ""}">${pct(pctGoal)}</div>
+        <div class="hero-sub">${vsGoal >= 0 ? short(vsGoal) + " over goal" : short(-vsGoal) + " short of goal"}</div>
+      </div>
+    </div>
+    <div class="track" role="img" aria-label="${short(moneyIn)} in, ${short(projected)} projected, goal ${short(goal)}">
+      <div class="seg in" style="left:0;width:${moneyIn/scale*100}%"></div>
+      <div class="seg proj" style="left:${moneyIn/scale*100}%;width:${projected/scale*100}%"></div>
+      <div class="goal" style="left:calc(${goal/scale*100}% - 1px)"><span>Goal</span></div>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--navy)"></i>Money in <b>${money(moneyIn)}</b></span>
+      <span><i class="sw" style="background:var(--sky)"></i>Projected, not yet in <b>${money(projected)}</b></span>
+      <span><i class="sw" style="background:var(--gold)"></i>Fundraising goal <b>${money(goal)}</b></span>
+      <span>Original projection <b>${money(v(0))}</b></span>
+    </div>`;
+
+  const order = [...new Set(ov.filter(r => r.section !== "Header").map(r => r.section))];
+  $("ledgers").innerHTML = order.map(sec => {
+    const rows = ov.filter(r => r.section === sec);
+    return `<div class="ledger"><h3>${esc(sec)}</h3><dl>` + rows.map(r => {
+      const key = /surplus|total/i.test(r.label);
+      const neg = r.format !== "text" && num(r.value) < 0;
+      return `<div class="row${key ? " key" : ""}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${fmtVal(r.value, r.format)}</dd></div>`;
+    }).join("") + `</dl></div>`;
+  }).join("");
+
+  buildTable(data.projections || []);
+  $("proj-loading").hidden = true;
+  $("proj-body").hidden = false;
+}
+
+/* ===== Households table ===== */
+let ROWS = [], COLS = [], sortKey = null, sortDir = -1;
+function buildTable(rows) {
+  ROWS = rows;
+  const keys = rows.length ? Object.keys(rows[0]) : [];
+  const find = re => keys.find(k => re.test(k));
+  const moneyYears = keys.filter(k => /^Money In \d{4}$/.test(k)).sort().reverse();
+  COLS = [
+    { key: "Name", label: "Name", type: "name" },
+    { key: "Solicitor", label: "Fundraiser", type: "text" },
+    { key: "Q1", label: "Q1", type: "money" }, { key: "Q2", label: "Q2", type: "money" },
+    { key: "Q3", label: "Q3", type: "money" }, { key: "Q4", label: "Q4", type: "money" },
+    { key: "Outstanding Projected", label: "Outstanding", type: "money" },
+    { key: find(/^Total Money In & Projected/), label: "Money in + projected", type: "money" },
+    ...moneyYears.map(k => ({ key: k, label: k, type: "money" })),
+    { key: "Speculative", label: "Speculative", type: "money" },
+    { key: "Qualified Active", label: "Qualified active", type: "money" },
+    { key: find(/^Original \d{4} Projection$/), label: "Original projection", type: "money" },
+    { key: "Last Action Date", label: "Last action", type: "date" },
+    { key: "Prospect Status", label: "Status", type: "text" }
+  ].filter(c => c.key && keys.includes(c.key));
+  sortKey = COLS.find(c => /Money in \+ projected/.test(c.label))?.key || null;
+
+  const funds = [...new Set(rows.map(r => r.Solicitor).filter(Boolean))].sort();
+  $("f-fundraiser").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
+  ["f-fundraiser", "f-search", "f-open"].forEach(id => $(id).addEventListener("input", drawTable));
+  drawTable();
+}
+function filtered() {
+  const f = $("f-fundraiser").value, q = $("f-search").value.trim().toLowerCase(), open = $("f-open").checked;
+  return ROWS.filter(r =>
+    (!f || r.Solicitor === f) &&
+    (!q || String(r.Name || "").toLowerCase().includes(q) || String(r.ID || "").includes(q)) &&
+    (!open || num(r["Outstanding Projected"]) > 0));
+}
+function drawTable() {
+  const col = COLS.find(c => c.key === sortKey);
+  const rows = filtered().sort((a, b) => {
+    if (!col) return 0;
+    if (col.type === "money") return (num(a[sortKey]) - num(b[sortKey])) * sortDir;
+    if (col.type === "date") return ((new Date(a[sortKey] || 0)) - (new Date(b[sortKey] || 0))) * sortDir;
+    return String(a[sortKey] || "").localeCompare(String(b[sortKey] || "")) * sortDir;
+  });
+  const t = $("hh");
+  t.tHead.innerHTML = "<tr>" + COLS.map(c => `<th class="${c.type === "money" ? "" : "txt"}" data-k="${esc(c.key)}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(c.label)}</th>`).join("") + "</tr>";
+  t.tHead.querySelectorAll("th").forEach(th => th.onclick = () => {
+    const k = th.dataset.k; if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = COLS.find(c => c.key === k).type === "money" ? -1 : 1; } drawTable(); });
+  t.tBodies[0].innerHTML = rows.map(r => "<tr>" + COLS.map(c => {
+    const v = r[c.key];
+    if (c.type === "money") { const n = num(v); return `<td class="${n === 0 ? "zero" : n < 0 ? "neg" : ""}">${n === 0 ? "–" : money(n)}</td>`; }
+    if (c.type === "date") return `<td class="txt">${fmtDate(v)}</td>`;
+    return `<td class="${c.type === "name" ? "name txt" : "txt"}" title="${esc(v)}">${esc(v)}</td>`;
+  }).join("") + "</tr>").join("");
+  t.tFoot.innerHTML = "<tr>" + COLS.map((c, i) => {
+    if (i === 0) return `<td>Total (${rows.length.toLocaleString()})</td>`;
+    if (c.type !== "money") return "<td></td>";
+    return `<td>${money(rows.reduce((s, r) => s + num(r[c.key]), 0))}</td>`;
+  }).join("") + "</tr>";
+  $("hh-count").textContent = `${rows.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households`;
+}
+
+/* ===== Print & PDF ===== */
+$("btn-print").onclick = () => window.print();
+$("btn-pdf").onclick = () => {
+  const btn = $("btn-pdf"); btn.disabled = true; btn.textContent = "Building PDF…";
+  const name = ($("proj-title").textContent || "Projections").replace(/[^\w\s-]/g, "").trim() + ".pdf";
+  document.body.classList.add("pdf");
+  const wrap = document.querySelector(".tablewrap"); const old = wrap.style.maxHeight; wrap.style.maxHeight = "none";
+  html2pdf().set({ margin: 0.3, filename: name, image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: "in", format: "letter", orientation: "landscape" },
+      pagebreak: { mode: ["css", "legacy"] } })
+    .from($("proj-body")).save()
+    .catch(() => alert("The PDF couldn't be created here. Use Print and choose Save as PDF instead."))
+    .finally(() => { wrap.style.maxHeight = old; btn.disabled = false; btn.textContent = "Download PDF"; });
+};
+
+/* ===== Start ===== */
+if (window.BBSkyAddinClient && window.parent !== window) {
+  client = new BBSkyAddinClient.AddinClient({ callbacks: { init: args => { args.ready({ showUI: true }); load(); } } });
+} else {
+  showNotice("Open this from Raiser's Edge", "The Advancement Hub only loads inside Raiser's Edge NXT, where it can confirm who you are.", false);
+}
+</script>
+</body>
+</html>
