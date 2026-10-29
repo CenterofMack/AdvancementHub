@@ -104,7 +104,7 @@
   .drawer .kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #EDF0F4}
   .drawer .kv span:last-child{font-variant-numeric:tabular-nums;text-align:right}
   .drawer .notes{white-space:pre-wrap;background:#F7F9FC;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
-  .drawer footer{padding:14px 22px;border-top:1px solid var(--line)}
+  .drawer .dr-open{margin-top:12px;padding:6px 12px;font-size:13px}
 
   .notice{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:22px 24px;max-width:640px}
   .notice.err{border-left-color:var(--red)}
@@ -172,11 +172,11 @@
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-name" hidden>
   <header>
-    <div><h2 id="dr-name"></h2><div class="sub" id="dr-sub"></div></div>
+    <div><h2 id="dr-name"></h2><div class="sub" id="dr-sub"></div>
+      <button class="btn primary dr-open" id="dr-open">Open in Raiser's Edge</button></div>
     <button class="x" id="dr-close" aria-label="Close">×</button>
   </header>
   <div class="body" id="dr-body"></div>
-  <footer><button class="btn primary" id="dr-open">Open in Raiser's Edge</button></footer>
 </aside>
 
 <script>
@@ -197,7 +197,13 @@ const shortM = n => (n < 0 ? "-$" : "$") + (Math.abs(n)/1e6).toFixed(1) + "M";
 const pct = n => (n*100).toFixed(1) + "%";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const pdfText = s => String(s ?? "").replace(/[\u2014\u2013\u2212]/g, "-").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
-const fmtDate = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return String(v); return (d.getUTCMonth()+1) + "/" + d.getUTCDate() + "/" + d.getUTCFullYear(); };
+const toDate = v => {
+  if (v === null || v === undefined || v === "") return null;
+  const s = String(v).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) { const n = Number(s); if (n > 20000 && n < 80000) return new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000); }
+  const d = new Date(s); return isNaN(d) ? null : d;
+};
+const fmtDate = v => { const d = toDate(v); if (!d) return v ? String(v) : ""; return (d.getUTCMonth()+1) + "/" + d.getUTCDate() + "/" + d.getUTCFullYear(); };
 const today = () => { const d = new Date(); return (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear(); };
 const fileDate = () => { const d = new Date(); return (d.getMonth()+1) + "-" + d.getDate() + "-" + String(d.getFullYear()).slice(2); };
 const fmtVal = (v, f) => f === "pct" ? pct(num(v)) : f === "money" ? money(num(v)) : String(v ?? "");
@@ -365,7 +371,7 @@ function view() {
   ).sort((a, b) => {
     if (!col) return 0;
     if (col.type === "money") return (num(a[sortKey]) - num(b[sortKey])) * sortDir;
-    if (col.type === "date") return ((new Date(a[sortKey] || 0)) - (new Date(b[sortKey] || 0))) * sortDir;
+    if (col.type === "date") return (((toDate(a[sortKey]) || 0) - (toDate(b[sortKey]) || 0))) * sortDir;
     return String(a[sortKey] || "").localeCompare(String(b[sortKey] || "")) * sortDir;
   });
 }
