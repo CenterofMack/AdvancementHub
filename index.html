@@ -8,44 +8,43 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <script src="https://sky.blackbaudcdn.net/static/sky-addin-client/1/sky-addin-client.global.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --navy:#213A63; --navy-deep:#172A49; --sky:#8FB3E0; --sky-soft:#DCE7F5;
-    --gold:#C9A33F; --ink:#1C2533; --muted:#5E6878; --line:#D9DFE8;
-    --page:#F5F7FA; --white:#FFFFFF; --red:#B3261E; --green:#2E6B47;
-    --serif:"Source Serif 4", Georgia, serif;
-    --sans:"Public Sans", "Segoe UI", Arial, sans-serif;
+    --navy:#213A63; --navy-deep:#172A49; --sky:#8FB3E0; --gold:#C9A33F;
+    --ink:#1C2533; --muted:#5E6878; --line:#D9DFE8; --page:#F5F7FA; --white:#FFFFFF; --red:#B3261E;
+    --serif:"Source Serif 4", Georgia, serif; --sans:"Public Sans","Segoe UI",Arial,sans-serif;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
   button,select,input{font:inherit;color:inherit}
   :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  [hidden]{display:none!important}
 
-  /* ---- top bar ---- */
   .bar{background:var(--navy-deep);color:#fff;padding:0 28px;display:flex;align-items:flex-end;gap:32px;min-height:64px}
   .brand{font-family:var(--serif);font-weight:600;font-size:21px;padding:16px 0 14px;white-space:nowrap}
-  .tabs{display:flex;gap:4px;flex:1}
+  .tabs{display:flex;gap:4px;flex:1;flex-wrap:wrap}
   .tab{background:none;border:0;color:#C9D4E6;padding:12px 16px 13px;cursor:pointer;border-bottom:3px solid transparent;font-weight:500}
   .tab:hover{color:#fff}
   .tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
-  .tab[hidden]{display:none}
   .who{font-size:12px;color:#AFC0DA;padding-bottom:16px;white-space:nowrap}
 
   main{max-width:1320px;margin:0 auto;padding:28px}
-  .panel[hidden]{display:none}
-
-  /* ---- heading row ---- */
   .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
   h1{font-family:var(--serif);font-weight:600;font-size:30px;line-height:1.15;margin:0;color:var(--navy-deep)}
-  .asof{color:var(--muted);margin-top:4px}
-  .actions{display:flex;gap:8px}
+  h2{font-family:var(--serif);font-weight:600;font-size:22px;margin:0 0 4px;color:var(--navy-deep)}
+  .asof,.count{color:var(--muted);margin-top:4px}
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .btn{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500}
   .btn:hover{border-color:var(--navy)}
   .btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
   .btn.primary:hover{background:var(--navy-deep)}
+  .btn:disabled{opacity:.6;cursor:wait}
+  .fallback{font-size:12px;color:var(--muted)}
+  .fallback a{color:var(--navy)}
 
-  /* ---- hero: projection vs goal ---- */
   .hero{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:24px 28px 22px;margin-bottom:24px}
   .hero-top{display:flex;justify-content:space-between;align-items:baseline;gap:24px;flex-wrap:wrap}
   .hero-figure{font-family:var(--serif);font-weight:700;font-size:44px;line-height:1;color:var(--navy-deep)}
@@ -53,7 +52,7 @@
   .hero-pct{text-align:right}
   .hero-pct .big{font-family:var(--serif);font-weight:700;font-size:32px;color:var(--navy)}
   .hero-pct .big.under{color:var(--red)}
-  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:22px 0 8px;overflow:visible}
+  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:22px 0 8px}
   .seg{position:absolute;top:0;bottom:0}
   .seg.in{background:var(--navy);border-radius:5px 0 0 5px}
   .seg.proj{background:repeating-linear-gradient(135deg,var(--sky) 0 7px,#A7C3E7 7px 14px)}
@@ -63,121 +62,122 @@
   .legend b{color:var(--ink);font-weight:600}
   .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 
-  /* ---- ledgers ---- */
-  .ledgers{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-bottom:34px}
+  .ledgers{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
   .ledger{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .ledger h3{margin:0;padding:11px 16px;font-size:14px;font-weight:600;color:#fff;background:var(--navy)}
   .ledger dl{margin:0;padding:4px 16px 8px}
   .ledger .row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #EDF0F4}
   .ledger .row:last-child{border-bottom:0}
   .ledger .row.key{border-top:2px solid var(--navy);border-bottom:0;margin-top:2px;font-weight:600}
-  .ledger dt{color:var(--ink)}
   .ledger dd{margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}
   .neg{color:var(--red)}
+  .footnote{color:var(--muted);font-size:12px;margin-top:16px;max-width:80ch}
 
-  /* ---- households ---- */
-  h2{font-family:var(--serif);font-weight:600;font-size:22px;margin:0 0 4px;color:var(--navy-deep)}
-  .hh-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:12px}
-  .count{color:var(--muted)}
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
   .controls select,.controls input[type=search]{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:#fff}
   .controls input[type=search]{width:220px}
   .controls label{display:flex;gap:6px;align-items:center;color:var(--muted)}
   .tablewrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:70vh}
-  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;contain:content}
   th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid #EDF0F4}
-  th:first-child,td:first-child,th.txt,td.txt{text-align:left}
+  th.txt,td.txt{text-align:left}
   thead th{position:sticky;top:0;background:#F0F3F8;color:var(--navy-deep);font-weight:600;font-size:12.5px;cursor:pointer;user-select:none;z-index:1;border-bottom:1px solid var(--line)}
   thead th[aria-sort="ascending"]::after{content:" ▲";font-size:9px}
   thead th[aria-sort="descending"]::after{content:" ▼";font-size:9px}
   tbody tr:hover{background:#F7F9FC}
-  td.name{font-weight:500;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  td.name{max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  td.name button:hover{border-bottom-color:var(--navy)}
   td.zero{color:#B6BDC8}
-  td.name a{color:var(--navy);text-decoration:none;border-bottom:1px solid #BFD0EA}
-  td.name a:hover{border-bottom-color:var(--navy)}
-  .more{display:flex;gap:8px;justify-content:center;margin:14px 0 4px}
-  .more[hidden]{display:none}
-  .tablewrap table{contain:content}
   tfoot td{position:sticky;bottom:0;background:#F0F3F8;font-weight:700;border-top:2px solid var(--navy)}
+  .more{display:flex;gap:8px;justify-content:center;margin:14px 0 4px}
 
-  /* ---- states ---- */
+  .scrim{position:fixed;inset:0;background:rgba(23,42,73,.28);z-index:20}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,92vw);background:var(--white);z-index:21;box-shadow:-8px 0 24px rgba(23,42,73,.18);display:flex;flex-direction:column}
+  @media (prefers-reduced-motion:no-preference){ .drawer{animation:slide .18s ease-out} @keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}} .seg{transition:width .6s ease-out} }
+  .drawer header{padding:20px 22px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+  .drawer h2{font-size:20px;margin:0}
+  .drawer .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .drawer .x{background:none;border:0;font-size:24px;line-height:1;cursor:pointer;color:var(--muted);padding:2px 6px;align-self:flex-start}
+  .drawer .body{padding:6px 22px 22px;overflow:auto;flex:1}
+  .drawer h4{margin:18px 0 6px;font-size:13px;color:var(--navy);font-weight:600}
+  .drawer .kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #EDF0F4}
+  .drawer .kv span:last-child{font-variant-numeric:tabular-nums;text-align:right}
+  .drawer .notes{white-space:pre-wrap;background:#F7F9FC;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
+  .drawer footer{padding:14px 22px;border-top:1px solid var(--line)}
+
   .notice{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:22px 24px;max-width:640px}
-  .notice h2{margin-bottom:6px}
   .notice.err{border-left-color:var(--red)}
-  .soon{color:var(--muted)}
-  .loading{color:var(--muted);padding:40px 0}
-  @media (prefers-reduced-motion:no-preference){ .seg{transition:width .6s ease-out} }
-
-  /* ---- print / PDF ---- */
-  @media print{
-    @page{size:landscape;margin:0.4in}
-    body{background:#fff;font-size:10px}
-    .bar,.actions,.controls,.more{display:none!important}
-    main{padding:0;max-width:none}
-    .hero,.ledger,.tablewrap{break-inside:avoid;border-color:#bbb}
-    .tablewrap{max-height:none;overflow:visible}
-    thead th{position:static}
-    tfoot td{position:static}
-    .ledgers{grid-template-columns:repeat(3,1fr)}
-  }
-  @media (max-width:720px){
-    .bar{flex-wrap:wrap;padding:0 16px;gap:8px}
-    main{padding:18px 14px}
-    .hero-figure{font-size:34px}
-  }
+  .soon,.loading{color:var(--muted)}
+  .loading{padding:40px 0}
+  @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} }
 </style>
 </head>
 <body>
 <header class="bar">
   <div class="brand">Advancement Hub</div>
   <nav class="tabs" role="tablist" aria-label="Reports">
-    <button class="tab" role="tab" data-tab="Projections" aria-selected="true">Projections</button>
-    <button class="tab" role="tab" data-tab="Board Slides" aria-selected="false" hidden>Board Slides</button>
-    <button class="tab" role="tab" data-tab="Retention" aria-selected="false" hidden>Donor Retention</button>
+    <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
+    <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Households</button>
+    <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Board Slides</button>
+    <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
   </nav>
   <div class="who" id="who"></div>
 </header>
 
 <main>
-  <section class="panel" id="panel-Projections">
-    <div class="loading" id="proj-loading">Loading projections…</div>
-    <div id="proj-body" hidden>
-      <div class="head">
-        <div>
-          <h1 id="proj-title">Projections</h1>
-          <div class="asof" id="proj-asof"></div>
-        </div>
-        <div class="actions">
-          <button class="btn" id="btn-print">Print</button>
-          <button class="btn primary" id="btn-pdf">Download PDF</button>
-        </div>
-      </div>
+  <div class="loading" id="loading">Loading projections…</div>
+  <div id="status"></div>
 
-      <div class="hero" id="hero"></div>
-      <div class="ledgers" id="ledgers"></div>
+  <section class="panel" id="panel-Overview" hidden>
+    <div class="head">
+      <div><h1 id="ov-title">Projections — Overview</h1><div class="asof" id="ov-asof"></div></div>
+      <div class="actions">
+        <span class="fallback" id="ov-fb"></span>
+        <button class="btn" id="ov-xlsx">Download Excel</button>
+        <button class="btn primary" id="ov-pdf">Download PDF</button>
+      </div>
+    </div>
+    <div class="hero" id="hero"></div>
+    <div class="ledgers" id="ledgers"></div>
+    <p class="footnote">C3 = All-entities total − C4 − Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.</p>
+  </section>
 
-      <div class="hh-head">
-        <div>
-          <h2>Households</h2>
-          <div class="count" id="hh-count"></div>
-        </div>
-        <div class="controls">
-          <select id="f-fundraiser" aria-label="Fundraiser"><option value="">All fundraisers</option></select>
-          <input type="search" id="f-search" placeholder="Search name or ID" aria-label="Search households">
-          <label><input type="checkbox" id="f-open"> Open projections only</label>
-        </div>
+  <section class="panel" id="panel-Households" hidden>
+    <div class="head">
+      <div><h1>Households</h1><div class="count" id="hh-count"></div></div>
+      <div class="actions">
+        <span class="fallback" id="hh-fb"></span>
+        <button class="btn" id="hh-xlsx">Download Excel</button>
+        <button class="btn primary" id="hh-pdf">Download PDF</button>
       </div>
-      <div class="tablewrap"><table id="hh"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-      <div class="more" id="more" hidden>
-        <button class="btn" id="btn-more">Show 100 more</button>
-        <button class="btn" id="btn-all">Show all</button>
-      </div>
+    </div>
+    <div class="controls">
+      <select id="f-fundraiser" aria-label="Fundraiser"><option value="">All fundraisers</option></select>
+      <input type="search" id="f-search" placeholder="Search name or ID" aria-label="Search households">
+      <label><input type="checkbox" id="f-activity"> 2026 activity only</label>
+      <label><input type="checkbox" id="f-open"> Open projections only</label>
+    </div>
+    <div class="tablewrap"><table id="hh"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <div class="more" id="more" hidden>
+      <button class="btn" id="btn-more">Show 100 more</button>
+      <button class="btn" id="btn-all">Show all</button>
     </div>
   </section>
 
-  <section class="panel" id="panel-Board Slides" hidden><p class="soon">Board Slides is coming next.</p></section>
+  <section class="panel" id="panel-BoardSlides" hidden><p class="soon">Board Slides is coming next.</p></section>
   <section class="panel" id="panel-Retention" hidden><p class="soon">Donor Retention is coming next.</p></section>
 </main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-name" hidden>
+  <header>
+    <div><h2 id="dr-name"></h2><div class="sub" id="dr-sub"></div></div>
+    <button class="x" id="dr-close" aria-label="Close">×</button>
+  </header>
+  <div class="body" id="dr-body"></div>
+  <footer><button class="btn primary" id="dr-open">Open in Raiser's Edge</button></footer>
+</aside>
 
 <script>
 /* ===== Settings ===== */
@@ -186,45 +186,55 @@ const OWNER = "Chris Smith";
 const ENV_ID = "p-6dq4GyJXXEarYflLLsQhUA";
 const RECORD_URL = id => `https://host.nxt.blackbaud.com/constituent/records/${encodeURIComponent(id)}?envid=${ENV_ID}&svcid=renxt`;
 const PAGE = 100;
+const CONF = "MCPP - Confidential";
 
 /* ===== Helpers ===== */
 const $ = id => document.getElementById(id);
 const num = v => { if (v === null || v === undefined || v === "") return 0; const n = Number(String(v).replace(/[$,\s]/g, "")); return isFinite(n) ? n : 0; };
-const money = n => (n < 0 ? "−$" : "$") + Math.round(Math.abs(n)).toLocaleString("en-US");
-const short = n => { const a = Math.abs(n), s = n < 0 ? "−$" : "$";
-  if (a >= 1e6) return s + (a/1e6).toFixed(1) + "M"; if (a >= 1e3) return s + Math.round(a/1e3) + "K"; return s + Math.round(a); };
+const money = n => (n < 0 ? "-$" : "$") + Math.round(Math.abs(n)).toLocaleString("en-US");
+const short = n => { const a = Math.abs(n), s = n < 0 ? "-$" : "$"; if (a >= 1e6) return s + (a/1e6).toFixed(1) + "M"; if (a >= 1e3) return s + Math.round(a/1e3) + "K"; return s + Math.round(a); };
+const shortM = n => (n < 0 ? "-$" : "$") + (Math.abs(n)/1e6).toFixed(1) + "M";
 const pct = n => (n*100).toFixed(1) + "%";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmtDate = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return esc(v);
-  return (d.getUTCMonth()+1) + "/" + d.getUTCDate() + "/" + d.getUTCFullYear(); };
-const fmtVal = (v, f) => f === "pct" ? pct(num(v)) : f === "money" ? money(num(v)) : esc(v);
+const pdfText = s => String(s ?? "").replace(/[\u2014\u2013\u2212]/g, "-").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
+const fmtDate = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return String(v); return (d.getUTCMonth()+1) + "/" + d.getUTCDate() + "/" + d.getUTCFullYear(); };
+const today = () => { const d = new Date(); return (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear(); };
+const fileDate = () => { const d = new Date(); return (d.getMonth()+1) + "-" + d.getDate() + "-" + String(d.getFullYear()).slice(2); };
+const fmtVal = (v, f) => f === "pct" ? pct(num(v)) : f === "money" ? money(num(v)) : String(v ?? "");
 
-/* ===== Tabs ===== */
-document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
-  document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + t.dataset.tab);
-}));
+/* ===== Downloads (with a new-tab fallback if RE blocks it) ===== */
+function deliver(blob, filename, fbId) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  const fb = $(fbId);
+  fb.innerHTML = `Didn't download? <a href="#" id="${fbId}-a">Open it in a new tab</a>`;
+  $(fbId + "-a").onclick = e => { e.preventDefault(); window.open(url, "_blank"); };
+  setTimeout(() => { fb.innerHTML = ""; URL.revokeObjectURL(url); }, 60000);
+}
+
+/* ===== Tabs & access ===== */
+let ACCESS = {};
+const allowed = key => String(ACCESS[key] || "").trim().toLowerCase() === "yes";
+function selectTab(name) {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
+  document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + name);
+  closeDrawer();
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
 function applyAccess(access) {
-  if (!access) return;
-  document.querySelectorAll(".tab").forEach(t => {
-    const ok = String(access[t.dataset.tab] || "").trim().toLowerCase() === "yes";
-    if (t.dataset.tab !== "Projections") t.hidden = !ok;
-  });
+  ACCESS = access || {};
+  document.querySelectorAll(".tab").forEach(t => t.hidden = !allowed(t.dataset.access));
 }
 
 /* ===== Messages ===== */
 function showNotice(title, text, isErr, retry) {
-  $("proj-loading").hidden = true;
-  $("proj-body").hidden = true;
-  const box = document.createElement("div");
-  box.className = "notice" + (isErr ? " err" : "");
-  box.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>` + (retry ? `<button class="btn" id="retry">Try again</button>` : "");
-  $("panel-Projections").appendChild(box);
-  if (retry) $("retry").onclick = () => { box.remove(); $("proj-loading").hidden = false; load(); };
+  $("loading").hidden = true;
+  $("status").innerHTML = `<div class="notice${isErr ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="retry">Try again</button>' : ""}</div>`;
+  if (retry) $("retry").onclick = () => { $("status").innerHTML = ""; $("loading").hidden = false; load(); };
 }
 
 /* ===== Data load ===== */
-let client = null;
+let client = null, OV = [], HEADER = { label: "Projections — Overview", value: "" };
 function load() {
   client.getUserIdentityToken()
     .then(token => fetch(FLOW_URL + "&tab=Projections", { method: "POST", body: token }))
@@ -234,31 +244,26 @@ function load() {
       const data = await res.json();
       $("who").textContent = data.user || "";
       applyAccess(data.access);
-      render(data);
+      renderOverview(data.overview || []);
+      buildTable(data.projections || []);
+      $("loading").hidden = true;
+      selectTab("Overview");
     })
-    .catch(err => showNotice("Projections didn't load", "The data service couldn't be reached. Check your connection and try again.", true, true));
+    .catch(() => showNotice("Projections didn't load", "The data service couldn't be reached. Check your connection and try again.", true, true));
 }
 
 /* ===== Overview ===== */
-function render(data) {
-  const ov = (data.overview || []).map(r => ({ section: r.Section, label: r.Label, value: r.Value, format: (r.Format || "").trim() }));
-  const header = ov.find(r => r.section === "Header");
-  if (header) { $("proj-title").textContent = header.label; $("proj-asof").textContent = header.value; }
-
-  const fr = ov.filter(r => r.section === "Fundraising");
-  const v = i => num(fr[i] && fr[i].value);
+function renderOverview(rows) {
+  OV = rows.map(r => ({ section: r.Section, label: r.Label, value: r.Value, format: (r.Format || "").trim() }));
+  const h = OV.find(r => r.section === "Header");
+  if (h) { HEADER = h; $("ov-title").textContent = h.label; $("ov-asof").textContent = h.value; }
+  const fr = OV.filter(r => r.section === "Fundraising"); const v = i => num(fr[i] && fr[i].value);
   const goal = v(1), moneyIn = v(2), projected = v(3), ye = v(4), vsGoal = v(5), pctGoal = v(6);
   const scale = Math.max(goal, ye) * 1.08 || 1;
   $("hero").innerHTML = `
     <div class="hero-top">
-      <div>
-        <div class="hero-figure">${short(ye)}</div>
-        <div class="hero-sub">${esc(fr[4] ? fr[4].label : "Year-end projection")} against a ${short(goal)} goal</div>
-      </div>
-      <div class="hero-pct">
-        <div class="big ${pctGoal < 1 ? "under" : ""}">${pct(pctGoal)}</div>
-        <div class="hero-sub">${vsGoal >= 0 ? short(vsGoal) + " over goal" : short(-vsGoal) + " short of goal"}</div>
-      </div>
+      <div><div class="hero-figure">${short(ye)}</div><div class="hero-sub">${esc(fr[4] ? fr[4].label : "Year-end projection")} against a ${short(goal)} goal</div></div>
+      <div class="hero-pct"><div class="big ${pctGoal < 1 ? "under" : ""}">${pct(pctGoal)}</div><div class="hero-sub">${vsGoal >= 0 ? short(vsGoal) + " over goal" : short(-vsGoal) + " short of goal"}</div></div>
     </div>
     <div class="track" role="img" aria-label="${short(moneyIn)} in, ${short(projected)} projected, goal ${short(goal)}">
       <div class="seg in" style="left:0;width:${moneyIn/scale*100}%"></div>
@@ -271,115 +276,234 @@ function render(data) {
       <span><i class="sw" style="background:var(--gold)"></i>Fundraising goal <b>${money(goal)}</b></span>
       <span>Original projection <b>${money(v(0))}</b></span>
     </div>`;
-
-  const order = [...new Set(ov.filter(r => r.section !== "Header").map(r => r.section))];
-  $("ledgers").innerHTML = order.map(sec => {
-    const rows = ov.filter(r => r.section === sec);
-    return `<div class="ledger"><h3>${esc(sec)}</h3><dl>` + rows.map(r => {
-      const key = /surplus|total/i.test(r.label);
-      const neg = r.format !== "text" && num(r.value) < 0;
-      return `<div class="row${key ? " key" : ""}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${fmtVal(r.value, r.format)}</dd></div>`;
-    }).join("") + `</dl></div>`;
-  }).join("");
-
-  buildTable(data.projections || []);
-  $("proj-loading").hidden = true;
-  $("proj-body").hidden = false;
+  const order = [...new Set(OV.filter(r => r.section !== "Header").map(r => r.section))];
+  $("ledgers").innerHTML = order.map(sec => `<div class="ledger"><h3>${esc(sec)}</h3><dl>` +
+    OV.filter(r => r.section === sec).map(r => {
+      const key = /surplus|total/i.test(r.label), neg = r.format !== "text" && num(r.value) < 0;
+      return `<div class="row${key ? " key" : ""}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${esc(fmtVal(r.value, r.format))}</dd></div>`;
+    }).join("") + `</dl></div>`).join("");
 }
 
-/* ===== Households table ===== */
-let ROWS = [], COLS = [], sortKey = null, sortDir = -1, shown = PAGE;
+function overviewPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter", compress: true });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 36, gap = 18;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(23, 42, 73);
+  doc.text(pdfText(HEADER.label || "Projections - Overview"), M, M + 6);
+  doc.setFont("helvetica", "italic"); doc.setFontSize(9); doc.setTextColor(94, 104, 120);
+  doc.text(pdfText(HEADER.value || ""), M, M + 20);
+  const colW = (W - 2*M - 2*gap) / 3;
+  const layout = [["Fundraising", "Operations", "C3 Operations"], ["Non-MCPP C3 Revenue", "C4 Operations"], ["Other MCPP C3 Revenue", "Estimated Balances"]];
+  const titles = { "Fundraising": "Overview - Fundraising Activity All Entities", "Operations": "Overview - Operations (All Entities)", "C3 Operations": "Overview - C3 Operations", "C4 Operations": "Overview - C4 Operations" };
+  layout.forEach((stack, ci) => {
+    let y = M + 36; const x = M + ci * (colW + gap);
+    stack.forEach(sec => {
+      const rows = OV.filter(r => r.section === sec); if (!rows.length) return;
+      doc.autoTable({
+        startY: y, margin: { left: x }, tableWidth: colW, theme: "plain",
+        head: [[pdfText(titles[sec] || sec), ""]],
+        body: rows.map(r => [pdfText(r.label), r.format === "pct" ? pct(num(r.value)) : r.format === "money" ? shortM(num(r.value)) : pdfText(r.value)]),
+        styles: { font: "helvetica", fontSize: 8, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 }, textColor: [28, 37, 51] },
+        headStyles: { fillColor: [68, 84, 106], textColor: 255, fontStyle: "bold" },
+        columnStyles: { 1: { halign: "right", cellWidth: 56 } },
+        didParseCell: d => {
+          if (d.section !== "body") return;
+          if (/surplus|total/i.test(String(d.row.raw[0]))) { d.cell.styles.fontStyle = "bold"; d.cell.styles.fillColor = [236, 234, 226]; }
+          if (d.column.index === 1 && String(d.cell.raw).startsWith("-")) d.cell.styles.textColor = [179, 38, 30];
+        },
+        didDrawCell: d => { if (d.section === "body") { doc.setDrawColor(220, 224, 230); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } }
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    });
+  });
+  doc.setFont("helvetica", "italic"); doc.setFontSize(7.5); doc.setTextColor(94, 104, 120);
+  doc.text("C3 = All-entities total - C4 - Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.", M, H - 46, { maxWidth: W - 2*M });
+  footer(doc, 1, 1);
+  return doc;
+}
+
+/* ===== Households ===== */
+let ROWS = [], COLS = [], KEYS = { years: [] }, sortKey = null, sortDir = -1, shown = PAGE, VIEW = [];
 function buildTable(rows) {
   ROWS = rows;
   const keys = rows.length ? Object.keys(rows[0]) : [];
   const find = re => keys.find(k => re.test(k));
-  const moneyYears = keys.filter(k => /^Money In \d{4}$/.test(k)).sort().reverse();
+  const years = keys.filter(k => /^Money In \d{4}$/.test(k)).sort().reverse();
+  KEYS = { total: find(/^Total Money In & Projected/), original: find(/^Original \d{4} Projection$/), years, curYear: years[0] };
+  const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
+  $("f-activity").parentElement.lastChild.textContent = ` ${yr} activity only`;
   COLS = [
-    { key: "Name", label: "Name", type: "name" },
-    { key: "ID", label: "Constituent ID", type: "text" },
-    { key: "Solicitor", label: "Fundraiser", type: "text" },
-    { key: "Q1", label: "Q1", type: "money" }, { key: "Q2", label: "Q2", type: "money" },
-    { key: "Q3", label: "Q3", type: "money" }, { key: "Q4", label: "Q4", type: "money" },
-    { key: "Outstanding Projected", label: "Outstanding", type: "money" },
-    { key: find(/^Total Money In & Projected/), label: "Money in + projected", type: "money" },
-    ...moneyYears.map(k => ({ key: k, label: k, type: "money" })),
-    { key: "Speculative", label: "Speculative", type: "money" },
-    { key: "Qualified Active", label: "Qualified active", type: "money" },
-    { key: find(/^Original \d{4} Projection$/), label: "Original projection", type: "money" },
-    { key: "Last Action Date", label: "Last action", type: "date" },
-    { key: "Prospect Status", label: "Status", type: "text" }
+    { key: "Name", label: "Name", type: "name", group: "Constituent" },
+    { key: "ID", label: "ID", type: "text", group: "Constituent" },
+    { key: "Solicitor", label: "Fundraiser", pdf: "Solicitor", type: "text", group: "Constituent" },
+    { key: "Q1", label: "Q1", type: "money", group: "Projected" }, { key: "Q2", label: "Q2", type: "money", group: "Projected" },
+    { key: "Q3", label: "Q3", type: "money", group: "Projected" }, { key: "Q4", label: "Q4", type: "money", group: "Projected" },
+    { key: "Outstanding Projected", label: "Outstanding", type: "money", group: "Projected", screenOnly: true },
+    { key: KEYS.total, label: "Money in + projected", pdf: KEYS.total, type: "money", group: "Projected" },
+    ...years.map(k => ({ key: k, label: k, type: "money", group: "Actual" })),
+    { key: "Speculative", label: "Speculative", type: "money", group: "Opportunity" },
+    { key: "Qualified Active", label: "Qualified active", pdf: "Qualified Active", type: "money", group: "Opportunity" },
+    { key: "Qualified Inactive", label: "Qualified inactive", pdf: "Qualified Inactive", type: "money", group: "Opportunity" },
+    { key: KEYS.original, label: "Original projection", type: "money", group: "Other", screenOnly: true },
+    { key: "Last Action Date", label: "Last action", type: "date", group: "Other", screenOnly: true },
+    { key: "Prospect Status", label: "Status", type: "text", group: "Other", screenOnly: true }
   ].filter(c => c.key && keys.includes(c.key));
-  sortKey = COLS.find(c => /Money in \+ projected/.test(c.label))?.key || null;
-
+  sortKey = KEYS.total || null;
   const funds = [...new Set(rows.map(r => r.Solicitor).filter(Boolean))].sort();
   $("f-fundraiser").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
-  ["f-fundraiser", "f-search", "f-open"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; drawTable(); }));
+  ["f-fundraiser", "f-search", "f-activity", "f-open"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; drawTable(); }));
   drawTable();
 }
-function filtered() {
-  const f = $("f-fundraiser").value, q = $("f-search").value.trim().toLowerCase(), open = $("f-open").checked;
+function view() {
+  const f = $("f-fundraiser").value, q = $("f-search").value.trim().toLowerCase(), act = $("f-activity").checked, open = $("f-open").checked;
+  const col = COLS.find(c => c.key === sortKey);
   return ROWS.filter(r =>
     (!f || r.Solicitor === f) &&
     (!q || String(r.Name || "").toLowerCase().includes(q) || String(r.ID || "").includes(q)) &&
-    (!open || num(r["Outstanding Projected"]) > 0));
-}
-function drawTable() {
-  const col = COLS.find(c => c.key === sortKey);
-  const rows = filtered().sort((a, b) => {
+    (!act || num(r[KEYS.total]) > 0) &&
+    (!open || num(r["Outstanding Projected"]) > 0)
+  ).sort((a, b) => {
     if (!col) return 0;
     if (col.type === "money") return (num(a[sortKey]) - num(b[sortKey])) * sortDir;
     if (col.type === "date") return ((new Date(a[sortKey] || 0)) - (new Date(b[sortKey] || 0))) * sortDir;
     return String(a[sortKey] || "").localeCompare(String(b[sortKey] || "")) * sortDir;
   });
-  const t = $("hh");
+}
+function drawTable() {
+  VIEW = view(); const t = $("hh");
   t.tHead.innerHTML = "<tr>" + COLS.map(c => `<th class="${c.type === "money" ? "" : "txt"}" data-k="${esc(c.key)}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(c.label)}</th>`).join("") + "</tr>";
   t.tHead.querySelectorAll("th").forEach(th => th.onclick = () => {
     const k = th.dataset.k; if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = COLS.find(c => c.key === k).type === "money" ? -1 : 1; } drawTable(); });
-  t.tBodies[0].innerHTML = rows.slice(0, shown).map(r => "<tr>" + COLS.map(c => {
+  t.tBodies[0].innerHTML = VIEW.slice(0, shown).map((r, i) => "<tr>" + COLS.map(c => {
     const v = r[c.key];
     if (c.type === "money") { const n = num(v); return `<td class="${n === 0 ? "zero" : n < 0 ? "neg" : ""}">${n === 0 ? "–" : money(n)}</td>`; }
     if (c.type === "date") return `<td class="txt">${fmtDate(v)}</td>`;
-    if (c.type === "name") {
-      const sid = String(r["System Record ID"] || "").trim();
-      return sid ? `<td class="name txt" title="Open ${esc(v)} in Raiser's Edge"><a class="rec" href="${RECORD_URL(sid)}" target="_blank" rel="noopener" data-url="${RECORD_URL(sid)}">${esc(v)}</a></td>`
-                 : `<td class="name txt" title="${esc(v)}">${esc(v)}</td>`;
-    }
+    if (c.type === "name") return `<td class="name txt"><button data-i="${i}" title="Quick look">${esc(v)}</button></td>`;
     return `<td class="txt" title="${esc(v)}">${esc(v)}</td>`;
   }).join("") + "</tr>").join("");
-  t.tFoot.innerHTML = "<tr>" + COLS.map((c, i) => {
-    if (i === 0) return `<td>Total (${rows.length.toLocaleString()})</td>`;
-    if (c.type !== "money") return "<td></td>";
-    return `<td>${money(rows.reduce((s, r) => s + num(r[c.key]), 0))}</td>`;
-  }).join("") + "</tr>";
-  t.tBodies[0].querySelectorAll("a.rec").forEach(a => a.onclick = e => {
-    e.preventDefault();
-    const w = window.open(a.dataset.url, "_blank");
-    if (w) { try { w.opener = null; } catch (_) {} }
-    else if (client && client.navigate) client.navigate({ url: a.dataset.url });
-  });
-  const showing = Math.min(shown, rows.length);
-  $("hh-count").textContent = `${rows.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households` + (showing < rows.length ? ` (showing ${showing.toLocaleString()})` : "");
-  $("more").hidden = showing >= rows.length;
+  t.tBodies[0].querySelectorAll("td.name button").forEach(b => b.onclick = () => openDrawer(VIEW[+b.dataset.i]));
+  t.tFoot.innerHTML = "<tr>" + COLS.map((c, i) => i === 0 ? `<td class="txt">Total (${VIEW.length.toLocaleString()})</td>` :
+    c.type !== "money" ? "<td></td>" : `<td>${money(VIEW.reduce((s, r) => s + num(r[c.key]), 0))}</td>`).join("") + "</tr>";
+  const showing = Math.min(shown, VIEW.length);
+  $("hh-count").textContent = `${VIEW.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households` + (showing < VIEW.length ? ` (showing ${showing.toLocaleString()})` : "");
+  $("more").hidden = showing >= VIEW.length;
 }
-
 $("btn-more").onclick = () => { shown += PAGE; drawTable(); };
 $("btn-all").onclick = () => { shown = Infinity; drawTable(); };
 
-/* ===== Print & PDF ===== */
-const withAllRows = fn => { const prev = shown; shown = Infinity; drawTable(); return Promise.resolve(fn()).finally(() => { shown = prev; drawTable(); }); };
-$("btn-print").onclick = () => withAllRows(() => window.print());
-$("btn-pdf").onclick = () => {
-  const btn = $("btn-pdf"); btn.disabled = true; btn.textContent = "Building PDF…";
-  const name = ($("proj-title").textContent || "Projections").replace(/[^\w\s-]/g, "").trim() + ".pdf";
-  document.body.classList.add("pdf");
-  const wrap = document.querySelector(".tablewrap"); const old = wrap.style.maxHeight; wrap.style.maxHeight = "none";
-  const prev = shown; shown = Infinity; drawTable();
-  html2pdf().set({ margin: 0.3, filename: name, image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: "in", format: "letter", orientation: "landscape" },
-      pagebreak: { mode: ["css", "legacy"] } })
-    .from($("proj-body")).save()
-    .catch(() => alert("The PDF couldn't be created here. Use Print and choose Save as PDF instead."))
-    .finally(() => { shown = prev; drawTable(); wrap.style.maxHeight = old; btn.disabled = false; btn.textContent = "Download PDF"; });
+function householdsPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter", compress: true });
+  const rows = VIEW, cols = COLS.filter(c => !c.screenOnly);
+  const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
+  const groupNames = { Constituent: "Constituent", Projected: `${yr} Projected`, Actual: "Actual", Opportunity: "Opportunity" };
+  const groups = []; cols.forEach(c => { const g = groups[groups.length - 1]; if (g && g.name === c.group) g.span++; else groups.push({ name: c.group, span: 1 }); });
+  groups[0].span += 1; // include Ref #
+  const head = [
+    groups.map(g => ({ content: groupNames[g.name] || g.name, colSpan: g.span, styles: { halign: "center" } })),
+    ["Ref #", ...cols.map(c => pdfText(c.pdf || c.label))]
+  ];
+  const cell = (c, r) => { if (c.type === "money") { const n = num(r[c.key]); return n === 0 ? "" : money(n); } if (c.type === "date") return fmtDate(r[c.key]); return pdfText(r[c.key]); };
+  const body = rows.map((r, i) => [String(i + 1), ...cols.map(c => cell(c, r))]);
+  const foot = [["Total", ...cols.map((c, i) => i === 0 ? String(rows.length) : c.type === "money" ? money(rows.reduce((s, r) => s + num(r[c.key]), 0)) : "")]];
+  const colStyles = { 0: { halign: "right", cellWidth: 24 } };
+  cols.forEach((c, i) => { colStyles[i + 1] = c.type === "money" ? { halign: "right" } : c.key === "Name" ? { cellWidth: 140 } : c.key === "ID" ? { cellWidth: 34 } : c.key === "Solicitor" ? { cellWidth: 74 } : {}; });
+  doc.autoTable({
+    head, body, foot, showFoot: "lastPage", showHead: "everyPage", theme: "plain",
+    margin: { top: 28, left: 18, right: 18, bottom: 30 },
+    styles: { font: "helvetica", fontSize: 6.5, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: [28, 37, 51], overflow: "ellipsize" },
+    headStyles: { fillColor: [33, 58, 99], textColor: 255, fontStyle: "bold", overflow: "linebreak", valign: "bottom" },
+    footStyles: { fillColor: [240, 243, 248], textColor: [23, 42, 73], fontStyle: "bold" },
+    columnStyles: colStyles,
+    alternateRowStyles: { fillColor: [247, 249, 252] },
+    didParseCell: d => {
+      if ((d.section === "head" && d.row.index === 1) || d.section === "foot") d.cell.styles.halign = d.column.index <= 3 ? "left" : "right";
+      if (d.section === "head" && d.row.index === 1 && d.column.index === 0) d.cell.styles.halign = "right";
+    }
+  });
+  const total = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= total; p++) { doc.setPage(p); footer(doc, p, total); }
+  return doc;
+}
+
+function footer(doc, p, total) {
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+  doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(94, 104, 120);
+  doc.text(`Printed: ${today()}`, 18, H - 14);
+  doc.text(CONF, W / 2, H - 14, { align: "center" });
+  doc.text(`Page ${p} of ${total}`, W - 18, H - 14, { align: "right" });
+}
+
+/* ===== Excel ===== */
+function overviewXlsx() {
+  const src = OV.filter(r => r.section !== "Header");
+  const data = src.map(r => ({ Section: r.section, Label: r.label, Value: r.format === "text" ? r.value : num(r.value) }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws["!cols"] = [{ wch: 24 }, { wch: 52 }, { wch: 16 }];
+  src.forEach((r, i) => { const c = ws[XLSX.utils.encode_cell({ r: i + 1, c: 2 })]; if (c && typeof c.v === "number") c.z = r.format === "pct" ? "0.0%" : "$#,##0"; });
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Overview");
+  return wb;
+}
+function householdsXlsx() {
+  const rows = VIEW;
+  const data = rows.map((r, i) => { const o = { "Ref #": i + 1 }; COLS.forEach(c => { o[c.pdf || c.label] = c.type === "money" ? num(r[c.key]) : c.type === "date" ? fmtDate(r[c.key]) : String(r[c.key] ?? ""); }); return o; });
+  const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ "Ref #": "" }]);
+  const hdr = ["Ref #", ...COLS.map(c => c.pdf || c.label)];
+  ws["!cols"] = hdr.map(h => ({ wch: h === "Name" ? 42 : h === "Solicitor" ? 22 : Math.max(10, h.length + 2) }));
+  hdr.forEach((h, ci) => { const c = COLS.find(x => (x.pdf || x.label) === h); if (c && c.type === "money") for (let ri = 1; ri <= data.length; ri++) { const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })]; if (cell) cell.z = "$#,##0"; } });
+  ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length, c: hdr.length - 1 } }) };
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Households");
+  return wb;
+}
+const xlsxBlob = wb => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+function wire(btnId, make, name, fbId, kind) {
+  $(btnId).onclick = () => {
+    const btn = $(btnId), label = btn.textContent; btn.disabled = true; btn.textContent = "Building…";
+    setTimeout(() => {
+      try { const out = make(); deliver(kind === "pdf" ? out.output("blob") : xlsxBlob(out), name(), fbId); }
+      catch (e) { console.error(e); $(fbId).textContent = "That file couldn't be created. Try again."; }
+      finally { btn.disabled = false; btn.textContent = label; }
+    }, 30);
+  };
+}
+wire("ov-pdf", overviewPdf, () => `Projections Overview - ${fileDate()}.pdf`, "ov-fb", "pdf");
+wire("ov-xlsx", overviewXlsx, () => `Projections Overview - ${fileDate()}.xlsx`, "ov-fb", "xlsx");
+wire("hh-pdf", householdsPdf, () => `Projections - ${fileDate()}.pdf`, "hh-fb", "pdf");
+wire("hh-xlsx", householdsXlsx, () => `Projections Households - ${fileDate()}.xlsx`, "hh-fb", "xlsx");
+
+/* ===== Quick-look panel ===== */
+let lastFocus = null, current = null;
+function openDrawer(r) {
+  if (!r) return;
+  current = r; lastFocus = document.activeElement;
+  $("dr-name").textContent = r.Name || "";
+  $("dr-sub").textContent = [r.ID ? "ID " + r.ID : "", r.Solicitor || "No assigned fundraiser", r["Prospect Status"]].filter(Boolean).join("  |  ");
+  const kv = (k, v) => `<div class="kv"><span>${esc(k)}</span><span>${esc(v)}</span></div>`;
+  const m = k => { const n = num(r[k]); return n ? money(n) : "–"; };
+  const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
+  let html = `<h4>${esc(yr)} projected</h4>` +
+    ["Q1", "Q2", "Q3", "Q4"].map(k => kv(k, m(k))).join("") + kv("Outstanding", m("Outstanding Projected")) +
+    (KEYS.total ? kv("Money in + projected", m(KEYS.total)) : "") +
+    (KEYS.original ? kv("Original projection", m(KEYS.original)) : "") +
+    `<h4>Money in</h4>` + KEYS.years.map(k => kv(k.replace("Money In ", ""), m(k))).join("") +
+    `<h4>Opportunity</h4>` + ["Speculative", "Qualified Active", "Qualified Inactive"].map(k => kv(k, m(k))).join("") +
+    `<h4>Relationship</h4>` +
+    kv("Prospect classification", r["Prospect Classification"] || "–") +
+    kv("Last action", [fmtDate(r["Last Action Date"]), r["Last Action Category"], r["Last Action Type"]].filter(Boolean).join(", ") || "–") +
+    kv("Location", [r["Preferred County"] ? r["Preferred County"] + " County" : "", r["Preferred State"]].filter(Boolean).join(", ") || "–");
+  if (String(r.Notes || "").trim()) html += `<h4>Notes</h4><div class="notes">${esc(r.Notes)}</div>`;
+  $("dr-body").innerHTML = html;
+  $("dr-open").hidden = !String(r["System Record ID"] || "").trim();
+  $("scrim").hidden = false; $("drawer").hidden = false; $("dr-close").focus();
+}
+function closeDrawer() { if ($("drawer").hidden) return; $("scrim").hidden = true; $("drawer").hidden = true; if (lastFocus) lastFocus.focus(); }
+$("dr-close").onclick = closeDrawer; $("scrim").onclick = closeDrawer;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+$("dr-open").onclick = () => {
+  const url = RECORD_URL(String(current["System Record ID"]).trim());
+  const w = window.open(url, "_blank");
+  if (w) { try { w.opener = null; } catch (_) {} } else if (client && client.navigate) client.navigate({ url });
 };
 
 /* ===== Start ===== */
