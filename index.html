@@ -290,9 +290,8 @@ function renderOverview(rows) {
     }).join("") + `</dl></div>`).join("");
 }
 
-function overviewPdf() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter", compress: true });
+function newDoc() { const { jsPDF } = window.jspdf; return new jsPDF({ orientation: "landscape", unit: "pt", format: "legal", compress: true }); }
+function drawOverview(doc) {
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 36, gap = 18;
   doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(23, 42, 73);
   doc.text(pdfText(HEADER.label || "Projections - Overview"), M, M + 6);
@@ -324,8 +323,6 @@ function overviewPdf() {
   });
   doc.setFont("helvetica", "italic"); doc.setFontSize(7.5); doc.setTextColor(94, 104, 120);
   doc.text("C3 = All-entities total - C4 - Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.", M, H - 46, { maxWidth: W - 2*M });
-  footer(doc, 1, 1);
-  return doc;
 }
 
 /* ===== Households ===== */
@@ -344,7 +341,6 @@ function buildTable(rows) {
     { key: "Solicitor", label: "Fundraiser", pdf: "Solicitor", type: "text", group: "Constituent" },
     { key: "Q1", label: "Q1", type: "money", group: "Projected" }, { key: "Q2", label: "Q2", type: "money", group: "Projected" },
     { key: "Q3", label: "Q3", type: "money", group: "Projected" }, { key: "Q4", label: "Q4", type: "money", group: "Projected" },
-    { key: "Outstanding Projected", label: "Outstanding", type: "money", group: "Projected", screenOnly: true },
     { key: KEYS.total, label: "Money in + projected", pdf: KEYS.total, type: "money", group: "Projected" },
     ...years.map(k => ({ key: k, label: k, type: "money", group: "Actual" })),
     { key: "Speculative", label: "Speculative", type: "money", group: "Opportunity" },
@@ -397,9 +393,8 @@ function drawTable() {
 $("btn-more").onclick = () => { shown += PAGE; drawTable(); };
 $("btn-all").onclick = () => { shown = Infinity; drawTable(); };
 
-function householdsPdf() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter", compress: true });
+function drawHouseholds(doc) {
+  doc.addPage();
   const rows = VIEW, cols = COLS.filter(c => !c.screenOnly);
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   const groupNames = { Constituent: "Constituent", Projected: `${yr} Projected`, Actual: "Actual", Opportunity: "Opportunity" };
@@ -413,11 +408,11 @@ function householdsPdf() {
   const body = rows.map((r, i) => [String(i + 1), ...cols.map(c => cell(c, r))]);
   const foot = [["Total", ...cols.map((c, i) => i === 0 ? String(rows.length) : c.type === "money" ? money(rows.reduce((s, r) => s + num(r[c.key]), 0)) : "")]];
   const colStyles = { 0: { halign: "right", cellWidth: 24 } };
-  cols.forEach((c, i) => { colStyles[i + 1] = c.type === "money" ? { halign: "right" } : c.key === "Name" ? { cellWidth: 140 } : c.key === "ID" ? { cellWidth: 34 } : c.key === "Solicitor" ? { cellWidth: 74 } : {}; });
+  cols.forEach((c, i) => { colStyles[i + 1] = c.type === "money" ? { halign: "right" } : c.key === "Name" ? { cellWidth: 210 } : c.key === "ID" ? { cellWidth: 34 } : c.key === "Solicitor" ? { cellWidth: 90 } : {}; });
   doc.autoTable({
-    head, body, foot, showFoot: "lastPage", showHead: "everyPage", theme: "plain",
+    head, body, foot, showFoot: "lastPage", showHead: "everyPage", theme: "plain", startY: 28,
     margin: { top: 28, left: 18, right: 18, bottom: 30 },
-    styles: { font: "helvetica", fontSize: 6.5, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: [28, 37, 51], overflow: "ellipsize" },
+    styles: { font: "helvetica", fontSize: 7, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: [28, 37, 51], overflow: "ellipsize" },
     headStyles: { fillColor: [33, 58, 99], textColor: 255, fontStyle: "bold", overflow: "linebreak", valign: "bottom" },
     footStyles: { fillColor: [240, 243, 248], textColor: [23, 42, 73], fontStyle: "bold" },
     columnStyles: colStyles,
@@ -427,6 +422,11 @@ function householdsPdf() {
       if (d.section === "head" && d.row.index === 1 && d.column.index === 0) d.cell.styles.halign = "right";
     }
   });
+}
+function fullPdf() {
+  const doc = newDoc();
+  drawOverview(doc);
+  drawHouseholds(doc);
   const total = doc.internal.getNumberOfPages();
   for (let p = 1; p <= total; p++) { doc.setPage(p); footer(doc, p, total); }
   return doc;
@@ -441,16 +441,15 @@ function footer(doc, p, total) {
 }
 
 /* ===== Excel ===== */
-function overviewXlsx() {
+function overviewSheet() {
   const src = OV.filter(r => r.section !== "Header");
   const data = src.map(r => ({ Section: r.section, Label: r.label, Value: r.format === "text" ? r.value : num(r.value) }));
   const ws = XLSX.utils.json_to_sheet(data);
   ws["!cols"] = [{ wch: 24 }, { wch: 52 }, { wch: 16 }];
   src.forEach((r, i) => { const c = ws[XLSX.utils.encode_cell({ r: i + 1, c: 2 })]; if (c && typeof c.v === "number") c.z = r.format === "pct" ? "0.0%" : "$#,##0"; });
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Overview");
-  return wb;
+  return ws;
 }
-function householdsXlsx() {
+function householdsSheet() {
   const rows = VIEW;
   const data = rows.map((r, i) => { const o = { "Ref #": i + 1 }; COLS.forEach(c => { o[c.pdf || c.label] = c.type === "money" ? num(r[c.key]) : c.type === "date" ? fmtDate(r[c.key]) : String(r[c.key] ?? ""); }); return o; });
   const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ "Ref #": "" }]);
@@ -458,7 +457,12 @@ function householdsXlsx() {
   ws["!cols"] = hdr.map(h => ({ wch: h === "Name" ? 42 : h === "Solicitor" ? 22 : Math.max(10, h.length + 2) }));
   hdr.forEach((h, ci) => { const c = COLS.find(x => (x.pdf || x.label) === h); if (c && c.type === "money") for (let ri = 1; ri <= data.length; ri++) { const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })]; if (cell) cell.z = "$#,##0"; } });
   ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length, c: hdr.length - 1 } }) };
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Households");
+  return ws;
+}
+function fullXlsx() {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, overviewSheet(), "Overview");
+  XLSX.utils.book_append_sheet(wb, householdsSheet(), "Households");
   return wb;
 }
 const xlsxBlob = wb => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -473,10 +477,10 @@ function wire(btnId, make, name, fbId, kind) {
     }, 30);
   };
 }
-wire("ov-pdf", overviewPdf, () => `Projections Overview - ${fileDate()}.pdf`, "ov-fb", "pdf");
-wire("ov-xlsx", overviewXlsx, () => `Projections Overview - ${fileDate()}.xlsx`, "ov-fb", "xlsx");
-wire("hh-pdf", householdsPdf, () => `Projections - ${fileDate()}.pdf`, "hh-fb", "pdf");
-wire("hh-xlsx", householdsXlsx, () => `Projections Households - ${fileDate()}.xlsx`, "hh-fb", "xlsx");
+wire("ov-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "ov-fb", "pdf");
+wire("ov-xlsx", fullXlsx, () => `Projections - ${fileDate()}.xlsx`, "ov-fb", "xlsx");
+wire("hh-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "hh-fb", "pdf");
+wire("hh-xlsx", fullXlsx, () => `Projections - ${fileDate()}.xlsx`, "hh-fb", "xlsx");
 
 /* ===== Quick-look panel ===== */
 let lastFocus = null, current = null;
