@@ -731,11 +731,11 @@ function chartVolume(cols, label) {
   }
   cols.forEach((c, i) => { g += `<text class="ax" text-anchor="middle" x="${x(i)}" y="${H - B + 18}">${tspans(catLabel(c), x(i), 13)}</text>`; });
   const line = (key, yf, color, fmt, dy) => {
-    const pts = cols.map((c, i) => c[key] === null || c[key] === undefined ? null : [x(i), yf(c[key]), c[key]]);
+    const pts = cols.map((c, i) => c[key] === null || c[key] === undefined ? null : [x(i), yf(c[key]), c[key], catLabel(c).replace("\n", " ")]);
     let d = "", started = false;
     pts.forEach(p => { if (!p) { started = false; return; } d += (started ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1); started = true; });
     let out = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
-    pts.forEach(p => { if (!p) return; out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${color}"/>`;
+    pts.forEach(p => { if (!p) return; out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${color}"/><circle cx="${p[0]}" cy="${p[1]}" r="11" fill="transparent" style="cursor:default"><title>${esc(p[3])}: ${esc(fmt(p[2]))}</title></circle>`;
       if (!showLabels) return;
       const side = key === "d" && p === pts[pts.length - 1] && gi >= 0;
       out += side ? `<text class="lbl" x="${p[0] + 9}" y="${p[1] + 4}" style="fill:${color}">${fmt(p[2])}</text>`
@@ -893,20 +893,20 @@ function societyCols(s, mode, fr) {
 function renderSocieties(s, funds) {
   const ui = BS.ui, Y = s.year, mon = monthOf(s.throughDate), fr = ui.fr, mode = fr ? "annual" : ui.socMode;
   const cols = societyCols(s, mode, fr);
-  const title = `Giving Societies Report through ${mon} ${Y}` + (fr ? ` — ${fr}` : "");
+  const title = `Giving Societies Report through ${mon} ${Y}`;
   const series = fr ? SOCIETIES.filter(x => x.k !== "legacy") : SOCIETIES;
   const head = `<tr><th class="txt">Giving Society</th>${cols.map(c => `<th class="${c.hl || c.proj ? "hl" : ""}">${esc(c.label)}</th>`).join("")}</tr>`;
   const rows = [...series].map(sc => `<tr><td class="txt"><i class="sw" style="background:${sc.color}"></i>${esc(sc.label)}</td>` +
     cols.map(c => { const v = c.vals[sc.k]; return `<td class="${c.hl || c.proj ? "hl" : ""}${v === null || v === undefined ? " dim" : ""}">${intOrDash(v)}</td>`; }).join("") + `</tr>`).join("");
   $("bs-societies").innerHTML = `
-    <div class="card-head"><div><h2>${esc(title)}</h2><div class="sub">Households by giving level. Gen Anonymous is not counted.</div></div>
-      <div class="card-tools">
+    <div class="card-head"><div><h2>${esc(title)}</h2><div class="sub">${fr ? `<b>${esc(fr)}</b> · ` : ""}Households by giving level. Gen Anonymous is not counted.</div></div></div>
+      <div class="card-tools" style="margin-bottom:6px">
         <select id="bs-fr" aria-label="Fundraiser"><option value="">All fundraisers</option>${funds.map(f => `<option${f === fr ? " selected" : ""}>${esc(f)}</option>`).join("")}</select>
         ${segBtns("soc", mode, !!fr)}
         <label><input type="checkbox" id="bs-proj"${ui.proj ? " checked" : ""}> Projected year-end</label>
         <label><input type="checkbox" id="bs-spec"${ui.spec ? " checked" : ""}> Projected + speculative</label>
-      </div></div>
-    <div class="chart">${chartStack(cols, series, title)}</div>
+      </div>
+    <div class="chart">${chartStack(cols, series, title + (fr ? " — " + fr : ""))}</div>
     ${legendHtml(series)}
     <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
     ${fr ? `<p class="bs-note">Fundraiser view shows 2024 forward only. Earlier years are available as organization-wide totals. Prior-year figures reflect each household’s fundraiser assignment as of this snapshot.</p>` : ""}
