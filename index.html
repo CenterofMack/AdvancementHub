@@ -77,19 +77,54 @@
   .controls select,.controls input[type=search]{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:#fff}
   .controls input[type=search]{width:220px}
   .controls label{display:flex;gap:6px;align-items:center;color:var(--muted)}
-  .tablewrap{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:70vh}
-  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;contain:content}
-  th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid #EDF0F4}
+  .tablecard{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .topscroll{overflow-x:auto;overflow-y:hidden;background:#F7F9FC;border-bottom:1px solid var(--line)}
+  .topscroll div{height:1px}
+  .tablewrap{overflow:auto;max-height:min(62vh,560px)}
+  table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid #EDF0F4;background:var(--white)}
   th.txt,td.txt{text-align:left}
-  thead th{position:sticky;top:0;background:#F0F3F8;color:var(--navy-deep);font-weight:600;font-size:12.5px;cursor:pointer;user-select:none;z-index:1;border-bottom:1px solid var(--line)}
-  thead th[aria-sort="ascending"]::after{content:" ▲";font-size:9px}
-  thead th[aria-sort="descending"]::after{content:" ▼";font-size:9px}
-  tbody tr:hover{background:#F7F9FC}
-  td.name{max-width:280px;overflow:hidden;text-overflow:ellipsis}
+
+  /* Group band row */
+  tr.grp th{position:sticky;top:0;z-index:3;height:30px;padding:6px 12px;line-height:18px;font-size:12px;font-weight:600;color:#fff;text-align:center;border-bottom:0;cursor:default}
+  tr.grp th.b-con{background:var(--navy-deep);text-align:left}
+  tr.grp th.b-proj{background:#2F5C9A}
+  tr.grp th.b-cur{background:#2E6B47}
+  tr.grp th.b-prior{background:#6B7585}
+  tr.grp th.b-opp{background:#8A6D1E}
+  tr.grp th.b-oth{background:#5E6878}
+  tr.grp th.gs{border-left:2px solid rgba(255,255,255,.45)}
+
+  /* Column header row */
+  tr.cols th{position:sticky;top:30px;z-index:2;background:#F0F3F8;color:var(--navy-deep);font-weight:600;font-size:12.5px;cursor:pointer;user-select:none;border-bottom:1px solid var(--line)}
+  tr.cols th[aria-sort="ascending"]::after{content:" ▲";font-size:9px}
+  tr.cols th[aria-sort="descending"]::after{content:" ▼";font-size:9px}
+  tr.cols th.rn{cursor:default}
+
+  /* Group dividers and highlighted columns */
+  .gs{border-left:2px solid #C9D2DF}
+  tr.cols th.t-proj{background:#DCE7F7}
+  tr.cols th.t-cur{background:#D5EBDD}
+  td.t-proj{background:#EEF4FC;font-weight:600;color:var(--navy-deep)}
+  td.t-cur{background:#EAF5EE;font-weight:600;color:#1F4D33}
+  tbody tr:hover td{background:#F4F7FB}
+  tbody tr:hover td.t-proj{background:#E2ECF9}
+  tbody tr:hover td.t-cur{background:#DDEFE3}
+
+  /* Row number and frozen Name */
+  td.rn,th.rn{color:var(--muted);font-size:12px;font-weight:500;min-width:48px;text-align:right}
+  .frz0{position:sticky;left:0;z-index:1}
+  .frz1{position:sticky;left:var(--rnw,48px);z-index:1;box-shadow:inset -1px 0 0 var(--line)}
+  tr.cols th.frz0,tr.cols th.frz1{z-index:4}
+  tr.grp th.frz0{z-index:5}
+  td.name{max-width:260px;overflow:hidden;text-overflow:ellipsis}
   td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
   td.name button:hover{border-bottom-color:var(--navy)}
   td.zero{color:#B6BDC8}
-  tfoot td{position:sticky;bottom:0;background:#F0F3F8;font-weight:700;border-top:2px solid var(--navy)}
+  tfoot td{position:sticky;bottom:0;z-index:2;background:#F0F3F8;font-weight:700;border-top:2px solid var(--navy)}
+  tfoot td.t-proj{background:#DCE7F7}
+  tfoot td.t-cur{background:#D5EBDD}
+  tfoot td.frz0,tfoot td.frz1{z-index:3}
   .more{display:flex;gap:8px;justify-content:center;margin:14px 0 4px}
 
   .scrim{position:fixed;inset:0;background:rgba(23,42,73,.28);z-index:20}
@@ -118,7 +153,7 @@
   <div class="brand">Advancement Hub</div>
   <nav class="tabs" role="tablist" aria-label="Reports">
     <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
-    <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Households</button>
+    <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
     <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Board Slides</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
   </nav>
@@ -145,7 +180,7 @@
 
   <section class="panel" id="panel-Households" hidden>
     <div class="head">
-      <div><h1>Households</h1><div class="count" id="hh-count"></div></div>
+      <div><h1>Projections Data</h1><div class="asof" id="hh-asof"></div><div class="count" id="hh-count"></div></div>
       <div class="actions">
         <span class="fallback" id="hh-fb"></span>
         <button class="btn" id="hh-xlsx">Download Excel</button>
@@ -158,7 +193,10 @@
       <label><input type="checkbox" id="f-activity"> 2026 activity only</label>
       <label><input type="checkbox" id="f-open"> Open projections only</label>
     </div>
-    <div class="tablewrap"><table id="hh"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <div class="tablecard">
+      <div class="topscroll" id="topscroll" aria-hidden="true"><div id="topscroll-inner"></div></div>
+      <div class="tablewrap" id="tablewrap"><table id="hh"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    </div>
     <div class="more" id="more" hidden>
       <button class="btn" id="btn-more">Show 100 more</button>
       <button class="btn" id="btn-all">Show all</button>
@@ -225,6 +263,7 @@ function selectTab(name) {
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
   document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + name);
   closeDrawer();
+  if (name === "Households") requestAnimationFrame(sizeTopScroll);
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
 function applyAccess(access) {
@@ -259,10 +298,16 @@ function load() {
 }
 
 /* ===== Overview ===== */
+function dataThrough() {
+  const v = HEADER.value; if (!v) return "";
+  const d = toDate(v);
+  return d && !/[a-z]/i.test(String(v).replace(/^data through/i, "")) ? "Data through " + fmtDate(v) : String(v);
+}
 function renderOverview(rows) {
   OV = rows.map(r => ({ section: r.Section, label: r.Label, value: r.Value, format: (r.Format || "").trim() }));
   const h = OV.find(r => r.section === "Header");
-  if (h) { HEADER = h; $("ov-title").textContent = h.label; $("ov-asof").textContent = h.value; }
+  if (h) { HEADER = h; $("ov-title").textContent = h.label; $("ov-asof").textContent = dataThrough(); }
+  $("hh-asof").textContent = dataThrough();
   const fr = OV.filter(r => r.section === "Fundraising"); const v = i => num(fr[i] && fr[i].value);
   const goal = v(1), moneyIn = v(2), projected = v(3), ye = v(4), vsGoal = v(5), pctGoal = v(6);
   const scale = Math.max(goal, ye) * 1.08 || 1;
@@ -335,7 +380,7 @@ function buildTable(rows) {
   KEYS = { total: find(/^Total Money In & Projected/), original: find(/^Original \d{4} Projection$/), years, curYear: years[0] };
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   $("f-activity").parentElement.lastChild.textContent = ` ${yr} activity only`;
-  COLS = [
+  const cols = [
     { key: "Name", label: "Name", type: "name", group: "Constituent" },
     { key: "ID", label: "ID", type: "text", group: "Constituent" },
     { key: "Solicitor", label: "Fundraiser", pdf: "Solicitor", type: "text", group: "Constituent" },
@@ -350,6 +395,12 @@ function buildTable(rows) {
     { key: "Last Action Date", label: "Last action", type: "date", group: "Other", screenOnly: true },
     { key: "Prospect Status", label: "Status", type: "text", group: "Other", screenOnly: true }
   ].filter(c => c.key && keys.includes(c.key));
+  const bandOf = { Constituent: "con", Projected: "proj", Opportunity: "opp", Other: "oth" };
+  COLS = cols.map(c => ({
+    ...c,
+    band: c.group === "Actual" ? (c.key === KEYS.curYear ? "cur" : "prior") : bandOf[c.group],
+    tint: c.key === KEYS.total ? "t-proj" : c.key === KEYS.curYear ? "t-cur" : ""
+  }));
   sortKey = KEYS.total || null;
   const funds = [...new Set(rows.map(r => r.Solicitor).filter(Boolean))].sort();
   $("f-fundraiser").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
@@ -373,28 +424,68 @@ function view() {
 }
 function drawTable() {
   VIEW = view(); const t = $("hh");
-  t.tHead.innerHTML = "<tr>" + COLS.map(c => `<th class="${c.type === "money" ? "" : "txt"}" data-k="${esc(c.key)}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(c.label)}</th>`).join("") + "</tr>";
-  t.tHead.querySelectorAll("th").forEach(th => th.onclick = () => {
+  const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
+  const bandLabel = { con: "Constituent", proj: `${yr} projected`, cur: `${yr} money in`, prior: "Prior years", opp: "Opportunity", oth: "Other" };
+  const bands = [];
+  COLS.forEach((c, i) => { const b = bands[bands.length - 1]; if (b && b.band === c.band) b.span++; else bands.push({ band: c.band, span: 1, start: i }); });
+  const starts = new Set(bands.slice(1).map(b => b.start));
+  const cls = (c, i, extra) => [c.type === "money" ? "" : "txt", c.type === "name" ? "frz1" : "", starts.has(i) ? "gs" : "", c.tint || "", extra || ""].filter(Boolean).join(" ");
+
+  let grp = "";
+  bands.forEach((b, bi) => {
+    if (bi === 0 && COLS[0] && COLS[0].type === "name") {
+      grp += `<th class="b-${b.band} frz0" colspan="2">${esc(bandLabel[b.band])}</th>`;
+      if (b.span > 1) grp += `<th class="b-${b.band}" colspan="${b.span - 1}"></th>`;
+    } else grp += `<th class="b-${b.band}${bi ? " gs" : ""}" colspan="${b.span + (bi ? 0 : 1)}">${esc(bandLabel[b.band] || "")}</th>`;
+  });
+  t.tHead.innerHTML = `<tr class="grp">${grp}</tr>` +
+    `<tr class="cols"><th class="rn frz0">#</th>` + COLS.map((c, i) => `<th class="${cls(c, i)}" data-k="${esc(c.key)}" aria-sort="${c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(c.label)}</th>`).join("") + "</tr>";
+  t.tHead.querySelectorAll("tr.cols th[data-k]").forEach(th => th.onclick = () => {
     const k = th.dataset.k; if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = COLS.find(c => c.key === k).type === "money" ? -1 : 1; } drawTable(); });
-  t.tBodies[0].innerHTML = VIEW.slice(0, shown).map((r, i) => "<tr>" + COLS.map(c => {
+
+  t.tBodies[0].innerHTML = VIEW.slice(0, shown).map((r, ri) => `<tr><td class="rn frz0">${ri + 1}</td>` + COLS.map((c, i) => {
     const v = r[c.key];
-    if (c.type === "money") { const n = num(v); return `<td class="${n === 0 ? "zero" : n < 0 ? "neg" : ""}">${n === 0 ? "–" : money(n)}</td>`; }
-    if (c.type === "date") return `<td class="txt">${fmtDate(v)}</td>`;
-    if (c.type === "name") return `<td class="name txt"><button data-i="${i}" title="Quick look">${esc(v)}</button></td>`;
-    return `<td class="txt" title="${esc(v)}">${esc(v)}</td>`;
+    if (c.type === "money") { const n = num(v); return `<td class="${cls(c, i, n === 0 ? "zero" : n < 0 ? "neg" : "")}">${n === 0 ? "–" : money(n)}</td>`; }
+    if (c.type === "date") return `<td class="${cls(c, i)}">${fmtDate(v)}</td>`;
+    if (c.type === "name") return `<td class="${cls(c, i, "name")}"><button data-i="${ri}" title="Quick look">${esc(v)}</button></td>`;
+    return `<td class="${cls(c, i)}" title="${esc(v)}">${esc(v)}</td>`;
   }).join("") + "</tr>").join("");
   t.tBodies[0].querySelectorAll("td.name button").forEach(b => b.onclick = () => openDrawer(VIEW[+b.dataset.i]));
-  t.tFoot.innerHTML = "<tr>" + COLS.map((c, i) => i === 0 ? `<td class="txt">Total (${VIEW.length.toLocaleString()})</td>` :
-    c.type !== "money" ? "<td></td>" : `<td>${money(VIEW.reduce((s, r) => s + num(r[c.key]), 0))}</td>`).join("") + "</tr>";
+
+  t.tFoot.innerHTML = `<tr><td class="rn frz0"></td>` + COLS.map((c, i) => i === 0 ? `<td class="${cls(c, i)}">Total (${VIEW.length.toLocaleString()})</td>` :
+    c.type !== "money" ? `<td class="${cls(c, i)}"></td>` : `<td class="${cls(c, i)}">${money(VIEW.reduce((s, r) => s + num(r[c.key]), 0))}</td>`).join("") + "</tr>";
+
+  const rn = t.querySelector("tr.cols th.rn");
+  if (rn) t.style.setProperty("--rnw", rn.getBoundingClientRect().width + "px");
   const showing = Math.min(shown, VIEW.length);
   $("hh-count").textContent = `${VIEW.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households` + (showing < VIEW.length ? ` (showing ${showing.toLocaleString()})` : "");
   $("more").hidden = showing >= VIEW.length;
+  requestAnimationFrame(sizeTopScroll);
 }
+
+/* Scroll bar across the top, kept in step with the table */
+function sizeTopScroll() {
+  const ts = $("topscroll"), tw = $("tablewrap");
+  if (!tw.clientWidth) return;
+  ts.hidden = false;
+  $("topscroll-inner").style.width = (tw.scrollWidth + (ts.clientWidth - tw.clientWidth)) + "px";
+  ts.hidden = tw.scrollWidth <= tw.clientWidth + 1;
+  ts.scrollLeft = tw.scrollLeft;
+}
+$("topscroll").addEventListener("scroll", () => { if ($("tablewrap").scrollLeft !== $("topscroll").scrollLeft) $("tablewrap").scrollLeft = $("topscroll").scrollLeft; });
+$("tablewrap").addEventListener("scroll", () => { if ($("topscroll").scrollLeft !== $("tablewrap").scrollLeft) $("topscroll").scrollLeft = $("tablewrap").scrollLeft; });
+window.addEventListener("resize", () => requestAnimationFrame(sizeTopScroll));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { const rn = document.querySelector("#hh tr.cols th.rn"); if (rn) $("hh").style.setProperty("--rnw", rn.getBoundingClientRect().width + "px"); sizeTopScroll(); });
+
 $("btn-more").onclick = () => { shown += PAGE; drawTable(); };
 $("btn-all").onclick = () => { shown = Infinity; drawTable(); };
 
 function drawHouseholds(doc) {
   doc.addPage();
+  doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(23, 42, 73);
+  doc.text("Projections Data", 18, 30);
+  doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(94, 104, 120);
+  doc.text(pdfText(dataThrough()), 130, 30);
   const rows = VIEW, cols = COLS.filter(c => !c.screenOnly);
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   const groupNames = { Constituent: "Constituent", Projected: `${yr} Projected`, Actual: "Actual", Opportunity: "Opportunity" };
@@ -410,7 +501,7 @@ function drawHouseholds(doc) {
   const colStyles = { 0: { halign: "right", cellWidth: 24 } };
   cols.forEach((c, i) => { colStyles[i + 1] = c.type === "money" ? { halign: "right" } : c.key === "Name" ? { cellWidth: 210 } : c.key === "ID" ? { cellWidth: 34 } : c.key === "Solicitor" ? { cellWidth: 90 } : {}; });
   doc.autoTable({
-    head, body, foot, showFoot: "lastPage", showHead: "everyPage", theme: "plain", startY: 28,
+    head, body, foot, showFoot: "lastPage", showHead: "everyPage", theme: "plain", startY: 44,
     margin: { top: 28, left: 18, right: 18, bottom: 30 },
     styles: { font: "helvetica", fontSize: 7, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: [28, 37, 51], overflow: "ellipsize" },
     headStyles: { fillColor: [33, 58, 99], textColor: 255, fontStyle: "bold", overflow: "linebreak", valign: "bottom" },
@@ -435,7 +526,7 @@ function fullPdf() {
 function footer(doc, p, total) {
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
   doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(94, 104, 120);
-  doc.text(`Printed: ${today()}`, 18, H - 14);
+  doc.text(pdfText(`Printed: ${today()}` + (dataThrough() ? `  |  ${dataThrough()}` : "")), 18, H - 14);
   doc.text(CONF, W / 2, H - 14, { align: "center" });
   doc.text(`Page ${p} of ${total}`, W - 18, H - 14, { align: "right" });
 }
@@ -462,7 +553,7 @@ function householdsSheet() {
 function fullXlsx() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, overviewSheet(), "Overview");
-  XLSX.utils.book_append_sheet(wb, householdsSheet(), "Households");
+  XLSX.utils.book_append_sheet(wb, householdsSheet(), "Projections Data");
   return wb;
 }
 const xlsxBlob = wb => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
