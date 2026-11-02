@@ -145,7 +145,42 @@
   .notice.err{border-left-color:var(--red)}
   .soon,.loading{color:var(--muted)}
   .loading{padding:40px 0}
-  @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} }
+
+  /* ===== Board Slides ===== */
+  .bs-through{display:flex;gap:8px;align-items:center;color:var(--muted)}
+  .bs-through select{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:#fff;min-width:170px}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px 24px 22px;margin-bottom:22px}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .card-head .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .card-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .card-tools select{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:#fff}
+  .card-tools label{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:13px}
+  .segbtn{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .segbtn button{background:#fff;border:0;padding:6px 12px;cursor:pointer;font-weight:500;color:var(--muted)}
+  .segbtn button+button{border-left:1px solid var(--line)}
+  .segbtn button[aria-pressed="true"]{background:var(--navy);color:#fff}
+  .segbtn button:disabled{cursor:not-allowed;opacity:.45}
+  .chart svg{display:block;width:100%;height:auto}
+  .chart text{font-family:var(--sans);fill:var(--ink)}
+  .chart .ax{fill:var(--muted);font-size:11px}
+  .chart .cl{font-size:12.5px;font-weight:500}
+  .chart .lbl{font-size:11px;font-weight:600}
+  .bs-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:8px 0 12px}
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 10px}
+  .stat{border:1px solid var(--line);border-radius:8px;padding:9px 14px;background:#F7F9FC}
+  .stat .k{font-size:12px;color:var(--muted)}
+  .stat .v{font-family:var(--serif);font-weight:700;font-size:19px;color:var(--navy-deep)}
+  .bs-tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px}
+  table.bs{font-size:12.5px}
+  table.bs th{background:#F0F3F8;color:var(--navy-deep);font-weight:600;font-size:12px;white-space:normal;vertical-align:bottom;min-width:86px;border-bottom:1px solid var(--line)}
+  table.bs th.txt,table.bs td.txt{position:sticky;left:0;z-index:1;min-width:190px;box-shadow:inset -1px 0 0 var(--line)}
+  table.bs th.txt{background:#F0F3F8}
+  table.bs td.dim{color:#B6BDC8}
+  table.bs th.hl{background:#DCE7F7}
+  table.bs td.hl{background:#EEF4FC}
+  table.bs tr:last-child td{border-bottom:0}
+  .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
+  @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
 </head>
 <body>
@@ -203,7 +238,21 @@
     </div>
   </section>
 
-  <section class="panel" id="panel-BoardSlides" hidden><p class="soon">Board Slides is coming next.</p></section>
+  <section class="panel" id="panel-BoardSlides" hidden>
+    <div class="head">
+      <div><h1>Board Slides</h1><div class="asof" id="bs-asof"></div></div>
+      <div class="actions">
+        <label class="bs-through" for="bs-month">Through <select id="bs-month" aria-label="Report through"></select></label>
+      </div>
+    </div>
+    <div id="bs-msg"></div>
+    <div id="bs-body" hidden>
+      <div class="card" id="bs-revenue"></div>
+      <div class="card" id="bs-volume"></div>
+      <div class="card" id="bs-societies"></div>
+      <div class="card" id="bs-quarterly"></div>
+    </div>
+  </section>
   <section class="panel" id="panel-Retention" hidden><p class="soon">Donor Retention is coming next.</p></section>
 </main>
 
@@ -220,6 +269,7 @@
 <script>
 /* ===== Settings ===== */
 const FLOW_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/24/workflows/bffe634be4ee4f0a88f09facc45f4340/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tr64EO3kpi3AVQYb_F3tQHyGG1KcOpgoltkR8F1YGn0";
+const BOARD_URL = "PASTE_THE_BOARD_SLIDES_FLOW_URL_HERE";
 const OWNER = "Chris Smith";
 const ENV_ID = "p-6dq4GyJXXEarYflLLsQhUA";
 const RECORD_URL = id => `https://host.nxt.blackbaud.com/constituent/records/${encodeURIComponent(id)}?envid=${ENV_ID}&svcid=renxt`;
@@ -264,6 +314,7 @@ function selectTab(name) {
   document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + name);
   closeDrawer();
   if (name === "Households") requestAnimationFrame(sizeTopScroll);
+  if (name === "BoardSlides" && !BS.month && !BS.loading) loadBoard();
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
 function applyAccess(access) {
@@ -572,6 +623,322 @@ wire("ov-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "ov-fb", "pdf")
 wire("ov-xlsx", fullXlsx, () => `Projections - ${fileDate()}.xlsx`, "ov-fb", "xlsx");
 wire("hh-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "hh-fb", "pdf");
 wire("hh-xlsx", fullXlsx, () => `Projections - ${fileDate()}.xlsx`, "hh-fb", "xlsx");
+
+/* ===== Board Slides ===== */
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const SOCIETIES = [ // bottom of the stack first
+  { k: "presidents", label: "President's $1K - $9,999", re: /^President/i, lo: 1e3, hi: 1e4, color: "#2F5C9A" },
+  { k: "1851", label: "1851 $10K - $49,999", re: /^1851/, lo: 1e4, hi: 5e4, color: "#C0504D" },
+  { k: "liberty", label: "Liberty $50K - $99,999", re: /^Liberty/i, lo: 5e4, hi: 1e5, color: "#8AA84B" },
+  { k: "patriot", label: "Patriot $100K - $999,999", re: /^Patriot/i, lo: 1e5, hi: 1e6, color: "#7B5EA7" },
+  { k: "lifetime", label: "Lifetime $1M+", re: /^Lifetime/i, lo: 1e6, hi: Infinity, color: "#3E9BB5" },
+  { k: "legacy", label: "Legacy", re: /^Legacy/i, color: "#E8892E" }
+];
+const QCOLORS = ["#7B3FA0", "#3F6FC4", "#C0392B", "#7DB843"];
+const FIRST_YEAR = 2008;
+const BS = { cache: {}, months: [], month: null, history: {}, loading: false,
+  ui: { volMode: "avg", socMode: "avg", fr: "", proj: false, spec: false } };
+
+const blank = v => v === null || v === undefined || String(v).trim() === "";
+const numOrNull = v => blank(v) ? null : num(v);
+const keyOf = (row, re) => Object.keys(row || {}).find(k => re.test(k));
+const monthLabel = m => { const [y, mo] = String(m).split("-"); return (MONTH_NAMES[+mo - 1] || "") + " " + y; };
+const longDate = s => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return `${MONTH_NAMES[m - 1]} ${d}, ${y}`; };
+const monthOf = s => MONTH_NAMES[Number(String(s).slice(5, 7)) - 1];
+const avgOf = arr => { const v = arr.filter(x => x !== null && x !== undefined); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+const round100 = n => n === null ? null : Math.round(n / 100) * 100;
+const intOrDash = n => n === null || n === undefined ? "–" : Math.round(n).toLocaleString("en-US");
+
+function boardMsg(title, text, retry) {
+  $("bs-body").hidden = true;
+  $("bs-msg").innerHTML = `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="bs-retry">Try again</button>' : ""}</div>`;
+  if (retry) $("bs-retry").onclick = () => loadBoard(BS.month || undefined);
+}
+
+function loadBoard(month) {
+  if (month && BS.cache[month]) { BS.month = month; renderBoard(); return; }
+  if (/^PASTE_/.test(BOARD_URL)) { boardMsg("Board Slides isn't connected yet", "The Board Slides flow address hasn't been added to this page.", false); return; }
+  BS.loading = true; $("bs-month").disabled = true;
+  $("bs-body").hidden = true; $("bs-msg").innerHTML = `<div class="loading">Loading board slides…</div>`;
+  client.getUserIdentityToken()
+    .then(token => fetch(BOARD_URL + "&tab=" + encodeURIComponent("Board Slides") + (month ? "&month=" + encodeURIComponent(month) : ""), { method: "POST", body: token }))
+    .then(async res => {
+      if (res.status === 403) { boardMsg("You don't have access to Board Slides", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      if (!res.ok) { boardMsg("Board Slides didn't load", `The data service returned an error (status ${res.status}).`, true); return; }
+      const d = await res.json();
+      if (!d.snapshot) { boardMsg("No board slides yet", "No monthly snapshots were found in the Board Slides folder.", false); return; }
+      BS.months = (d.months || []).map(m => m.month).filter(Boolean);
+      BS.history = d.history || {};
+      BS.month = d.month;
+      BS.cache[d.month] = d.snapshot;
+      fillMonths();
+      renderBoard();
+    })
+    .catch(() => boardMsg("Board Slides didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
+    .finally(() => { BS.loading = false; $("bs-month").disabled = false; });
+}
+function fillMonths() {
+  $("bs-month").innerHTML = BS.months.map(m => `<option value="${esc(m)}">${esc(monthLabel(m))}</option>`).join("");
+  $("bs-month").value = BS.month;
+}
+$("bs-month").addEventListener("change", e => loadBoard(e.target.value));
+
+function renderBoard() {
+  const s = BS.cache[BS.month]; if (!s) return;
+  $("bs-asof").textContent = "Through " + longDate(s.throughDate);
+  const funds = [...new Set((s.households || []).map(h => h.fundraiser).filter(Boolean))].sort();
+  if (BS.ui.fr && !funds.includes(BS.ui.fr)) BS.ui.fr = "";
+  renderRevenue(s); renderVolume(s); renderSocieties(s, funds); renderQuarterly(s);
+  $("bs-msg").innerHTML = ""; $("bs-body").hidden = false;
+}
+
+/* --- SVG chart pieces --- */
+const svgOpen = (w, h, label) => `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}" xmlns="http://www.w3.org/2000/svg">`;
+const tspans = (text, x, lh) => String(text).split("\n").map((t, i) => `<tspan x="${x}" dy="${i ? lh : 0}">${esc(t)}</tspan>`).join("");
+const niceMax = v => { if (!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; };
+
+function chartHBar(items, label) {
+  const W = 900, rowH = 58, T = 8, L = 190, R = 90, H = T + items.length * rowH + 8;
+  const max = Math.max(...items.map(i => i.value)) * 1.04 || 1, sc = v => (W - L - R) * Math.max(0, v) / max;
+  let g = `<line x1="${L}" y1="${T}" x2="${L}" y2="${H - 8}" stroke="#C9D2DF"/>`;
+  items.forEach((it, i) => {
+    const y = T + i * rowH + 15, bw = sc(it.value), lines = String(it.label).split("\n").length;
+    g += `<text class="cl" text-anchor="end" x="${L - 12}" y="${y + 19 - (lines - 1) * 7}">${tspans(it.label, L - 12, 15)}</text>`;
+    g += `<rect x="${L}" y="${y}" width="${bw}" height="28" rx="2" fill="#1F5F7F"/>`;
+    g += `<text class="lbl" x="${L + bw + 8}" y="${y + 19}" style="font-size:13px">${shortM(it.value)}</text>`;
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+
+function catLabel(c) {
+  const m = /^(\d{4}) - (\d{4}) Average$/.exec(c.label);
+  if (m) return `${m[1]}–${m[2]}\nAverage`;
+  return c.current ? `${c.label}\nProjected` : c.label;
+}
+
+function chartVolume(cols, label) {
+  const W = 960, H = 360, L = 64, R = 64, T = 34, B = 52, n = cols.length, step = (W - L - R) / n, x = i => L + step * (i + 0.5);
+  const maxD = niceMax(Math.max(...cols.map(c => Math.max(c.d || 0, c.goal || 0))) * 1.12);
+  const maxN = niceMax(Math.max(...cols.map(c => c.n || 0)) * 1.12);
+  const yD = v => T + (H - T - B) * (1 - v / maxD), yN = v => T + (H - T - B) * (1 - v / maxN);
+  const showLabels = n <= 10, gi = cols.findIndex(c => c.goal);
+  let g = "";
+  for (let k = 0; k <= 4; k++) {
+    const y = T + (H - T - B) * k / 4;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#EDF0F4"/>`;
+    g += `<text class="ax" x="${L - 8}" y="${y + 4}" text-anchor="end">$${(maxD * (1 - k / 4) / 1e6).toFixed(maxD >= 1e7 ? 0 : 1)}M</text>`;
+    g += `<text class="ax" x="${W - R + 8}" y="${y + 4}">${Math.round(maxN * (1 - k / 4)).toLocaleString()}</text>`;
+  }
+  cols.forEach((c, i) => { g += `<text class="ax" text-anchor="middle" x="${x(i)}" y="${H - B + 18}">${tspans(catLabel(c), x(i), 13)}</text>`; });
+  const line = (key, yf, color, fmt, dy) => {
+    const pts = cols.map((c, i) => c[key] === null || c[key] === undefined ? null : [x(i), yf(c[key]), c[key]]);
+    let d = "", started = false;
+    pts.forEach(p => { if (!p) { started = false; return; } d += (started ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1); started = true; });
+    let out = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
+    pts.forEach(p => { if (!p) return; out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${color}"/>`;
+      if (!showLabels) return;
+      const side = key === "d" && p === pts[pts.length - 1] && gi >= 0;
+      out += side ? `<text class="lbl" x="${p[0] + 9}" y="${p[1] + 4}" style="fill:${color}">${fmt(p[2])}</text>`
+                  : `<text class="lbl" text-anchor="middle" x="${p[0]}" y="${p[1] + dy}" style="fill:${color}">${fmt(p[2])}</text>`; });
+    return out;
+  };
+  g += line("n", yN, "#213A63", v => Math.round(v).toLocaleString(), -10);
+  g += line("d", yD, "#D9541E", v => shortM(v), 18);
+  if (gi >= 0) {
+    const gx = x(gi), gy = yD(cols[gi].goal);
+    g += `<path d="M${gx - 7},${gy} L${gx},${gy - 7} L${gx + 7},${gy} L${gx},${gy + 7} Z" fill="#C9A33F" stroke="#fff" stroke-width="1.5"/>`;
+    g += `<text class="lbl" x="${gx}" y="${gy + 24}" text-anchor="middle" style="fill:#8A6D1E">Goal ${shortM(cols[gi].goal)}</text>`;
+  }
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+
+function chartStack(cols, series, label) {
+  const W = 960, H = 340, L = 48, R = 16, T = 24, B = 52, n = cols.length, step = (W - L - R) / n, bw = Math.min(64, step * 0.62);
+  const tot = c => series.reduce((s, sr) => s + (c.vals[sr.k] || 0), 0);
+  const max = Math.max(4, Math.ceil(niceMax(Math.max(...cols.map(tot)) * 1.1) / 4) * 4), y = v => T + (H - T - B) * (1 - v / max);
+  let g = "";
+  for (let k = 0; k <= 4; k++) {
+    const yy = T + (H - T - B) * k / 4;
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 8}" y="${yy + 4}" text-anchor="end">${Math.round(max * (1 - k / 4))}</text>`;
+  }
+  cols.forEach((c, i) => {
+    const cx = L + step * (i + 0.5); let acc = 0;
+    series.forEach(sr => { const v = c.vals[sr.k] || 0; if (v <= 0) return;
+      g += `<rect x="${cx - bw / 2}" y="${y(acc + v)}" width="${bw}" height="${y(acc) - y(acc + v)}" fill="${sr.color}"><title>${esc(sr.label)}: ${intOrDash(v)}</title></rect>`; acc += v; });
+    g += `<text class="lbl" text-anchor="middle" x="${cx}" y="${y(acc) - 6}">${intOrDash(acc)}</text>`;
+    g += `<text class="ax" text-anchor="middle" x="${cx}" y="${H - B + 18}"${n > 12 ? ' style="font-size:9.5px"' : ""}>${tspans(c.chartLabel || c.label, cx, 12)}</text>`;
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+
+function chartQuarters(groups, label) {
+  const W = 620, H = 400, L = 46, T = 16, B = 40, bw = 150, gap = 120;
+  const x0 = L + (W - L - 2 * bw - gap) / 2, y = p => T + (H - T - B) * (1 - p);
+  let g = "";
+  for (let k = 0; k <= 4; k++) { const yy = y(k / 4); g += `<line x1="${L}" x2="${W - 10}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 8}" y="${yy + 4}" text-anchor="end">${k * 25}%</text>`; }
+  groups.forEach((grp, gi) => {
+    const bx = x0 + gi * (bw + gap); let acc = 0;
+    grp.vals.forEach((v, qi) => {
+      const p = grp.total ? v / grp.total : 0; if (p <= 0) { return; }
+      const y1 = y(acc + p), y2 = y(acc), mid = (y1 + y2) / 2;
+      g += `<rect x="${bx}" y="${y1}" width="${bw}" height="${y2 - y1}" fill="${QCOLORS[qi]}"/>`;
+      if (y2 - y1 >= 30) g += `<text class="lbl" text-anchor="middle" x="${bx + bw / 2}" y="${mid - 2}" style="fill:#fff;font-size:12.5px">${tspans(grp.pcts[qi] + "%\n" + shortM(v), bx + bw / 2, 15)}</text>`;
+      acc += p;
+    });
+    g += `<text class="cl" text-anchor="middle" x="${bx + bw / 2}" y="${H - B + 22}">${esc(grp.label)}</text>`;
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+
+const legendHtml = items => `<div class="bs-legend">${items.map(i => `<span><i class="sw" style="background:${i.color}"></i>${esc(i.label)}</span>`).join("")}</div>`;
+const segBtns = (id, mode, disabled) => `<div class="segbtn" role="group" aria-label="View">` +
+  [["avg", "Averaged"], ["annual", "Annual"]].map(([v, t]) => `<button type="button" data-seg="${id}" data-v="${v}" aria-pressed="${mode === v}"${disabled ? " disabled" : ""}>${t}</button>`).join("") + `</div>`;
+function wireSeg(id, set) { document.querySelectorAll(`[data-seg="${id}"]`).forEach(b => b.onclick = () => { set(b.dataset.v); renderBoard(); }); }
+
+/* --- Advancement Revenue --- */
+function renderRevenue(s) {
+  const r = s.revenue, Y = s.year;
+  const items = [
+    { label: "Year to Date*", value: r.ytd },
+    { label: "Current\nProjections", value: r.projections },
+    { label: "Board Approved\nExpense Budget", value: r.budget },
+    { label: `${Y} Goal`, value: r.goal }
+  ];
+  $("bs-revenue").innerHTML = `<div class="card-head"><div><h2>${Y} Advancement Revenue</h2></div></div>
+    <div class="chart">${chartHBar(items, `${Y} Advancement Revenue`)}</div>
+    <p class="bs-note">*As of ${esc(longDate(s.throughDate))}. Money raised by Mackinac Center includes donations to affiliated entities.</p>`;
+}
+
+/* --- Volume of Donors and Dollars --- */
+function volumeCols(s, mode) {
+  const Y = s.year, C = Y - 1, ann = {}, pub = {};
+  (BS.history.volumeAnnual || []).forEach(r => { const y = num(r.Year); if (y) ann[y] = { d: numOrNull(r["Total Dollars"]), n: numOrNull(r.Donors) }; });
+  (BS.history.volumePeriods || []).forEach(r => { const y = num(r["Start Year"]); if (y) pub[y] = { d: numOrNull(r["Published Dollars"]), n: numOrNull(r["Published Donors"]) }; });
+  const cols = [];
+  let y = FIRST_YEAR;
+  if (mode === "avg") {
+    for (; y + 2 <= C; y += 3) {
+      const yrs = [y, y + 1, y + 2].map(k => ann[k]).filter(Boolean), p = pub[y] || {};
+      const d = p.d ?? avgOf(yrs.map(a => a.d)), n = p.n ?? round100(avgOf(yrs.map(a => a.n)));
+      if (d !== null || n !== null) cols.push({ label: `${y} - ${y + 2} Average`, d, n });
+    }
+  }
+  for (; y <= C; y++) if (ann[y]) cols.push({ label: String(y), d: ann[y].d, n: ann[y].n });
+  cols.push({ label: String(Y), d: s.volume.projectedTotal, n: s.volume.projectedDonors, goal: s.volume.goal, current: true });
+  return cols;
+}
+function renderVolume(s) {
+  const v = s.volume, Y = s.year, mon = monthOf(s.throughDate), mode = BS.ui.volMode;
+  const cols = volumeCols(s, mode);
+  const title = `Volume of Donors and Dollars through ${mon} ${Y}`;
+  const fmtN = (c) => c.n === null ? "–" : Math.round(c.n).toLocaleString();
+  const head = `<tr><th class="txt">Measure</th>${cols.map(c => `<th class="${c.current ? "hl" : ""}">${esc(catLabel(c).replace("\n", " "))}</th>`).join("")}</tr>`;
+  const row = (name, f) => `<tr><td class="txt">${name}</td>${cols.map(c => `<td class="${c.current ? "hl" : ""}">${f(c)}</td>`).join("")}</tr>`;
+  $("bs-volume").innerHTML = `
+    <div class="card-head"><div><h2>${esc(title)}</h2><div class="sub">${mode === "avg" ? "Three-year averages, then the current year as projected." : "Every year, then the current year as projected."}</div></div>
+      <div class="card-tools">${segBtns("vol", mode)}</div></div>
+    <div class="stats">
+      <div class="stat" title="${money(v.ytdPrior)} from ${v.donorsPrior.toLocaleString()} donors"><div class="k">${mon} ${Y - 1} YTD</div><div class="v">${shortM(v.ytdPrior)} · ${round100(v.donorsPrior).toLocaleString()} donors</div></div>
+      <div class="stat" title="${money(v.ytdCurrent)} from ${v.donorsCurrent.toLocaleString()} donors"><div class="k">${mon} ${Y} YTD</div><div class="v">${shortM(v.ytdCurrent)} · ${round100(v.donorsCurrent).toLocaleString()} donors</div></div>
+    </div>
+    <div class="chart">${chartVolume(cols, title)}</div>
+    ${legendHtml([{ color: "#D9541E", label: "Total $ (left scale)" }, { color: "#213A63", label: "Number of donors (right scale)" }, { color: "#C9A33F", label: "Fundraising goal" }])}
+    <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>
+      ${row("Total $", c => c.d === null ? "–" : money(c.d))}
+      ${row("Fundraising Goal", c => c.goal ? money(c.goal) : "")}
+      ${row("Number Donors", fmtN)}
+    </tbody></table></div>`;
+  wireSeg("vol", m => BS.ui.volMode = m);
+}
+
+/* --- Giving Societies --- */
+function socCount(hh, valueOf, fr, exclude) {
+  const out = {}; SOCIETIES.filter(x => x.lo).forEach(x => out[x.k] = 0);
+  hh.forEach(h => {
+    if (exclude.has(String(h.id)) || (fr && h.fundraiser !== fr)) return;
+    const v = valueOf(h), band = SOCIETIES.find(x => x.lo && v >= x.lo && v < x.hi);
+    if (band) out[band.k]++;
+  });
+  return out;
+}
+function socRow(r) { const o = {}; SOCIETIES.forEach(sc => { const k = keyOf(r, sc.re); o[sc.k] = k ? numOrNull(r[k]) : null; }); return o; }
+function societyCols(s, mode, fr) {
+  const Y = s.year, C = Y - 1, mon = monthOf(s.throughDate), hh = s.households || [], ex = new Set((s.societyExcludeIds || []).map(String));
+  const g = (h, k) => num(h[k]);
+  const cols = [];
+  if (fr) {
+    const years = [...new Set(hh.flatMap(h => Object.keys(h).filter(k => /^mi\d{4}$/.test(k)).map(k => +k.slice(2))))].filter(y => y <= C).sort();
+    years.forEach(y => cols.push({ label: String(y), vals: socCount(hh, h => g(h, "mi" + y), fr, ex) }));
+  } else {
+    const ann = {}; (BS.history.societyAnnual || []).forEach(r => { const y = num(r.Year); if (y) ann[y] = socRow(r); });
+    const pub = {}; (BS.history.societyPeriods || []).forEach(r => { const y = num(r["Start Year"]); if (y) pub[y] = socRow(r); });
+    let y = FIRST_YEAR;
+    if (mode === "avg") {
+      for (; y + 2 <= C; y += 3) {
+        const yrs = [y, y + 1, y + 2].map(k => ann[k]).filter(Boolean), vals = {};
+        SOCIETIES.forEach(sc => { vals[sc.k] = pub[y] ? pub[y][sc.k] : avgOf(yrs.map(a => a[sc.k])); });
+        cols.push({ label: `${y} - ${y + 2} Average`, chartLabel: `${y}–${y + 2}\nAverage`, vals });
+      }
+    }
+    for (; y <= C; y++) if (ann[y]) cols.push({ label: String(y), vals: ann[y] });
+  }
+  const ytd = (field, legacy) => { const v = socCount(hh, h => g(h, field), fr, ex); v.legacy = fr ? null : legacy; return v; };
+  cols.push({ label: `${mon} ${Y - 1} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y - 1}\nYTD`, vals: ytd("ytdPrior", s.societies.legacyYtdPrior) });
+  cols.push({ label: `${mon} ${Y} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y}\nYTD`, vals: ytd("ytdCurrent", s.societies.legacyYtdCurrent), hl: true });
+  if (BS.ui.proj) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected"), fr, ex); v.legacy = null; cols.push({ label: `${Y} Projected Year-End`, chartLabel: `${Y}\nProjected`, vals: v, proj: true }); }
+  if (BS.ui.spec) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected") + g(h, "speculative"), fr, ex); v.legacy = null; cols.push({ label: `${Y} Projected + Speculative`, chartLabel: `${Y} Proj.\n+ Spec.`, vals: v, proj: true }); }
+  if (!fr) { const goals = s.societies.goals || {}, v = {}; SOCIETIES.forEach(sc => v[sc.k] = goals[sc.k] ?? null); cols.push({ label: `${Y} Goal`, chartLabel: `${Y}\nGoal`, vals: v }); }
+  return cols;
+}
+function renderSocieties(s, funds) {
+  const ui = BS.ui, Y = s.year, mon = monthOf(s.throughDate), fr = ui.fr, mode = fr ? "annual" : ui.socMode;
+  const cols = societyCols(s, mode, fr);
+  const title = `Giving Societies Report through ${mon} ${Y}` + (fr ? ` — ${fr}` : "");
+  const series = fr ? SOCIETIES.filter(x => x.k !== "legacy") : SOCIETIES;
+  const head = `<tr><th class="txt">Giving Society</th>${cols.map(c => `<th class="${c.hl || c.proj ? "hl" : ""}">${esc(c.label)}</th>`).join("")}</tr>`;
+  const rows = [...series].map(sc => `<tr><td class="txt"><i class="sw" style="background:${sc.color}"></i>${esc(sc.label)}</td>` +
+    cols.map(c => { const v = c.vals[sc.k]; return `<td class="${c.hl || c.proj ? "hl" : ""}${v === null || v === undefined ? " dim" : ""}">${intOrDash(v)}</td>`; }).join("") + `</tr>`).join("");
+  $("bs-societies").innerHTML = `
+    <div class="card-head"><div><h2>${esc(title)}</h2><div class="sub">Households by giving level. Gen Anonymous is not counted.</div></div>
+      <div class="card-tools">
+        <select id="bs-fr" aria-label="Fundraiser"><option value="">All fundraisers</option>${funds.map(f => `<option${f === fr ? " selected" : ""}>${esc(f)}</option>`).join("")}</select>
+        ${segBtns("soc", mode, !!fr)}
+        <label><input type="checkbox" id="bs-proj"${ui.proj ? " checked" : ""}> Projected year-end</label>
+        <label><input type="checkbox" id="bs-spec"${ui.spec ? " checked" : ""}> Projected + speculative</label>
+      </div></div>
+    <div class="chart">${chartStack(cols, series, title)}</div>
+    ${legendHtml(series)}
+    <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+    ${fr ? `<p class="bs-note">Fundraiser view shows 2024 forward only. Earlier years are available as organization-wide totals. Prior-year figures reflect each household’s fundraiser assignment as of this snapshot.</p>` : ""}
+    ${ui.proj || ui.spec ? `<p class="bs-note">Projected columns count each household at its ${mon} ${Y} year-to-date giving plus outstanding projections${ui.spec ? " (and, for the last column, speculative)" : ""} as recorded in this snapshot. Legacy is not projected.</p>` : ""}`;
+  $("bs-fr").onchange = e => { BS.ui.fr = e.target.value; renderBoard(); };
+  $("bs-proj").onchange = e => { BS.ui.proj = e.target.checked; renderBoard(); };
+  $("bs-spec").onchange = e => { BS.ui.spec = e.target.checked; renderBoard(); };
+  wireSeg("soc", m => BS.ui.socMode = m);
+}
+
+/* --- Quarterly Fundraising --- */
+function wholePercents(vals) {
+  const t = vals.reduce((a, b) => a + b, 0); if (!t) return vals.map(() => 0);
+  const raw = vals.map(v => v / t * 100), fl = raw.map(Math.floor), left = 100 - fl.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => [r - fl[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, left).forEach(([, i]) => fl[i]++);
+  return fl;
+}
+function renderQuarterly(s) {
+  const q = s.quarterly, Y = s.year;
+  const groups = [{ label: String(Y - 1), vals: q.prior }, { label: String(Y), vals: q.current }]
+    .map(g => ({ ...g, total: g.vals.reduce((a, b) => a + b, 0), pcts: wholePercents(g.vals) }));
+  const title = `Quarterly Fundraising ${Y - 1} and ${Y}`;
+  const qn = ["1st", "2nd", "3rd", "4th"];
+  $("bs-quarterly").innerHTML = `<div class="card-head"><div><h2>${esc(title)}</h2>
+      <div class="sub">${Y}: completed quarters are money in; the open quarter and later ones include outstanding projections.</div></div></div>
+    <div class="chart" style="max-width:640px">${chartQuarters(groups, title)}</div>
+    ${legendHtml(qn.map((n, i) => ({ color: QCOLORS[i], label: n })))}
+    <div class="bs-tablewrap" style="max-width:640px"><table class="bs"><thead><tr><th class="txt">Quarter</th>${groups.map(g => `<th>${g.label}</th><th>%</th>`).join("")}</tr></thead><tbody>
+      ${qn.map((n, i) => `<tr><td class="txt">${n}</td>${groups.map(g => `<td>${money(g.vals[i])}</td><td>${g.pcts[i]}%</td>`).join("")}</tr>`).join("")}
+      <tr><td class="txt"><b>Total</b></td>${groups.map(g => `<td><b>${money(g.total)}</b></td><td></td>`).join("")}</tr>
+    </tbody></table></div>`;
+}
 
 /* ===== Quick-look panel ===== */
 let lastFocus = null, current = null;
