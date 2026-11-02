@@ -179,8 +179,6 @@
   table.bs th.hl{background:#DCE7F7}
   table.bs td.hl{background:#EEF4FC}
   table.bs tr:last-child td{border-bottom:0}
-  .ar-switch{margin:0 0 18px}
-  .ar-switch button{padding:8px 16px}
   .bs-tip{position:fixed;z-index:30;pointer-events:none;background:var(--navy-deep);color:#fff;font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:6px;box-shadow:0 4px 12px rgba(23,42,73,.25);white-space:nowrap}
   .chart [data-tip]{cursor:default}
   .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
@@ -194,6 +192,7 @@
     <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
     <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</button>
+    <button class="tab" role="tab" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
   </nav>
   <div class="who" id="who"></div>
@@ -249,11 +248,6 @@
         <label class="bs-through" for="bs-month">Through <select id="bs-month" aria-label="Report through"></select></label>
       </div>
     </div>
-    <div class="segbtn ar-switch" role="group" aria-label="Report">
-      <button type="button" data-report="board" aria-pressed="true">Board Slides</button>
-      <button type="button" data-report="plan" aria-pressed="false">Strategic Plan</button>
-    </div>
-    <div id="sp-body" hidden><div class="notice"><h2>Strategic Plan is coming</h2><p>Progress on the Advancement Strategic Plan will appear here in a future update.</p></div></div>
     <div id="bs-msg"></div>
     <div id="bs-body" hidden>
       <div class="card" id="bs-revenue"></div>
@@ -261,6 +255,10 @@
       <div class="card" id="bs-societies"></div>
       <div class="card" id="bs-quarterly"></div>
     </div>
+  </section>
+  <section class="panel" id="panel-StrategicPlan" hidden>
+    <div class="head"><div><h1>Strategic Plan</h1></div></div>
+    <div class="notice"><h2>Strategic Plan is coming</h2><p>Progress on the Advancement Strategic Plan will appear here in a future update.</p></div>
   </section>
   <section class="panel" id="panel-Retention" hidden><p class="soon">Donor Retention is coming next.</p></section>
 </main>
@@ -705,7 +703,7 @@ function renderBoard() {
   const funds = [...new Set((s.households || []).map(h => h.fundraiser).filter(Boolean))].sort();
   if (BS.ui.fr && !funds.includes(BS.ui.fr)) BS.ui.fr = "";
   renderRevenue(s); renderVolume(s); renderSocieties(s, funds); renderQuarterly(s);
-  $("bs-msg").innerHTML = ""; $("bs-body").hidden = REPORT !== "board";
+  $("bs-msg").innerHTML = ""; $("bs-body").hidden = false;
 }
 
 /* --- SVG chart pieces --- */
@@ -956,16 +954,6 @@ function renderQuarterly(s) {
       <tr><td class="txt"><b>Total</b></td>${groups.map(g => `<td><b>${short(g.total)}</b></td><td></td>`).join("")}</tr>
     </tbody></table></div>`;
 }
-
-/* --- Report switch (Board Slides / Strategic Plan) --- */
-let REPORT = "board";
-document.querySelectorAll("[data-report]").forEach(b => b.onclick = () => {
-  REPORT = b.dataset.report;
-  document.querySelectorAll("[data-report]").forEach(x => x.setAttribute("aria-pressed", x.dataset.report === REPORT));
-  const board = REPORT === "board";
-  $("sp-body").hidden = board; $("bs-through-wrap").hidden = !board; $("bs-asof").hidden = !board;
-  $("bs-msg").hidden = !board; $("bs-body").hidden = !board || !BS.cache[BS.month];
-});
 
 /* --- Hover values on charts --- */
 document.addEventListener("mousemove", e => {
