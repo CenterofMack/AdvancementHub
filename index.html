@@ -179,6 +179,10 @@
   table.bs th.hl{background:#DCE7F7}
   table.bs td.hl{background:#EEF4FC}
   table.bs tr:last-child td{border-bottom:0}
+  .ar-switch{margin:0 0 18px}
+  .ar-switch button{padding:8px 16px}
+  .bs-tip{position:fixed;z-index:30;pointer-events:none;background:var(--navy-deep);color:#fff;font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:6px;box-shadow:0 4px 12px rgba(23,42,73,.25);white-space:nowrap}
+  .chart [data-tip]{cursor:default}
   .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
@@ -189,7 +193,7 @@
   <nav class="tabs" role="tablist" aria-label="Reports">
     <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
-    <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Board Slides</button>
+    <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
   </nav>
   <div class="who" id="who"></div>
@@ -240,11 +244,16 @@
 
   <section class="panel" id="panel-BoardSlides" hidden>
     <div class="head">
-      <div><h1>Board Slides</h1><div class="asof" id="bs-asof"></div></div>
-      <div class="actions">
+      <div><h1>Advancement Reports</h1><div class="asof" id="bs-asof"></div></div>
+      <div class="actions" id="bs-through-wrap">
         <label class="bs-through" for="bs-month">Through <select id="bs-month" aria-label="Report through"></select></label>
       </div>
     </div>
+    <div class="segbtn ar-switch" role="group" aria-label="Report">
+      <button type="button" data-report="board" aria-pressed="true">Board Slides</button>
+      <button type="button" data-report="plan" aria-pressed="false">Strategic Plan</button>
+    </div>
+    <div id="sp-body" hidden><div class="notice"><h2>Strategic Plan is coming</h2><p>Progress on the Advancement Strategic Plan will appear here in a future update.</p></div></div>
     <div id="bs-msg"></div>
     <div id="bs-body" hidden>
       <div class="card" id="bs-revenue"></div>
@@ -256,6 +265,7 @@
   <section class="panel" id="panel-Retention" hidden><p class="soon">Donor Retention is coming next.</p></section>
 </main>
 
+<div class="bs-tip" id="bs-tip" hidden></div>
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-name" hidden>
   <header>
@@ -689,7 +699,7 @@ function renderBoard() {
   const funds = [...new Set((s.households || []).map(h => h.fundraiser).filter(Boolean))].sort();
   if (BS.ui.fr && !funds.includes(BS.ui.fr)) BS.ui.fr = "";
   renderRevenue(s); renderVolume(s); renderSocieties(s, funds); renderQuarterly(s);
-  $("bs-msg").innerHTML = ""; $("bs-body").hidden = false;
+  $("bs-msg").innerHTML = ""; $("bs-body").hidden = REPORT !== "board";
 }
 
 /* --- SVG chart pieces --- */
@@ -735,7 +745,7 @@ function chartVolume(cols, label) {
     let d = "", started = false;
     pts.forEach(p => { if (!p) { started = false; return; } d += (started ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1); started = true; });
     let out = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
-    pts.forEach(p => { if (!p) return; out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${color}"/><circle cx="${p[0]}" cy="${p[1]}" r="11" fill="transparent" style="cursor:default"><title>${esc(p[3])}: ${esc(fmt(p[2]))}</title></circle>`;
+    pts.forEach(p => { if (!p) return; out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${color}"/><circle cx="${p[0]}" cy="${p[1]}" r="12" fill="transparent" data-tip="${esc(p[3])}: ${esc(fmt(p[2]))}"/>`;
       if (!showLabels) return;
       const side = key === "d" && p === pts[pts.length - 1] && gi >= 0;
       out += side ? `<text class="lbl" x="${p[0] + 9}" y="${p[1] + 4}" style="fill:${color}">${fmt(p[2])}</text>`
@@ -764,7 +774,7 @@ function chartStack(cols, series, label) {
   cols.forEach((c, i) => {
     const cx = L + step * (i + 0.5); let acc = 0;
     series.forEach(sr => { const v = c.vals[sr.k] || 0; if (v <= 0) return;
-      g += `<rect x="${cx - bw / 2}" y="${y(acc + v)}" width="${bw}" height="${y(acc) - y(acc + v)}" fill="${sr.color}"><title>${esc(sr.label)}: ${intOrDash(v)}</title></rect>`; acc += v; });
+      g += `<rect x="${cx - bw / 2}" y="${y(acc + v)}" width="${bw}" height="${y(acc) - y(acc + v)}" fill="${sr.color}" data-tip="${esc((c.chartLabel || c.label).replace("\n", " "))} · ${esc(sr.label)}: ${intOrDash(v)}"/>`; acc += v; });
     g += `<text class="lbl" text-anchor="middle" x="${cx}" y="${y(acc) - 6}">${intOrDash(acc)}</text>`;
     g += `<text class="ax" text-anchor="middle" x="${cx}" y="${H - B + 18}"${n > 12 ? ' style="font-size:9.5px"' : ""}>${tspans(c.chartLabel || c.label, cx, 12)}</text>`;
   });
@@ -781,8 +791,9 @@ function chartQuarters(groups, label) {
     grp.vals.forEach((v, qi) => {
       const p = grp.total ? v / grp.total : 0; if (p <= 0) { return; }
       const y1 = y(acc + p), y2 = y(acc), mid = (y1 + y2) / 2;
-      g += `<rect x="${bx}" y="${y1}" width="${bw}" height="${y2 - y1}" fill="${QCOLORS[qi]}"/>`;
-      if (y2 - y1 >= 30) g += `<text class="lbl" text-anchor="middle" x="${bx + bw / 2}" y="${mid - 2}" style="fill:#fff;font-size:12.5px">${tspans(grp.pcts[qi] + "%\n" + shortM(v), bx + bw / 2, 15)}</text>`;
+      g += `<rect x="${bx}" y="${y1}" width="${bw}" height="${y2 - y1}" fill="${QCOLORS[qi]}" data-tip="${esc(grp.label)} Q${qi + 1}: ${grp.pcts[qi]}% · ${short(v)}"/>`;
+      if (y2 - y1 >= 30) g += `<text class="lbl" text-anchor="middle" x="${bx + bw / 2}" y="${mid - 2}" style="fill:#fff;font-size:12.5px">${tspans(grp.pcts[qi] + "%\n" + short(v), bx + bw / 2, 15)}</text>`;
+      else g += `<text class="lbl" x="${bx + bw + 8}" y="${mid + 4}" style="fill:${QCOLORS[qi]};font-size:12.5px">${grp.pcts[qi]}% · ${short(v)}</text>`;
       acc += p;
     });
     g += `<text class="cl" text-anchor="middle" x="${bx + bw / 2}" y="${H - B + 22}">${esc(grp.label)}</text>`;
@@ -844,8 +855,8 @@ function renderVolume(s) {
     <div class="chart">${chartVolume(cols, title)}</div>
     ${legendHtml([{ color: "#D9541E", label: "Total $ (left scale)" }, { color: "#213A63", label: "Number of donors (right scale)" }, { color: "#C9A33F", label: "Fundraising goal" }])}
     <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>
-      ${row("Total $", c => c.d === null ? "–" : money(c.d))}
-      ${row("Fundraising Goal", c => c.goal ? money(c.goal) : "")}
+      ${row("Total $", c => c.d === null ? "–" : short(c.d))}
+      ${row("Fundraising Goal", c => c.goal ? short(c.goal) : "")}
       ${row("Number Donors", fmtN)}
     </tbody></table></div>`;
   wireSeg("vol", m => BS.ui.volMode = m);
@@ -885,8 +896,8 @@ function societyCols(s, mode, fr) {
   const ytd = (field, legacy) => { const v = socCount(hh, h => g(h, field), fr, ex); v.legacy = fr ? null : legacy; return v; };
   cols.push({ label: `${mon} ${Y - 1} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y - 1}\nYTD`, vals: ytd("ytdPrior", s.societies.legacyYtdPrior) });
   cols.push({ label: `${mon} ${Y} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y}\nYTD`, vals: ytd("ytdCurrent", s.societies.legacyYtdCurrent), hl: true });
-  if (BS.ui.proj) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected"), fr, ex); v.legacy = null; cols.push({ label: `${Y} Projected Year-End`, chartLabel: `${Y}\nProjected`, vals: v, proj: true }); }
-  if (BS.ui.spec) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected") + g(h, "speculative"), fr, ex); v.legacy = null; cols.push({ label: `${Y} Projected + Speculative`, chartLabel: `${Y} Proj.\n+ Spec.`, vals: v, proj: true }); }
+  if (BS.ui.proj) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected"), fr, ex); v.legacy = fr ? null : s.societies.legacyYtdCurrent; cols.push({ label: `${Y} Projected Year-End`, chartLabel: `${Y}\nProjected`, vals: v, proj: true }); }
+  if (BS.ui.spec) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected") + g(h, "speculative"), fr, ex); v.legacy = fr ? null : s.societies.legacyYtdCurrent; cols.push({ label: `${Y} Projected + Speculative`, chartLabel: `${Y} Proj.\n+ Spec.`, vals: v, proj: true }); }
   if (!fr) { const goals = s.societies.goals || {}, v = {}; SOCIETIES.forEach(sc => v[sc.k] = goals[sc.k] ?? null); cols.push({ label: `${Y} Goal`, chartLabel: `${Y}\nGoal`, vals: v }); }
   return cols;
 }
@@ -910,7 +921,7 @@ function renderSocieties(s, funds) {
     ${legendHtml(series)}
     <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
     ${fr ? `<p class="bs-note">Fundraiser view shows 2024 forward only. Earlier years are available as organization-wide totals. Prior-year figures reflect each household’s fundraiser assignment as of this snapshot.</p>` : ""}
-    ${ui.proj || ui.spec ? `<p class="bs-note">Projected columns count each household at its ${mon} ${Y} year-to-date giving plus outstanding projections${ui.spec ? " (and, for the last column, speculative)" : ""} as recorded in this snapshot. Legacy is not projected.</p>` : ""}`;
+    ${ui.proj || ui.spec ? `<p class="bs-note">Projected columns count each household at its ${mon} ${Y} year-to-date giving plus outstanding projections${ui.spec ? " (and, for the last column, speculative)" : ""} as recorded in this snapshot. Legacy isn’t projected, so those columns repeat the year-to-date Legacy count.</p>` : ""}`;
   $("bs-fr").onchange = e => { BS.ui.fr = e.target.value; renderBoard(); };
   $("bs-proj").onchange = e => { BS.ui.proj = e.target.checked; renderBoard(); };
   $("bs-spec").onchange = e => { BS.ui.spec = e.target.checked; renderBoard(); };
@@ -935,10 +946,29 @@ function renderQuarterly(s) {
     <div class="chart" style="max-width:640px">${chartQuarters(groups, title)}</div>
     ${legendHtml(qn.map((n, i) => ({ color: QCOLORS[i], label: n })))}
     <div class="bs-tablewrap" style="max-width:640px"><table class="bs"><thead><tr><th class="txt">Quarter</th>${groups.map(g => `<th>${g.label}</th><th>%</th>`).join("")}</tr></thead><tbody>
-      ${qn.map((n, i) => `<tr><td class="txt">${n}</td>${groups.map(g => `<td>${money(g.vals[i])}</td><td>${g.pcts[i]}%</td>`).join("")}</tr>`).join("")}
-      <tr><td class="txt"><b>Total</b></td>${groups.map(g => `<td><b>${money(g.total)}</b></td><td></td>`).join("")}</tr>
+      ${qn.map((n, i) => `<tr><td class="txt">${n}</td>${groups.map(g => `<td>${short(g.vals[i])}</td><td>${g.pcts[i]}%</td>`).join("")}</tr>`).join("")}
+      <tr><td class="txt"><b>Total</b></td>${groups.map(g => `<td><b>${short(g.total)}</b></td><td></td>`).join("")}</tr>
     </tbody></table></div>`;
 }
+
+/* --- Report switch (Board Slides / Strategic Plan) --- */
+let REPORT = "board";
+document.querySelectorAll("[data-report]").forEach(b => b.onclick = () => {
+  REPORT = b.dataset.report;
+  document.querySelectorAll("[data-report]").forEach(x => x.setAttribute("aria-pressed", x.dataset.report === REPORT));
+  const board = REPORT === "board";
+  $("sp-body").hidden = board; $("bs-through-wrap").hidden = !board; $("bs-asof").hidden = !board;
+  $("bs-msg").hidden = !board; $("bs-body").hidden = !board || !BS.cache[BS.month];
+});
+
+/* --- Hover values on charts --- */
+document.addEventListener("mousemove", e => {
+  const t = e.target.closest && e.target.closest("[data-tip]"), tip = $("bs-tip");
+  if (!t) { tip.hidden = true; return; }
+  tip.textContent = t.getAttribute("data-tip"); tip.hidden = false;
+  const w = tip.offsetWidth, x = Math.min(e.clientX + 14, window.innerWidth - w - 8);
+  tip.style.left = x + "px"; tip.style.top = (e.clientY - 38) + "px";
+});
 
 /* ===== Quick-look panel ===== */
 let lastFocus = null, current = null;
