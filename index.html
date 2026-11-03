@@ -150,6 +150,14 @@
   .drawer .kv span:last-child{font-variant-numeric:tabular-nums;text-align:right}
   .drawer .notes{white-space:pre-wrap;background:#F7F9FC;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
   .drawer .dr-open{margin-top:12px;padding:6px 12px;font-size:13px}
+  .edit{margin-top:6px;background:#F7F9FC;border:1px solid var(--line);border-radius:8px;padding:12px}
+  .edit label{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 3px}
+  .edit input,.edit textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:#fff;font-size:13px}
+  .edit textarea{min-height:110px;resize:vertical;font-family:inherit}
+  .edit .row2{display:flex;gap:10px;align-items:center;margin-top:10px}
+  .edit .msg{font-size:12.5px;color:var(--muted)}
+  .edit .msg.ok{color:#1F6B3A;font-weight:600}
+  .edit .msg.bad{color:var(--red)}
 
   .notice{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:22px 24px;max-width:640px}
   .notice.err{border-left-color:var(--red)}
@@ -297,6 +305,8 @@
 /* ===== Settings ===== */
 const FLOW_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/24/workflows/bffe634be4ee4f0a88f09facc45f4340/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tr64EO3kpi3AVQYb_F3tQHyGG1KcOpgoltkR8F1YGn0";
 const BOARD_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/29/workflows/5b0b2e3c7947495086cfabb34858e82a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2RPn_sAw4fAmYAZa96KTCYkD8KA00igbof03MvNQJDw";
+const EDIT_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/04/workflows/d3af22a3399643ef9912b6a551d1fe24/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hboJht6LJBZuFRPJatJIP5M9ScBDYDVURO_TMhjSpj0";
+const EDIT_ACCESS = "Edit Permissions (Projections)";
 const OWNER = "Chris Smith";
 const ENV_ID = "p-6dq4GyJXXEarYflLLsQhUA";
 const RECORD_URL = id => `https://host.nxt.blackbaud.com/constituent/records/${encodeURIComponent(id)}?envid=${ENV_ID}&svcid=renxt`;
@@ -1051,10 +1061,42 @@ function openDrawer(r) {
     kv("Prospect classification", r["Prospect Classification"] || "–") +
     kv("Last action", [fmtDate(r["Last Action Date"]), r["Last Action Category"], r["Last Action Type"]].filter(Boolean).join(", ") || "–") +
     kv("Location", [r["Preferred County"] ? r["Preferred County"] + " County" : "", r["Preferred State"]].filter(Boolean).join(", ") || "–");
-  if (String(r.Notes || "").trim()) html += `<h4>Notes</h4><div class="notes">${esc(r.Notes)}</div>`;
+  const canEdit = allowed(EDIT_ACCESS) && String(r.ID || "").trim() !== "";
+  if (canEdit) {
+    html += `<h4>Edit</h4><div class="edit">
+      <label for="ed-contractor">Contractor</label><input id="ed-contractor" maxlength="200" value="${esc(r.Contractor ?? "")}">
+      <label for="ed-credit">Contractor credit</label><input id="ed-credit" inputmode="decimal" placeholder="e.g. 25000" value="${esc(r["Contractor Credit"] ?? "")}">
+      <label for="ed-notes">Notes</label><textarea id="ed-notes" maxlength="1500">${esc(r.Notes ?? "")}</textarea>
+      <div class="row2"><button class="btn primary" id="ed-save" type="button">Save</button><span class="msg" id="ed-msg"></span></div>
+    </div>`;
+  } else {
+    if (String(r.Contractor || "").trim() || num(r["Contractor Credit"])) html += `<h4>Contractor</h4>` + kv("Contractor", r.Contractor || "–") + kv("Contractor credit", m("Contractor Credit"));
+    if (String(r.Notes || "").trim()) html += `<h4>Notes</h4><div class="notes">${esc(r.Notes)}</div>`;
+  }
   $("dr-body").innerHTML = html;
+  if (canEdit) $("ed-save").onclick = () => saveEdit(r);
   $("dr-open").hidden = !String(r["System Record ID"] || "").trim();
   $("scrim").hidden = false; $("drawer").hidden = false; $("dr-close").focus();
+}
+function saveEdit(r) {
+  const msg = $("ed-msg"), btn = $("ed-save");
+  const contractor = $("ed-contractor").value.trim(), notes = $("ed-notes").value.trim();
+  const creditRaw = $("ed-credit").value.trim().replace(/[$,\s]/g, "");
+  if (creditRaw !== "" && !isFinite(Number(creditRaw))) { msg.className = "msg bad"; msg.textContent = "Contractor credit must be a number."; return; }
+  btn.disabled = true; msg.className = "msg"; msg.textContent = "Saving…";
+  const q = "&tab=" + encodeURIComponent(EDIT_ACCESS) + "&id=" + encodeURIComponent(String(r.ID).trim()) +
+    "&contractor=" + encodeURIComponent(contractor) + "&credit=" + encodeURIComponent(creditRaw) + "&notes=" + encodeURIComponent(notes);
+  client.getUserIdentityToken()
+    .then(token => fetch(EDIT_URL + q, { method: "POST", body: token }))
+    .then(res => {
+      if (res.status === 403) { msg.className = "msg bad"; msg.textContent = "You don't have edit rights for Projections."; return; }
+      if (!res.ok) { msg.className = "msg bad"; msg.textContent = `Didn't save (status ${res.status}). Try again.`; return; }
+      r.Contractor = contractor; r["Contractor Credit"] = creditRaw; r.Notes = notes;
+      msg.className = "msg ok"; msg.textContent = "Saved ✓";
+      drawTable();
+    })
+    .catch(() => { msg.className = "msg bad"; msg.textContent = "Couldn't reach the save service. Try again."; })
+    .finally(() => { btn.disabled = false; });
 }
 function closeDrawer() { if ($("drawer").hidden) return; $("scrim").hidden = true; $("drawer").hidden = true; if (lastFocus) lastFocus.focus(); }
 $("dr-close").onclick = closeDrawer; $("scrim").onclick = closeDrawer;
