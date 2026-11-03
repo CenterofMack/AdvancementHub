@@ -95,6 +95,14 @@
   tr.grp th.b-oth{background:#5E6878}
   tr.grp th.b-more{background:#3D4757}
   td.long{max-width:320px;overflow:hidden;text-overflow:ellipsis}
+  .colpick{position:relative}
+  .colpick .btn{padding:7px 12px}
+  .colpop{position:absolute;right:0;top:calc(100% + 6px);z-index:15;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(23,42,73,.16);width:300px;max-height:420px;display:flex;flex-direction:column}
+  .colpop-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px}
+  .colpop-head button{background:none;border:0;color:var(--navy);cursor:pointer;padding:0;font-size:12.5px;text-decoration:underline}
+  .colpop-list{overflow:auto;padding:6px 12px 10px}
+  .colpop-list h5{margin:10px 0 4px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .colpop-list label{display:flex;gap:8px;align-items:center;padding:3px 0;color:var(--ink);font-size:13px}
   tr.grp th.gs{border-left:2px solid rgba(255,255,255,.45)}
 
   /* Column header row */
@@ -234,6 +242,13 @@
       <label><input type="checkbox" id="f-open"> Open projections only</label>
       <label><input type="checkbox" id="f-inactive"> Include inactive</label>
       <label><input type="checkbox" id="f-allcols"> Show all columns</label>
+      <div class="colpick">
+        <button type="button" class="btn" id="col-btn" aria-expanded="false" aria-haspopup="true">Columns ▾</button>
+        <div class="colpop" id="col-pop" hidden>
+          <div class="colpop-head"><b>Show columns</b><span><button type="button" id="col-all">Show all</button> · <button type="button" id="col-reset">Reset</button></span></div>
+          <div class="colpop-list" id="col-list"></div>
+        </div>
+      </div>
     </div>
     <div class="tablecard">
       <div class="topscroll" id="topscroll" aria-hidden="true"><div id="topscroll-inner"></div></div>
@@ -483,11 +498,31 @@ function buildTable(rows) {
   ["f-fundraiser", "f-activity", "f-open", "f-inactive"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; drawTable(); }));
   let searchTimer;
   $("f-search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { shown = PAGE; drawTable(); }, 150); });
-  $("f-allcols").addEventListener("input", () => { setCols(); drawTable(); });
+  $("f-allcols").addEventListener("input", () => { setCols(); drawTable(); if (!$("col-pop").hidden) buildColList(); });
   drawTable();
 }
+const HIDE_KEY = "hub-hidden-columns";
+let HIDDEN = new Set();
+try { HIDDEN = new Set(JSON.parse(localStorage.getItem(HIDE_KEY) || "[]")); } catch (_) {}
+function saveHidden() { try { localStorage.setItem(HIDE_KEY, JSON.stringify([...HIDDEN])); } catch (_) {} }
+function buildColList() {
+  const groups = [...new Set(ALLCOLS.filter(c => !c.extra || $("f-allcols").checked).map(c => c.group))];
+  const names = { Constituent: "Constituent", Projected: "Projected", Actual: "Money in", Opportunity: "Opportunity", Other: "Other", More: "More columns" };
+  $("col-list").innerHTML = groups.map(g => `<h5>${esc(names[g] || g)}</h5>` +
+    ALLCOLS.filter(c => c.group === g && (!c.extra || $("f-allcols").checked)).map(c =>
+      `<label><input type="checkbox" data-col="${esc(c.key)}"${HIDDEN.has(c.key) ? "" : " checked"}${c.type === "name" ? " disabled" : ""}> ${esc(c.label)}</label>`).join("")).join("");
+  $("col-list").querySelectorAll("input[data-col]").forEach(cb => cb.onchange = () => {
+    if (cb.checked) HIDDEN.delete(cb.dataset.col); else HIDDEN.add(cb.dataset.col);
+    saveHidden(); setCols(); drawTable();
+  });
+}
+$("col-btn").onclick = e => { e.stopPropagation(); const open = $("col-pop").hidden; if (open) buildColList(); $("col-pop").hidden = !open; $("col-btn").setAttribute("aria-expanded", open); };
+$("col-pop").onclick = e => e.stopPropagation();
+document.addEventListener("click", () => { if (!$("col-pop").hidden) { $("col-pop").hidden = true; $("col-btn").setAttribute("aria-expanded", "false"); } });
+$("col-all").onclick = () => { HIDDEN.clear(); saveHidden(); setCols(); drawTable(); buildColList(); };
+$("col-reset").onclick = () => { HIDDEN.clear(); saveHidden(); $("f-allcols").checked = false; setCols(); drawTable(); buildColList(); };
 function setCols() {
-  COLS = ALLCOLS.filter(c => !c.extra || $("f-allcols").checked);
+  COLS = ALLCOLS.filter(c => (!c.extra || $("f-allcols").checked) && (c.type === "name" || !HIDDEN.has(c.key)));
   if (!COLS.some(c => c.key === sortKey)) { sortKey = KEYS.total || null; sortDir = -1; }
 }
 const isActive = r => !HAS_ACTIVE || String(r.Active ?? "").trim().toLowerCase() === "yes";
