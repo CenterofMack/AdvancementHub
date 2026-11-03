@@ -1069,7 +1069,7 @@ document.addEventListener("mousemove", e => {
 });
 
 /* ===== Portfolio Scorecard ===== */
-const PF = { fr: "", mode: "proj" };
+const PF = { fr: "", mode: "proj", incProj: true };
 const pfReal = () => ROWS.filter(r => String(r.Name ?? "").trim() !== "");
 function pfYears() { return KEYS.years.map(k => +k.replace("Money In ", "")).sort((a, b) => a - b); }
 function pfTotals(rows) {
@@ -1131,7 +1131,9 @@ function renderPortfolios() {
   $("pf-all").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => { PF.fr = tr.dataset.f === PF.fr ? "" : tr.dataset.f; $("pf-fr").value = PF.fr; renderPortfolios(); });
 
   // Changes: lapsed / decreased / increased / new
-  const modes = { proj: { cur: r => num(r[KEYS.total]), prior: r => num(r["Money In " + (Y - 1)]), curL: `${Y} money in + projected`, priorL: String(Y - 1) },
+  const modes = { proj: PF.incProj
+                    ? { cur: r => num(r[KEYS.total]), prior: r => num(r["Money In " + (Y - 1)]), curL: `${Y} money in + projected`, colL: `${Y} proj.`, priorL: String(Y - 1) }
+                    : { cur: r => num(r[KEYS.curYear]), prior: r => num(r["Money In " + (Y - 1)]), curL: `${Y} money in so far`, colL: `${Y} so far`, priorL: String(Y - 1) },
                   last: { cur: r => num(r["Money In " + (Y - 1)]), prior: r => num(r["Money In " + (Y - 2)]), curL: String(Y - 1), priorL: String(Y - 2) } };
   if (!KEYS.years.includes("Money In " + (Y - 2))) delete modes.last;
   const m = modes[PF.mode] || modes.proj;
@@ -1145,7 +1147,7 @@ function renderPortfolios() {
   groups.forEach(gp => gp.rows.sort((p, q) => Math.abs(q.b - q.a) - Math.abs(p.b - p.a)));
   const POOL = [];
   const tbl = gp => `<div class="pf-list"><h3>${gp.k} <small>· ${gp.rows.length.toLocaleString()} · ${esc(gp.note)}</small></h3>
-    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th>${esc(m.priorL)}</th><th>${esc(m.curL.replace(" money in + projected", " proj."))}</th><th>Change</th></tr></thead><tbody>
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th>${esc(m.priorL)}</th><th>${esc(m.colL || m.curL)}</th><th>Change</th></tr></thead><tbody>
     ${gp.rows.length ? gp.rows.map(x => { POOL.push(x.r); const ch = x.b - x.a;
       const back = gp.k === "New or renewed" ? [...KEYS.years].map(k => +k.replace("Money In ", "")).filter(y => y < +m.priorL && num(x.r["Money In " + y]) > 0).sort((p, q) => q - p)[0] : null;
       return `<tr><td class="txt name"><button data-pi="${POOL.length - 1}">${esc(x.r.Name)}</button>${back ? ` <span class="tag">gave in ${back}</span>` : ""}</td><td>${x.a ? short(x.a) : "–"}</td><td>${x.b ? short(x.b) : "–"}</td><td class="${ch > 0 ? "up" : "down"}">${(ch > 0 ? "+" : "−") + short(Math.abs(ch))}</td></tr>`; }).join("")
@@ -1153,11 +1155,15 @@ function renderPortfolios() {
     </tbody></table></div></div>`;
   $("pf-changes").innerHTML = `<div class="card-head"><div><h2>Donor changes${PF.fr ? " — " + esc(PF.fr) : ""}</h2><div class="sub">Click a name for the quick look.</div></div>
       <div class="card-tools">${modes.last ? `<div class="segbtn" role="group" aria-label="Compare">
-        <button type="button" data-pm="proj" aria-pressed="${PF.mode === "proj"}">${Y} projected vs ${Y - 1}</button>
-        <button type="button" data-pm="last" aria-pressed="${PF.mode === "last"}">${Y - 1} vs ${Y - 2}</button></div>` : ""}</div></div>
+        <button type="button" data-pm="proj" aria-pressed="${PF.mode === "proj"}">${Y} vs ${Y - 1}</button>
+        <button type="button" data-pm="last" aria-pressed="${PF.mode === "last"}">${Y - 1} vs ${Y - 2}</button></div>` : ""}
+        ${PF.mode === "proj" ? `<label><input type="checkbox" id="pf-incproj"${PF.incProj ? " checked" : ""}> Include open projections</label>` : ""}</div></div>
     <div class="pf-grid">${groups.map(tbl).join("")}</div>
     <p class="bs-note">“New or renewed” covers anyone with nothing in ${esc(m.priorL)}. A “gave in” tag marks a returning donor the data can see; the hub only has ${KEYS.years.map(k => k.replace("Money In ", "")).sort()[0]} forward, so someone returning after a longer gap shows without a tag.</p>
-    <p class="bs-note">${PF.mode === "proj" ? `${Y} counts money in so far plus outstanding projections, so a household with an open projection isn’t lapsed yet.` : `Both years are complete, so this is a true year-over-year comparison.`}</p>`;
+    <p class="bs-note">${PF.mode !== "proj" ? `Both years are complete, so this is a true year-over-year comparison.`
+      : PF.incProj ? `${Y} counts money in so far plus outstanding projections, so a household with an open projection isn’t lapsed yet.`
+      : `${Y} counts money in so far only, against all of ${Y - 1}. Until the year ends, many households will show as lapsed or decreased simply because their gift hasn’t come in yet.`}</p>`;
+  if ($("pf-incproj")) $("pf-incproj").onchange = e => { PF.incProj = e.target.checked; renderPortfolios(); };
   $("pf-changes").querySelectorAll("[data-pm]").forEach(b => b.onclick = () => { PF.mode = b.dataset.pm; renderPortfolios(); });
   $("pf-changes").querySelectorAll("button[data-pi]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pi]));
 }
