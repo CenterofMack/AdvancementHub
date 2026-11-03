@@ -199,6 +199,21 @@
   table.bs tr:last-child td{border-bottom:0}
   .bs-tip{position:fixed;z-index:30;pointer-events:none;background:var(--navy-deep);color:#fff;font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:6px;box-shadow:0 4px 12px rgba(23,42,73,.25);white-space:nowrap}
   .chart [data-tip]{cursor:default}
+  .pf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:8px 0 14px}
+  .pf-stats .stat .v{font-size:22px}
+  .pf-stats .stat .d{font-size:12px;color:var(--muted);margin-top:2px}
+  .pf-stats .stat.hl{background:#EEF4FC;border-color:#BFD0EA}
+  table.bs tr.pick td{cursor:pointer}
+  table.bs tr.pick:hover td{background:#F4F7FB}
+  table.bs tr.sel td{background:#E2ECF9;font-weight:600}
+  .pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:16px;margin-top:10px}
+  .pf-list table.bs th.txt,.pf-list table.bs td.txt{min-width:0;position:static;box-shadow:none;width:50%}
+  .pf-list table.bs th,.pf-list table.bs td{min-width:0;padding:7px 10px}
+  .pf-list h3{margin:0 0 6px;font-size:14px;color:var(--navy-deep)}
+  .pf-list h3 small{color:var(--muted);font-weight:500}
+  .pf-list .bs-tablewrap{max-height:360px;overflow:auto}
+  .pf-list td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;text-align:left;white-space:normal}
+  td.up{color:#1F6B3A} td.down{color:var(--red)}
   .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
@@ -210,6 +225,7 @@
     <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
     <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</button>
+    <button class="tab" role="tab" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Scorecard</button>
     <button class="tab" role="tab" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
   </nav>
@@ -282,6 +298,15 @@
       <div class="card" id="bs-societies"></div>
       <div class="card" id="bs-quarterly"></div>
     </div>
+  </section>
+  <section class="panel" id="panel-Portfolios" hidden>
+    <div class="head">
+      <div><h1>Portfolio Scorecard</h1><div class="asof" id="pf-asof"></div></div>
+      <div class="actions"><label class="bs-through" for="pf-fr">Fundraiser <select id="pf-fr"></select></label></div>
+    </div>
+    <div class="card" id="pf-summary"></div>
+    <div class="card" id="pf-all"></div>
+    <div class="card" id="pf-changes"></div>
   </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
     <div class="head"><div><h1>Strategic Plan</h1></div></div>
@@ -380,6 +405,7 @@ function load() {
       applyAccess(data.access);
       renderOverview(data.overview || []);
       buildTable(data.projections || []);
+      initPortfolios();
       $("loading").hidden = true;
       selectTab("Overview");
     })
@@ -1040,6 +1066,98 @@ document.addEventListener("mousemove", e => {
   const w = tip.offsetWidth, x = Math.min(e.clientX + 14, window.innerWidth - w - 8);
   tip.style.left = x + "px"; tip.style.top = (e.clientY - 38) + "px";
 });
+
+/* ===== Portfolio Scorecard ===== */
+const PF = { fr: "", mode: "proj" };
+const pfReal = () => ROWS.filter(r => String(r.Name ?? "").trim() !== "");
+function pfYears() { return KEYS.years.map(k => +k.replace("Money In ", "")).sort((a, b) => a - b); }
+function pfTotals(rows) {
+  const t = { households: rows.length, spec: 0, proj: 0, yr: {} };
+  KEYS.years.forEach(k => t.yr[k] = 0);
+  rows.forEach(r => { KEYS.years.forEach(k => t.yr[k] += num(r[k])); t.proj += num(r[KEYS.total]); t.spec += num(r.Speculative); });
+  return t;
+}
+function initPortfolios() {
+  if (!KEYS.curYear) return;
+  const funds = [...new Set(pfReal().map(r => r.Solicitor).filter(Boolean))].sort((a, b) => (a === "No Assigned Fundraiser") - (b === "No Assigned Fundraiser") || a.localeCompare(b));
+  $("pf-fr").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
+  $("pf-fr").onchange = e => { PF.fr = e.target.value; renderPortfolios(); };
+  renderPortfolios();
+}
+function chartPortfolio(items, label) {
+  const W = 760, H = 260, L = 70, R = 16, T = 26, B = 40, n = items.length, step = (W - L - R) / n, bw = Math.min(90, step * 0.55);
+  const max = niceMax(Math.max(...items.map(i => i.v)) * 1.12), y = v => T + (H - T - B) * (1 - v / max);
+  let g = "";
+  for (let k = 0; k <= 4; k++) { const yy = T + (H - T - B) * k / 4; g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 8}" y="${yy + 4}" text-anchor="end">${short(max * (1 - k / 4))}</text>`; }
+  items.forEach((it, i) => {
+    const cx = L + step * (i + 0.5), top = y(Math.max(0, it.v));
+    g += `<rect x="${cx - bw / 2}" y="${top}" width="${bw}" height="${y(0) - top}" rx="2" fill="${it.color}" data-tip="${esc(it.label.replace("\n", " "))}: ${money(it.v)}"/>`;
+    g += `<text class="lbl" text-anchor="middle" x="${cx}" y="${top - 6}">${short(it.v)}</text>`;
+    g += `<text class="ax" text-anchor="middle" x="${cx}" y="${H - B + 16}">${tspans(it.label, cx, 12)}</text>`;
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+function renderPortfolios() {
+  const Y = +KEYS.curYear.replace("Money In ", ""), yrs = pfYears(), all = pfReal();
+  const mine = PF.fr ? all.filter(r => r.Solicitor === PF.fr) : all;
+  const t = pfTotals(mine), cur = t.yr[KEYS.curYear], prev = t.yr["Money In " + (Y - 1)] || 0;
+  $("pf-asof").textContent = dataThrough();
+  const pctTxt = (a, b) => b ? `${a >= b ? "+" : ""}${((a - b) / b * 100).toFixed(0)}% vs ${Y - 1}` : "";
+  const items = [...yrs.filter(y => y < Y).map(y => ({ label: String(y), v: t.yr["Money In " + y] || 0, color: "#8FA3BF" })),
+    { label: `${Y}\nmoney in`, v: cur, color: "#2E6B47" },
+    { label: `${Y} if all\nprojections`, v: t.proj, color: "#2F5C9A" },
+    { label: `${Y} + all\nspeculative`, v: t.proj + t.spec, color: "#8A6D1E" }];
+  $("pf-summary").innerHTML = `<div class="card-head"><div><h2>${esc(PF.fr || "All fundraisers")}</h2>
+      <div class="sub">${t.households.toLocaleString()} households in the portfolio, active and inactive. Earlier years use today’s assignments.</div></div></div>
+    <div class="pf-stats">
+      ${yrs.filter(y => y < Y).map(y => `<div class="stat"><div class="k">${y} money in</div><div class="v">${short(t.yr["Money In " + y] || 0)}</div></div>`).join("")}
+      <div class="stat"><div class="k">${Y} money in so far</div><div class="v">${short(cur)}</div></div>
+      <div class="stat hl"><div class="k">${Y} if all projections come in</div><div class="v">${short(t.proj)}</div><div class="d">${pctTxt(t.proj, prev)}</div></div>
+      <div class="stat"><div class="k">…plus all speculative</div><div class="v">${short(t.proj + t.spec)}</div><div class="d">${pctTxt(t.proj + t.spec, prev)}</div></div>
+    </div>
+    <div class="chart" style="max-width:800px">${chartPortfolio(items, "Portfolio value by year")}</div>`;
+
+  // All-fundraisers comparison table
+  const funds = [...new Set(all.map(r => r.Solicitor).filter(Boolean))];
+  const rowsF = funds.map(f => ({ f, t: pfTotals(all.filter(r => r.Solicitor === f)) })).sort((a, b) => b.t.proj - a.t.proj);
+  const past = yrs.filter(y => y < Y);
+  const cell = (v, cls) => `<td class="${cls || ""}">${v ? short(v) : "–"}</td>`;
+  $("pf-all").innerHTML = `<div class="card-head"><div><h2>All portfolios</h2><div class="sub">Click a row to open that fundraiser.</div></div></div>
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>Households</th>${past.map(y => `<th>${y}</th>`).join("")}<th>${Y} so far</th><th class="hl">${Y} if all projections</th><th>+ speculative</th><th>Projected vs ${Y - 1}</th></tr></thead><tbody>
+    ${rowsF.map(({ f, t: x }) => { const pv = x.yr["Money In " + (Y - 1)] || 0, ch = x.proj - pv;
+      return `<tr class="pick${f === PF.fr ? " sel" : ""}" data-f="${esc(f)}"><td class="txt">${esc(f)}</td><td>${x.households.toLocaleString()}</td>${past.map(y => cell(x.yr["Money In " + y])).join("")}${cell(x.yr[KEYS.curYear])}${cell(x.proj, "hl")}${cell(x.proj + x.spec)}<td class="${ch > 0 ? "up" : ch < 0 ? "down" : ""}">${ch ? (ch > 0 ? "+" : "−") + short(Math.abs(ch)).replace("-", "") : "–"}</td></tr>`; }).join("")}
+    </tbody></table></div>`;
+  $("pf-all").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => { PF.fr = tr.dataset.f === PF.fr ? "" : tr.dataset.f; $("pf-fr").value = PF.fr; renderPortfolios(); });
+
+  // Changes: lapsed / decreased / increased / new
+  const modes = { proj: { cur: r => num(r[KEYS.total]), prior: r => num(r["Money In " + (Y - 1)]), curL: `${Y} money in + projected`, priorL: String(Y - 1) },
+                  last: { cur: r => num(r["Money In " + (Y - 1)]), prior: r => num(r["Money In " + (Y - 2)]), curL: String(Y - 1), priorL: String(Y - 2) } };
+  if (!KEYS.years.includes("Money In " + (Y - 2))) delete modes.last;
+  const m = modes[PF.mode] || modes.proj;
+  const list = mine.filter(r => !/^gifts under/i.test(String(r.Name))).map(r => ({ r, a: m.prior(r), b: m.cur(r) }));
+  const groups = [
+    { k: "Lapsed", note: `gave in ${m.priorL}, nothing in ${m.curL}`, rows: list.filter(x => x.a > 0 && x.b <= 0) },
+    { k: "Decreased", note: "giving down", rows: list.filter(x => x.a > 0 && x.b > 0 && x.b < x.a) },
+    { k: "Increased", note: "giving up", rows: list.filter(x => x.a > 0 && x.b > x.a) },
+    { k: "New", note: `nothing in ${m.priorL}`, rows: list.filter(x => x.a <= 0 && x.b > 0) }
+  ];
+  groups.forEach(gp => gp.rows.sort((p, q) => Math.abs(q.b - q.a) - Math.abs(p.b - p.a)));
+  const POOL = [];
+  const tbl = gp => `<div class="pf-list"><h3>${gp.k} <small>· ${gp.rows.length.toLocaleString()} · ${esc(gp.note)}</small></h3>
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th>${esc(m.priorL)}</th><th>${esc(m.curL.replace(" money in + projected", " proj."))}</th><th>Change</th></tr></thead><tbody>
+    ${gp.rows.length ? gp.rows.map(x => { POOL.push(x.r); const ch = x.b - x.a;
+      return `<tr><td class="txt name"><button data-pi="${POOL.length - 1}">${esc(x.r.Name)}</button></td><td>${x.a ? short(x.a) : "–"}</td><td>${x.b ? short(x.b) : "–"}</td><td class="${ch > 0 ? "up" : "down"}">${(ch > 0 ? "+" : "−") + short(Math.abs(ch))}</td></tr>`; }).join("")
+      : `<tr><td class="txt" colspan="4" style="color:var(--muted)">None</td></tr>`}
+    </tbody></table></div></div>`;
+  $("pf-changes").innerHTML = `<div class="card-head"><div><h2>Donor changes${PF.fr ? " — " + esc(PF.fr) : ""}</h2><div class="sub">Click a name for the quick look.</div></div>
+      <div class="card-tools">${modes.last ? `<div class="segbtn" role="group" aria-label="Compare">
+        <button type="button" data-pm="proj" aria-pressed="${PF.mode === "proj"}">${Y} projected vs ${Y - 1}</button>
+        <button type="button" data-pm="last" aria-pressed="${PF.mode === "last"}">${Y - 1} vs ${Y - 2}</button></div>` : ""}</div></div>
+    <div class="pf-grid">${groups.map(tbl).join("")}</div>
+    <p class="bs-note">${PF.mode === "proj" ? `${Y} counts money in so far plus outstanding projections, so a household with an open projection isn’t lapsed yet.` : `Both years are complete, so this is a true year-over-year comparison.`}</p>`;
+  $("pf-changes").querySelectorAll("[data-pm]").forEach(b => b.onclick = () => { PF.mode = b.dataset.pm; renderPortfolios(); });
+  $("pf-changes").querySelectorAll("button[data-pi]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pi]));
+}
 
 /* ===== Quick-look panel ===== */
 let lastFocus = null, current = null;
