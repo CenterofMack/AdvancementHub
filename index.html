@@ -93,6 +93,8 @@
   tr.grp th.b-prior{background:#6B7585}
   tr.grp th.b-opp{background:#8A6D1E}
   tr.grp th.b-oth{background:#5E6878}
+  tr.grp th.b-more{background:#3D4757}
+  td.long{max-width:320px;overflow:hidden;text-overflow:ellipsis}
   tr.grp th.gs{border-left:2px solid rgba(255,255,255,.45)}
 
   /* Column header row */
@@ -230,6 +232,8 @@
       <input type="search" id="f-search" placeholder="Search name or ID" aria-label="Search households">
       <label><input type="checkbox" id="f-activity"> 2026 activity only</label>
       <label><input type="checkbox" id="f-open"> Open projections only</label>
+      <label><input type="checkbox" id="f-inactive"> Include inactive</label>
+      <label><input type="checkbox" id="f-allcols"> Show all columns</label>
     </div>
     <div class="tablecard">
       <div class="topscroll" id="topscroll" aria-hidden="true"><div id="topscroll-inner"></div></div>
@@ -345,7 +349,8 @@ function load() {
     .then(async res => {
       if (res.status === 403) { showNotice("You don't have access to Projections", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
       if (!res.ok) { showNotice("Projections didn't load", `The data service returned an error (status ${res.status}).`, true, true); return; }
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); } catch (_) { showNotice("Projections didn't load", "The data service sent back something unreadable. Try again in a minute.", true, true); return; }
       $("who").textContent = data.user || "";
       applyAccess(data.access);
       renderOverview(data.overview || []);
@@ -430,7 +435,7 @@ function drawOverview(doc) {
 }
 
 /* ===== Households ===== */
-let ROWS = [], COLS = [], KEYS = { years: [] }, sortKey = null, sortDir = -1, shown = PAGE, VIEW = [];
+let ROWS = [], COLS = [], ALLCOLS = [], HAS_ACTIVE = false, KEYS = { years: [] }, sortKey = null, sortDir = -1, shown = PAGE, VIEW = [];
 function buildTable(rows) {
   ROWS = rows;
   const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -454,18 +459,38 @@ function buildTable(rows) {
     { key: "Last Action Date", label: "Last action", type: "date", group: "Other", screenOnly: true },
     { key: "Prospect Status", label: "Status", type: "text", group: "Other", screenOnly: true }
   ].filter(c => c.key && keys.includes(c.key));
-  const bandOf = { Constituent: "con", Projected: "proj", Opportunity: "opp", Other: "oth" };
-  COLS = cols.map(c => ({
+  const bandOf = { Constituent: "con", Projected: "proj", Opportunity: "opp", Other: "oth", More: "more" };
+  const used = new Set(cols.map(c => c.key)), skip = new Set(["@odata.etag", "ItemInternalId", "Active"]);
+  const isNum = v => v !== "" && v !== null && v !== undefined && isFinite(Number(String(v).replace(/[$,\s]/g, "")));
+  const typeOf = k => {
+    if (/date/i.test(k)) return "date";
+    if (/(^|\s)(ID|Ref #)$|iWave|Record/i.test(k)) return "text";
+    const vals = rows.map(r => r[k]).filter(v => v !== "" && v !== null && v !== undefined).slice(0, 300);
+    return vals.length && vals.every(isNum) ? "money" : "text";
+  };
+  const extra = keys.filter(k => !used.has(k) && !skip.has(k)).map(k => ({ key: k, label: k, type: typeOf(k), group: "More", screenOnly: true, extra: true }));
+  ALLCOLS = [...cols, ...extra].map(c => ({
     ...c,
     band: c.group === "Actual" ? (c.key === KEYS.curYear ? "cur" : "prior") : bandOf[c.group],
     tint: c.key === KEYS.total ? "t-proj" : c.key === KEYS.curYear ? "t-cur" : ""
   }));
+  HAS_ACTIVE = keys.includes("Active");
+  $("f-inactive").parentElement.hidden = !HAS_ACTIVE;
+  setCols();
   sortKey = KEYS.total || null;
   const funds = [...new Set(rows.map(r => r.Solicitor).filter(Boolean))].sort();
   $("f-fundraiser").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
-  ["f-fundraiser", "f-search", "f-activity", "f-open"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; drawTable(); }));
+  ["f-fundraiser", "f-activity", "f-open", "f-inactive"].forEach(id => $(id).addEventListener("input", () => { shown = PAGE; drawTable(); }));
+  let searchTimer;
+  $("f-search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { shown = PAGE; drawTable(); }, 150); });
+  $("f-allcols").addEventListener("input", () => { setCols(); drawTable(); });
   drawTable();
 }
+function setCols() {
+  COLS = ALLCOLS.filter(c => !c.extra || $("f-allcols").checked);
+  if (!COLS.some(c => c.key === sortKey)) { sortKey = KEYS.total || null; sortDir = -1; }
+}
+const isActive = r => !HAS_ACTIVE || String(r.Active ?? "").trim().toLowerCase() === "yes";
 function view() {
   const f = $("f-fundraiser").value, q = $("f-search").value.trim().toLowerCase(), act = $("f-activity").checked, open = $("f-open").checked;
   const col = COLS.find(c => c.key === sortKey);
@@ -473,7 +498,9 @@ function view() {
     (!f || r.Solicitor === f) &&
     (!q || String(r.Name || "").toLowerCase().includes(q) || String(r.ID || "").includes(q)) &&
     (!act || num(r[KEYS.total]) > 0) &&
-    (!open || num(r["Outstanding Projected"]) > 0)
+    (!open || num(r["Outstanding Projected"]) > 0) &&
+    ($("f-inactive").checked || isActive(r)) &&
+    String(r.Name ?? "").trim() !== ""
   ).sort((a, b) => {
     if (!col) return 0;
     if (col.type === "money") return (num(a[sortKey]) - num(b[sortKey])) * sortDir;
@@ -484,7 +511,7 @@ function view() {
 function drawTable() {
   VIEW = view(); const t = $("hh");
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
-  const bandLabel = { con: "Constituent", proj: `${yr} projected`, cur: `${yr} money in`, prior: "Prior years", opp: "Opportunity", oth: "Other" };
+  const bandLabel = { con: "Constituent", proj: `${yr} projected`, cur: `${yr} money in`, prior: "Prior years", opp: "Opportunity", oth: "Other", more: "More columns" };
   const bands = [];
   COLS.forEach((c, i) => { const b = bands[bands.length - 1]; if (b && b.band === c.band) b.span++; else bands.push({ band: c.band, span: 1, start: i }); });
   const starts = new Set(bands.slice(1).map(b => b.start));
@@ -507,7 +534,7 @@ function drawTable() {
     if (c.type === "money") { const n = num(v); return `<td class="${cls(c, i, n === 0 ? "zero" : n < 0 ? "neg" : "")}">${n === 0 ? "–" : money(n)}</td>`; }
     if (c.type === "date") return `<td class="${cls(c, i)}">${fmtDate(v)}</td>`;
     if (c.type === "name") return `<td class="${cls(c, i, "name")}"><button data-i="${ri}" title="Quick look">${esc(v)}</button></td>`;
-    return `<td class="${cls(c, i)}" title="${esc(v)}">${esc(v)}</td>`;
+    return `<td class="${cls(c, i, c.extra ? "long" : "")}" title="${esc(v)}">${esc(v)}</td>`;
   }).join("") + "</tr>").join("");
   t.tBodies[0].querySelectorAll("td.name button").forEach(b => b.onclick = () => openDrawer(VIEW[+b.dataset.i]));
 
@@ -517,7 +544,8 @@ function drawTable() {
   const rn = t.querySelector("tr.cols th.rn");
   if (rn) t.style.setProperty("--rnw", rn.getBoundingClientRect().width + "px");
   const showing = Math.min(shown, VIEW.length);
-  $("hh-count").textContent = `${VIEW.length.toLocaleString()} of ${ROWS.length.toLocaleString()} active households` + (showing < VIEW.length ? ` (showing ${showing.toLocaleString()})` : "");
+  const inc = $("f-inactive").checked, real = ROWS.filter(r => String(r.Name ?? "").trim() !== ""), pool = inc ? real.length : real.filter(isActive).length;
+  $("hh-count").textContent = `${VIEW.length.toLocaleString()} of ${pool.toLocaleString()} ${inc ? "households, active and inactive" : "active households"}` + (showing < VIEW.length ? ` (showing ${showing.toLocaleString()})` : "");
   $("more").hidden = showing >= VIEW.length;
   requestAnimationFrame(sizeTopScroll);
 }
