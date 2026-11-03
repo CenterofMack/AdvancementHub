@@ -475,7 +475,11 @@ function buildTable(rows) {
     { key: "Prospect Status", label: "Status", type: "text", group: "Other", screenOnly: true }
   ].filter(c => c.key && keys.includes(c.key));
   const bandOf = { Constituent: "con", Projected: "proj", Opportunity: "opp", Other: "oth", More: "more" };
-  const used = new Set(cols.map(c => c.key)), skip = new Set(["@odata.etag", "ItemInternalId", "Active"]);
+  const used = new Set(cols.map(c => c.key));
+  const decode = k => String(k).replace(/_x([0-9A-Fa-f]{4})_/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  // Columns the hub never shows: Excel bookkeeping, the sheet's row number, and the workbook's review/reconciliation columns
+  const skip = new Set(["@odata.etag", "ItemInternalId", "Active", "Ref #", "Check", "Done", "Update Projections Rating in RE",
+    "Reduce By", "Reduce Entity", "Suggested Reduce", "Unreconciled Change", "Oprhan", "Orphan", "System Record ID"]);
   const isNum = v => v !== "" && v !== null && v !== undefined && isFinite(Number(String(v).replace(/[$,\s]/g, "")));
   const typeOf = k => {
     if (/date/i.test(k)) return "date";
@@ -483,7 +487,7 @@ function buildTable(rows) {
     const vals = rows.map(r => r[k]).filter(v => v !== "" && v !== null && v !== undefined).slice(0, 300);
     return vals.length && vals.every(isNum) ? "money" : "text";
   };
-  const extra = keys.filter(k => !used.has(k) && !skip.has(k)).map(k => ({ key: k, label: k, type: typeOf(k), group: "More", screenOnly: true, extra: true }));
+  const extra = keys.filter(k => !used.has(k) && !skip.has(decode(k))).map(k => ({ key: k, label: decode(k), type: typeOf(decode(k)), group: "More", screenOnly: true, extra: true }));
   ALLCOLS = [...cols, ...extra].map(c => ({
     ...c,
     band: c.group === "Actual" ? (c.key === KEYS.curYear ? "cur" : "prior") : bandOf[c.group],
