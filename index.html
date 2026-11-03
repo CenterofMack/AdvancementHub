@@ -215,6 +215,114 @@
   .pf-list td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;text-align:left;white-space:normal}
   td.up{color:#1F6B3A} td.down{color:var(--red)}
   .tag{display:inline-block;font-size:11px;color:#2E6B47;background:#EAF5EE;border-radius:4px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+  /* ===== 2027 EWMC tab (all classes start with "ew-") ===== */
+  .ew-sub{color:var(--muted);margin-top:4px}
+  .ew-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#2F7D54;background:#EAF5EE;border:1px solid #C7E4D3;padding:4px 10px;border-radius:999px}
+  .ew-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:#2F7D54}
+  .ew-hero{background:#fff;border:1px solid var(--line);border-top:5px solid #5B9BD5;border-radius:10px;padding:20px 24px 18px;margin-bottom:8px}
+  .ew-htop{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .ew-hlbl{font-size:13px;color:var(--muted);font-weight:500;margin-bottom:4px}
+  .ew-hbig{font-family:var(--serif);font-size:42px;font-weight:700;line-height:1;color:var(--navy-deep);font-variant-numeric:tabular-nums}
+  .ew-hof{font-size:17px;color:var(--muted);font-weight:400;font-family:var(--sans)}
+  .ew-hpct{font-family:var(--serif);font-size:34px;font-weight:700;color:var(--navy);line-height:1;text-align:right}
+  .ew-hpct small{display:block;font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:500;margin-top:4px}
+  .ew-bar{position:relative;height:22px;background:#E4EBF4;border-radius:6px}
+  .ew-bar .ew-segs{display:flex;height:100%;border-radius:6px;overflow:hidden}
+  .ew-bar .ew-seg{height:100%;width:0;transition:width .6s}
+  .ew-in{background:var(--navy)}
+  .ew-pl{background:#5B9BD5}
+  .ew-sp{background:repeating-linear-gradient(135deg,#BDD7EE 0 6px,#E3EEF8 6px 11px)}
+  .ew-goal{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink)}
+  .ew-goal::after{content:"Goal";position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600}
+  .ew-ticks{position:relative;height:24px;margin-top:3px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .ew-ticks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+  .ew-ticks span.first{transform:none}
+  .ew-ticks span.last{transform:translateX(-100%)}
+  .ew-fs{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .ew-fs details{background:#F3F6FA;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .ew-fs summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:12px 16px}
+  .ew-fs summary::-webkit-details-marker{display:none}
+  .ew-fs details[open] > summary{background:#E8EEF6;border-bottom:1px solid var(--line)}
+  .ew-sw{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+  .ew-st{flex:1;font-weight:600;font-size:14px;color:var(--navy-deep)}
+  .ew-st small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+  .ew-sv{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .ew-sv small{font-size:11.5px;font-weight:500;color:var(--muted);margin-left:5px}
+  .ew-chev{color:var(--muted);font-size:18px;transition:transform .2s}
+  .ew-fs details[open] > summary .ew-chev{transform:rotate(90deg)}
+  .ew-fs .ew-body{padding:8px 16px 12px}
+  .ew-li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0;font-size:13px;border-bottom:1px dotted #C9D6E6}
+  .ew-li:last-child{border-bottom:none}
+  .ew-li span{color:var(--muted)}
+  .ew-li em{font-style:normal;font-size:11px;color:#8A94A6;margin-left:6px}
+  .ew-li b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ew-li.tot{border-top:2px dotted #9FB6D3;border-bottom:none;margin-top:4px;padding-top:8px}
+  .ew-li.tot span{color:var(--navy-deep);font-weight:600}
+  .ew-fs details.ew-subd{background:none;border:none;border-radius:0}
+  .ew-fs details.ew-subd > summary{padding:6px 0}
+  .ew-fs details.ew-subd[open] > summary{background:none;border-bottom:1px dotted #C9D6E6}
+  .ew-fs details.ew-subd > summary span{color:var(--ink);font-weight:500}
+  .ew-subbody{margin:0 0 4px 14px;padding-left:10px;border-left:2px dotted #9FB6D3}
+  .ew-empty{font-size:12.5px;color:#9AA3B2;font-style:italic;padding:6px 0}
+  .ew-fs details.ew-attn{border-color:#E7C9C1}
+  .ew-fs details.ew-attn .ew-st,.ew-fs details.ew-attn .ew-sv{color:var(--red)}
+  .ew-foot{margin-top:14px;padding-top:12px;border-top:2px dotted var(--line);font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .ew-foot b{color:var(--navy-deep)}
+  .ew-label{font-family:var(--serif);font-size:20px;font-weight:600;color:var(--navy-deep);margin:30px 0 12px;padding-bottom:8px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--line)}
+  .ew-label span{font-family:var(--sans);font-size:12.5px;font-weight:500;color:var(--muted)}
+  .ew-label b{color:var(--navy-deep)}
+  .ew-sponsors{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+  .ew-tier{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .ew-tier h3{font-size:13px;margin:0 0 6px;font-weight:600;display:flex;justify-content:space-between;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--line);color:var(--navy-deep)}
+  .ew-tier h3 small{font-size:11px;color:var(--muted)}
+  .ew-tier .amt{font-size:11px;color:var(--navy);font-weight:600;margin:-2px 0 6px}
+  .ew-tier ul{margin:0;padding:0;list-style:none;font-size:12.5px}
+  .ew-tier li{padding:3px 0;border-bottom:1px dotted #C9D6E6}
+  .ew-tier li:last-child{border-bottom:none}
+  .ew-tier li.needs{color:var(--red)}
+  .ew-tier li.needs small{font-size:9px;font-weight:700;margin-left:5px}
+  .ew-tier .none{color:#A7AFBD;font-style:italic;font-size:12px}
+  .ew-tier.wide{grid-column:1/-1}
+  .ew-tier.wide ul{display:flex;flex-wrap:wrap;gap:4px 18px}
+  .ew-tier.wide li{border-bottom:none}
+  .ew-filters{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .ew-filters input,.ew-filters select{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:#fff}
+  .ew-filters input{flex:1 1 200px;min-width:0}
+  .ew-count{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+  .ew-roster{display:flex;flex-direction:column;gap:8px}
+  .ew-card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .ew-card.open{border-color:#B9CDE6;box-shadow:0 2px 10px rgba(47,85,151,.10)}
+  .ew-row{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:none;border:none;cursor:pointer;text-align:left}
+  .ew-row:hover{background:#F4F7FB}
+  .ew-card.open .ew-row{background:#EEF3FA}
+  .ew-name{font-weight:600;font-size:14px;display:block}
+  .ew-meta{font-size:12px;color:var(--muted);display:block}
+  .ew-right{display:flex;align-items:center;gap:11px;flex-shrink:0}
+  .ew-door{font-size:13px;font-weight:600;text-align:right;line-height:1.15}
+  .ew-door small{display:block;font-size:9.5px;color:var(--muted)}
+  .ew-lk{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .ew-lk.Confirmed{background:#E2F0E8;color:#2F7D54}
+  .ew-lk.NeedNames{background:#FBF0D8;color:#8A6D1B}
+  .ew-lk.Speculative{background:#E6EFFA;color:var(--navy)}
+  .ew-lk.Unlikely{background:#F2E6E6;color:var(--red)}
+  .ew-lk.Declined{background:#ECEAE7;color:#7A7A7A}
+  .ew-editor{border-top:1px solid var(--line);padding:14px;background:#F7F9FC}
+  .ew-context{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px 14px;padding:11px 13px;background:#FBF2E6;border:1px solid #F0E0CB;border-radius:8px}
+  .ew-context div{display:flex;flex-direction:column;min-width:0}
+  .ew-context .l{font-size:10px;color:#C98A3A;font-weight:700}
+  .ew-context .v{font-size:12.5px;color:#6B4E28;overflow-wrap:anywhere}
+  .ew-note{font-size:11px;color:#C98A3A;font-style:italic;margin:6px 0 12px}
+  .ew-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .ew-field{display:flex;flex-direction:column;gap:4px}
+  .ew-field.wide{grid-column:1/-1}
+  .ew-field label{font-size:12px;font-weight:700;color:var(--navy)}
+  .ew-field label i{font-weight:400;color:var(--muted)}
+  .ew-field input,.ew-field select,.ew-field textarea{border:1px solid #C5D6EC;border-radius:6px;padding:8px 10px;background:#fff;width:100%}
+  .ew-field textarea{resize:vertical;min-height:60px;font-family:inherit}
+  .ew-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+  .ew-more{margin-top:10px}
+  .ew-more .btn{width:100%}
+  .ew-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--navy-deep);color:#fff;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.22);max-width:90vw;z-index:50}
   .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
@@ -227,6 +335,7 @@
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
     <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</button>
     <button class="tab" role="tab" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Scorecard</button>
+    <button class="tab" role="tab" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</button>
     <button class="tab" role="tab" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
   </nav>
@@ -309,6 +418,54 @@
     <div class="card" id="pf-all"></div>
     <div class="card" id="pf-changes"></div>
   </section>
+  <section class="panel" id="panel-EWMC" hidden>
+    <div class="head">
+      <div><h1>2027 EWMC</h1><div class="ew-sub">An Evening with Mackinac Center · Campaign 27-EWMC · Sponsorship scoreboard</div></div>
+      <div class="actions"><span class="ew-badge">Live from Raiser’s Edge via SharePoint</span></div>
+    </div>
+    <div id="ew-msg"></div>
+    <div id="ew-body" hidden>
+
+      <!-- Progress toward the event goal -->
+      <div class="ew-hero">
+        <div class="ew-htop">
+          <div><div class="ew-hlbl">Raised toward event goal</div>
+            <div class="ew-hbig"><span id="ew-in">$0</span> <span class="ew-hof">of <span id="ew-goal">$0</span></span></div></div>
+          <div class="ew-hpct"><span id="ew-pct">0%</span><small>of goal in the door</small></div>
+        </div>
+        <div class="ew-bar" aria-hidden="true">
+          <div class="ew-segs"><span class="ew-seg ew-in" id="ew-bar-in"></span><span class="ew-seg ew-pl" id="ew-bar-pl"></span><span class="ew-seg ew-sp" id="ew-bar-sp"></span></div>
+          <span class="ew-goal" id="ew-bar-goal" hidden></span>
+        </div>
+        <div class="ew-ticks" id="ew-ticks" aria-hidden="true"></div>
+
+        <!-- Financial summary: each line opens to show who's in it -->
+        <div class="ew-fs">
+          <details><summary><span class="ew-sw ew-in"></span><span class="ew-st">In the door<small>Money received</small></span><span class="ew-sv"><span id="ew-sum-in">$0</span><small id="ew-pct-in"></small></span><span class="ew-chev">›</span></summary><div class="ew-body" id="ew-list-in"></div></details>
+          <details><summary><span class="ew-sw ew-pl"></span><span class="ew-st">Pledged, not yet in<small>Confirmed sponsors still owing</small></span><span class="ew-sv"><span id="ew-sum-pl">$0</span><small id="ew-pct-pl"></small></span><span class="ew-chev">›</span></summary><div class="ew-body" id="ew-list-pl"></div></details>
+          <details><summary><span class="ew-sw ew-sp"></span><span class="ew-st">Speculative, no pledge yet<small>Amount if entered, otherwise Sponsorship Level, otherwise Target Level</small></span><span class="ew-sv"><span id="ew-sum-sp">$0</span><small id="ew-pct-sp"></small></span><span class="ew-chev">›</span></summary><div class="ew-body" id="ew-list-sp"></div></details>
+          <details class="ew-attn" id="ew-attn"><summary><span class="ew-sw" style="background:var(--red)"></span><span class="ew-st">⚠ Needs attention<small>Money in, not yet counted: untagged or unconfirmed</small></span><span class="ew-sv" id="ew-sum-attn">$0</span><span class="ew-chev">›</span></summary><div class="ew-body" id="ew-list-attn"></div></details>
+        </div>
+        <div class="ew-foot"><span>If everything lands: <b id="ew-all">$0</b> (<span id="ew-all-pct">0%</span> of goal)</span><span id="ew-gap"></span></div>
+      </div>
+
+      <!-- Official sponsors by tier -->
+      <div class="ew-label">Official Sponsors <span><b id="ew-off-count">0</b> official sponsors · <b id="ew-off-amt">$0</b> confirmed</span></div>
+      <div class="ew-sponsors" id="ew-sponsors"></div>
+
+      <!-- Every sponsor prospect, click to edit -->
+      <div class="ew-label">Sponsorship Dashboard <span>click a sponsor to edit</span></div>
+      <div class="ew-filters">
+        <input id="ew-f-search" type="search" placeholder="Search sponsor name…" aria-label="Search sponsors">
+        <select id="ew-f-fund" aria-label="Fundraiser"><option value="">All fundraisers</option></select>
+        <select id="ew-f-lk" aria-label="Likelihood"><option value="">All likelihoods</option><option>Confirmed</option><option>Confirmed - Need Names</option><option>Speculative</option><option>Unlikely</option><option>Declined</option></select>
+        <button class="btn" id="ew-f-clear" type="button" hidden>Clear</button>
+      </div>
+      <div class="ew-count" id="ew-count"></div>
+      <div class="ew-roster" id="ew-roster"></div>
+      <div class="ew-more" id="ew-more" hidden></div>
+    </div>
+  </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
     <div class="head"><div><h1>Strategic Plan</h1></div></div>
     <div class="notice"><h2>Strategic Plan is coming</h2><p>Progress on the Advancement Strategic Plan will appear here in a future update.</p></div>
@@ -378,6 +535,7 @@ function selectTab(name) {
   closeDrawer();
   if (name === "Households") requestAnimationFrame(sizeTopScroll);
   if (name === "BoardSlides" && !BS.month && !BS.loading) loadBoard();
+  if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
 function applyAccess(access) {
@@ -1167,6 +1325,384 @@ function renderPortfolios() {
   $("pf-changes").querySelectorAll("[data-pm]").forEach(b => b.onclick = () => { PF.mode = b.dataset.pm; renderPortfolios(); });
   $("pf-changes").querySelectorAll("button[data-pi]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pi]));
 }
+
+/* =====================================================================
+   2027 EWMC — Sponsorship Scoreboard
+   ---------------------------------------------------------------------
+   Where the data comes from:
+     • EWMC_READ_URL  — the EWMC flow. It checks the RE login and sends back
+       every row of the 27-EWMC scoreboard table, plus ticket sales and the goal.
+     • EWMC_WRITE_URL — the EWMC save flow. It writes the blue (editable)
+       fields for one sponsor back to the scoreboard table.
+   What this tab shows, top to bottom:
+     1. Progress toward the event goal, with a four-line financial summary
+     2. Official sponsors, grouped by tier
+     3. The full sponsor list, with filters; click a sponsor to edit
+   ===================================================================== */
+
+/* ---------- 1. Settings ---------- */
+const EWMC_READ_URL  = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/25/workflows/40df9f6fc9dd40eba3bff91166ae5d9a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lRV4iYjBKOtzb-9ZtI2j9E6b2vOlWGCz0KgjMVoKJFE";
+const EWMC_WRITE_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/24/workflows/7473b87ce1874cd8a5a3dce27fd1e333/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ym8F4zCInbnhazyBAyoQp7DWGJisS2AuR9sOKKl5vC8";
+const EWMC_PAGE_SIZE = 15;            // sponsors shown before "Show more"
+
+// Sponsorship tiers, largest first, and what each is worth
+const EWMC_TIERS = [
+  { name: "Presenting Sponsor ($200k)", amount: 200000 },
+  { name: "Sacred Honor ($100k)",       amount: 100000 },
+  { name: "Patriot ($50k)",             amount: 50000 },
+  { name: "Liberty ($25k)",             amount: 25000 },
+  { name: "Freedom ($10k)",             amount: 10000 },
+  { name: "Justice ($5k)",              amount: 5000 },
+  { name: "Additional Donation",        amount: 0 }
+];
+const tierAmount = name => (EWMC_TIERS.find(t => t.name === name) || { amount: 0 }).amount;
+const tierShort  = name => String(name || "").replace(/\s*\(.*\)/, "");   // "Patriot ($50k)" → "Patriot"
+
+const EWMC_LIKELIHOODS = ["", "Confirmed", "Confirmed - Need Names", "Speculative", "Unlikely", "Declined"];
+const EWMC_LK_STYLE = { "Confirmed": "Confirmed", "Confirmed - Need Names": "NeedNames", "Speculative": "Speculative", "Unlikely": "Unlikely", "Declined": "Declined" };
+const EWMC_LK_LABEL = { "Confirmed - Need Names": "Confirmed · needs names" };
+
+/* ---------- 2. Columns ----------
+   "column" is the header in the Excel scoreboard table; "key" is the short
+   name used in this code. Editable fields are written back by the save flow;
+   read-only ones come from RE and are shown in the orange box. */
+const EWMC_COLUMNS = [
+  // identity
+  { key: "cid",    column: "Constituent ID" },
+  { key: "name",   column: "Constituent Name" },
+  // read-only context from RE (orange)
+  { key: "pc",     column: "Primary Contact",          label: "Primary Contact" },
+  { key: "fund",   column: "Assigned Fundraiser",      label: "Assigned Fundraiser" },
+  { key: "fa",     column: "First Action Date",        label: "First Action",       show: "date" },
+  { key: "ra",     column: "Most Recent Action Date",  label: "Most Recent Action", show: "date" },
+  { key: "pd",     column: "Proposal Date",            label: "Proposal Date",      show: "date" },
+  { key: "pa",     column: "Proposal Amount",          label: "Proposal Amount",    show: "money" },
+  { key: "ps",     column: "Proposal Status",          label: "Proposal Status" },
+  { key: "who",    column: "Who Made Ask",             label: "Who Made Ask" },
+  { key: "pledge", column: "Pledge Amount",            label: "Pledge Amount",      show: "money" },
+  { key: "door",   column: "Amount in Door",           label: "Amount in Door",     show: "money" },
+  // editable (blue) — written back by the save flow
+  { key: "tgt",    column: "Target Sponsorship Level", label: "Target Sponsorship Level", edit: "tier" },
+  { key: "lk",     column: "Sponsorship Likelihood",   label: "Sponsorship Likelihood",   edit: "likelihood" },
+  { key: "lvl",    column: "Sponsorship Level",        label: "Sponsorship Level",        edit: "tier" },
+  { key: "samt",   column: "Sponsorship Amount",       label: "Sponsorship Amount",       edit: "money", hint: "only if different than Sponsorship Level" },
+  { key: "sname",  column: "Sponsoring Name",          label: "Sponsoring Name",          edit: "text" },
+  { key: "inv",    column: "Invoice Created",          label: "Invoice Created",          edit: "yesno" },
+  { key: "guests", column: "Projected # of Guests",    label: "Projected # Guests",       edit: "number" },
+  { key: "notes",  column: "Additional Notes",         label: "Additional Notes",         edit: "notes" }
+];
+const EWMC_READONLY = EWMC_COLUMNS.filter(c => c.label && !c.edit);
+const EWMC_EDITABLE = EWMC_COLUMNS.filter(c => c.edit);
+
+/* ---------- 3. State ---------- */
+const EW = {
+  rows: [], goal: 0, tickets: 0, loaded: false, loading: false,
+  filter: { search: "", fund: "", lk: "" }, shown: EWMC_PAGE_SIZE, openId: null, scale: 1
+};
+
+/* ---------- 4. Small helpers ---------- */
+const ewNum   = v => Number(String(v ?? "").replace(/[^0-9.\-]/g, "")) || 0;
+const ewBlank = v => v === null || v === undefined || String(v).trim() === "";
+const ewUsd   = n => "$" + Math.round(n).toLocaleString("en-US");
+const ewPct   = n => !isFinite(n) || n <= 0 ? "0%" : (n < 10 ? n.toFixed(1) : Math.round(n)) + "%";   // one decimal under 10%
+const ewShort = n => n >= 1e6 ? "$" + (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M" : n >= 1e3 ? "$" + Math.round(n / 1e3) + "k" : "$" + n;
+const ewDate  = v => {                                   // Excel date number → m/d/yyyy
+  if (ewBlank(v)) return "";
+  const n = Number(v); if (!isFinite(n) || n < 1) return String(v);
+  const d = new Date(Math.round((n - 25569) * 86400000));
+  return isNaN(d) ? String(v) : `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+};
+const ewDisplayName = r => String(r.sname || "").trim() || r.name;                // Sponsoring Name wins if filled in
+const ewConfirmed   = r => String(r.lk || "").startsWith("Confirmed");           // "Confirmed" or "Confirmed - Need Names"
+const ewNeedsNames  = r => r.lk === "Confirmed - Need Names";
+const ewIsAddl      = r => r.lvl === "Additional Donation";
+const ewIsOfficial  = r => ewConfirmed(r) && r.lvl !== "" && !ewIsAddl(r);
+
+// Turn one Excel row into a tidy sponsor object
+function ewMapRow(xl) {
+  const r = {};
+  EWMC_COLUMNS.forEach(c => { r[c.key] = xl[c.column] ?? ""; });
+  ["pa", "pledge", "door", "guests"].forEach(k => r[k] = ewNum(r[k]));
+  r.samt = ewBlank(r.samt) ? "" : ewNum(r.samt);   // blank = "not entered", which is different from $0
+  return r;
+}
+
+/* ---------- 5. Loading ---------- */
+function ewMessage(title, text, isError) {
+  $("ew-body").hidden = true;
+  $("ew-msg").innerHTML = isError
+    ? `<div class="notice err"><h2>${esc(title)}</h2><p>${esc(text)}</p><button class="btn" id="ew-retry">Try again</button></div>`
+    : `<div class="loading">${esc(title)}</div>`;
+  if (isError) $("ew-retry").onclick = ewLoad;
+}
+
+function ewLoad() {
+  EW.loading = true;
+  ewMessage("Loading the live EWMC numbers…");
+  client.getUserIdentityToken()
+    .then(token => fetch(EWMC_READ_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: token }))
+    .then(res => { if (!res.ok) throw new Error(`the EWMC flow returned status ${res.status}`); return res.json(); })
+    .then(payload => {
+      // The flow sends { rows, tickets or ticketRows, goal or goalRows }
+      const rows = Array.isArray(payload) ? payload : payload && (payload.rows || payload.value);
+      if (!Array.isArray(rows)) throw new Error("unexpected response from the EWMC flow");
+      if (payload.tickets != null) EW.tickets = ewNum(payload.tickets);
+      else if (Array.isArray(payload.ticketRows)) EW.tickets = payload.ticketRows.reduce((s, x) => s + ewNum(x["Ticket Sales"]), 0);
+      if (payload.goal != null) EW.goal = ewNum(payload.goal);
+      else if (Array.isArray(payload.goalRows) && payload.goalRows.length) EW.goal = ewNum(payload.goalRows[0]["Event Goal"]);
+      EW.rows = rows.map(ewMapRow).filter(r => String(r.name).trim() !== "");
+      EW.loaded = true;
+      ewFillFundraisers();
+      ewRenderAll();
+      $("ew-msg").innerHTML = ""; $("ew-body").hidden = false;
+      requestAnimationFrame(ewDrawTicks);
+    })
+    .catch(e => ewMessage("The EWMC numbers didn’t load", `Nothing is shown rather than something wrong. (${e.message || e})`, true))
+    .finally(() => { EW.loading = false; });
+}
+
+/* ---------- 6. The money rules ----------
+   These are the same rules the tile used:
+   • In the door: confirmed sponsors with a level (not Additional Donation),
+     plus all Additional Donations, plus ticket sales.
+   • Pledged, not yet in: confirmed sponsors with a level — the larger of
+     Sponsorship Amount or the RE pledge, minus what's already in the door.
+   • Speculative: rows marked Speculative — Sponsorship Amount if entered,
+     else the Sponsorship Level's value, else the Target Level's value,
+     minus what's already in the door.
+   • Needs attention: money in the door that isn't counted above, because the
+     sponsor isn't confirmed or has no level. */
+function ewTotals() {
+  const t = { sponsorships: 0, addl: 0, pledged: 0, spec: 0, attn: 0, officialCount: 0, officialAmount: 0,
+              lists: { sponsorships: [], addl: [], pledged: [], spec: [], attn: [] } };
+  EW.rows.forEach(r => {
+    const door = r.door, amount = ewNum(r.samt), pledge = r.pledge, hasLevel = r.lvl !== "", label = ewDisplayName(r);
+
+    if (ewConfirmed(r) && hasLevel && !ewIsAddl(r) && door > 0) { t.sponsorships += door; t.lists.sponsorships.push({ label, note: tierShort(r.lvl), amt: door }); }
+    if (ewIsAddl(r) && door > 0) { t.addl += door; t.lists.addl.push({ label, amt: door }); }
+
+    if (ewConfirmed(r) && hasLevel) {
+      const owed = Math.max(amount, pledge, door) - door;
+      if (owed > 0) { t.pledged += owed; t.lists.pledged.push({ label, note: tierShort(r.lvl), amt: owed }); }
+    }
+
+    if (r.lk === "Speculative") {
+      let amt = 0, source = "";
+      if (!ewBlank(r.samt))       { amt = amount;            source = "amount entered"; }
+      else if (tierAmount(r.lvl)) { amt = tierAmount(r.lvl); source = "level: " + tierShort(r.lvl); }
+      else if (tierAmount(r.tgt)) { amt = tierAmount(r.tgt); source = "target: " + tierShort(r.tgt); }
+      amt = Math.max(0, amt - door);
+      if (amt > 0) { t.spec += amt; t.lists.spec.push({ label, note: source, amt }); }
+    }
+
+    if (door > 0 && !ewIsAddl(r) && (!hasLevel || !ewConfirmed(r))) { t.attn += door; t.lists.attn.push({ label, note: r.lk || "no likelihood", amt: door }); }
+
+    if (ewIsOfficial(r)) { t.officialCount++; t.officialAmount += ewBlank(r.samt) ? tierAmount(r.lvl) : amount; }
+  });
+  Object.values(t.lists).forEach(list => list.sort((a, b) => b.amt - a.amt));
+  t.inDoor = t.sponsorships + t.addl + EW.tickets;
+  t.everything = t.inDoor + t.pledged + t.spec;
+  return t;
+}
+
+/* ---------- 7. Drawing: progress and financial summary ---------- */
+const ewLine = x => `<div class="ew-li"><span>${esc(x.label)}${x.note ? `<em>${esc(x.note)}</em>` : ""}</span><b>${ewUsd(x.amt)}</b></div>`;
+const ewList = (items, totalLabel, total) => items.length
+  ? items.map(ewLine).join("") + `<div class="ew-li tot"><span>${esc(totalLabel)}</span><b>${ewUsd(total)}</b></div>`
+  : `<div class="ew-empty">Nothing here yet.</div>`;
+const ewSubList = (label, total, items) => `<details class="ew-subd"><summary class="ew-li"><span>› ${esc(label)}</span><b>${ewUsd(total)}</b></summary>
+  <div class="ew-subbody">${items.length ? items.map(ewLine).join("") : `<div class="ew-empty">Nothing in yet.</div>`}</div></details>`;
+
+function ewRenderProgress(t) {
+  const goal = EW.goal, pctOf = v => goal > 0 ? v / goal * 100 : 0, set = (id, v) => $(id).textContent = v;
+  set("ew-in", ewUsd(t.inDoor)); set("ew-goal", ewUsd(goal)); set("ew-pct", ewPct(pctOf(t.inDoor)));
+  set("ew-sum-in", ewUsd(t.inDoor));   set("ew-pct-in", ewPct(pctOf(t.inDoor)));
+  set("ew-sum-pl", ewUsd(t.pledged));  set("ew-pct-pl", ewPct(pctOf(t.pledged)));
+  set("ew-sum-sp", ewUsd(t.spec));     set("ew-pct-sp", ewPct(pctOf(t.spec)));
+  set("ew-sum-attn", ewUsd(t.attn));
+  set("ew-all", ewUsd(t.everything));  set("ew-all-pct", ewPct(pctOf(t.everything)));
+
+  // The bar is scaled to the goal, or to the total if everything would land past it
+  EW.scale = Math.max(goal, t.everything, 1);
+  $("ew-bar-in").style.width = t.inDoor / EW.scale * 100 + "%";
+  $("ew-bar-pl").style.width = t.pledged / EW.scale * 100 + "%";
+  $("ew-bar-sp").style.width = t.spec / EW.scale * 100 + "%";
+  $("ew-bar-goal").hidden = !(t.everything > goal);
+  $("ew-bar-goal").style.left = goal / EW.scale * 100 + "%";
+  ewDrawTicks();
+
+  $("ew-list-in").innerHTML = ewSubList("Sponsorships", t.sponsorships, t.lists.sponsorships) +
+    ewSubList("Additional donations", t.addl, t.lists.addl) +
+    `<div class="ew-li"><span>Ticket sales</span><b>${ewUsd(EW.tickets)}</b></div>` +
+    `<div class="ew-li tot"><span>Total in the door</span><b>${ewUsd(t.inDoor)}</b></div>`;
+  $("ew-list-pl").innerHTML = ewList(t.lists.pledged, "Total pledged, not yet in", t.pledged);
+  $("ew-list-sp").innerHTML = ewList(t.lists.spec, "Total speculative", t.spec);
+  $("ew-list-attn").innerHTML = ewList(t.lists.attn, "Total needing attention", t.attn);
+  $("ew-attn").hidden = t.attn <= 0;
+
+  const left = goal - t.everything;
+  $("ew-gap").innerHTML = left > 0 ? `Still <b style="color:var(--red)">${ewUsd(left)}</b> short of goal` : `<b style="color:#2F7D54">${ewUsd(-left)}</b> over goal`;
+}
+
+// Scale labels under the bar: every $50k if there's room, otherwise wider steps
+function ewDrawTicks() {
+  const host = $("ew-ticks"); if (!host || !host.clientWidth) return;
+  const scale = EW.scale, maxLabels = Math.max(2, Math.floor(host.clientWidth / 52));
+  const step = [50000, 100000, 250000, 500000, 1000000, 2500000].find(s => scale / s <= maxLabels) || 2500000;
+  let html = "";
+  for (let v = 0; v <= scale + 0.5; v += step) {
+    if (v !== 0 && scale - v < step * 0.35 && Math.abs(scale - v) >= 0.5) continue;   // skip a label crowding the end
+    const cls = v === 0 ? "first" : Math.abs(scale - v) < 0.5 ? "last" : "";
+    html += `<span class="${cls}" style="left:${v / scale * 100}%">${ewShort(v)}</span>`;
+  }
+  if (scale % step !== 0) html += `<span class="last" style="left:100%">${ewShort(scale)}</span>`;
+  host.innerHTML = html;
+}
+window.addEventListener("resize", () => { if (EW.loaded) ewDrawTicks(); });
+
+/* ---------- 8. Drawing: official sponsors ---------- */
+function ewRenderSponsors(t) {
+  $("ew-off-count").textContent = t.officialCount;
+  $("ew-off-amt").textContent = ewUsd(t.officialAmount);
+  $("ew-sponsors").innerHTML = EWMC_TIERS.map(tier => {
+    const rows = EW.rows.filter(r => r.lvl === tier.name && ewConfirmed(r));
+    const isAddl = tier.name === "Additional Donation";
+    const names = rows.length
+      ? "<ul>" + rows.map(r => `<li class="${ewNeedsNames(r) ? "needs" : ""}">${esc(ewDisplayName(r))}${ewNeedsNames(r) ? "<small>(needs guest names)</small>" : ""}</li>`).join("") + "</ul>"
+      : `<div class="none">None yet</div>`;
+    return `<div class="ew-tier${isAddl ? " wide" : ""}"><h3><span>${isAddl ? "Additional Donations" : tierShort(tier.name)}</span><small>${rows.length}</small></h3>` +
+      (isAddl ? "" : `<div class="amt">${ewUsd(tier.amount)} tier</div>`) + names + `</div>`;
+  }).join("");
+}
+
+/* ---------- 9. Drawing: the sponsor list ---------- */
+function ewFillFundraisers() {
+  const funds = [...new Set(EW.rows.map(r => r.fund).filter(Boolean))].sort();
+  $("ew-f-fund").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
+}
+function ewFiltered() {
+  const f = EW.filter;
+  return EW.rows.filter(r =>
+    (!f.search || String(r.name).toLowerCase().includes(f.search) || String(r.sname).toLowerCase().includes(f.search)) &&
+    (!f.fund || r.fund === f.fund) &&
+    (!f.lk || r.lk === f.lk));
+}
+function ewRenderRoster() {
+  const list = ewFiltered(), f = EW.filter, filtering = f.search || f.fund || f.lk, showing = Math.min(EW.shown, list.length);
+  $("ew-count").textContent = filtering
+    ? `${list.length} match${list.length === 1 ? "" : "es"} of ${EW.rows.length} · showing ${showing}`
+    : list.length > EW.shown ? `Showing ${showing} of ${EW.rows.length} sponsors` : `${EW.rows.length} sponsors`;
+  $("ew-f-clear").hidden = !filtering;
+
+  $("ew-roster").innerHTML = list.length ? list.slice(0, EW.shown).map(r => {
+    const meta = [String(r.sname || "").trim() ? r.name : "", tierShort(r.lvl || r.tgt) || "—", r.fund].filter(Boolean).map(esc).join(" · ");
+    const open = r.cid === EW.openId;
+    return `<div class="ew-card${open ? " open" : ""}" data-id="${esc(r.cid)}">
+      <button class="ew-row" type="button" aria-expanded="${open}">
+        <span><span class="ew-name">${esc(ewDisplayName(r))}</span><span class="ew-meta">${meta}</span></span>
+        <span class="ew-right">
+          ${r.lk ? `<span class="ew-lk ${EWMC_LK_STYLE[r.lk] || ""}">${esc(EWMC_LK_LABEL[r.lk] || r.lk)}</span>` : ""}
+          ${r.door ? `<span class="ew-door">${ewUsd(r.door)}<small>in door</small></span>` : ""}
+          <span class="ew-chev">›</span>
+        </span>
+      </button>
+      ${open ? `<div class="ew-editor">${ewEditorHtml(r)}</div>` : ""}
+    </div>`;
+  }).join("") : `<div class="notice">No sponsors match those filters.</div>`;
+
+  $("ew-roster").querySelectorAll(".ew-card").forEach(card => {
+    const id = card.dataset.id;
+    card.querySelector(".ew-row").onclick = () => { EW.openId = EW.openId === id ? null : id; ewRenderRoster(); };
+    if (id === EW.openId) ewWireEditor(card, EW.rows.find(r => r.cid === id));
+  });
+
+  const remaining = list.length - EW.shown;
+  $("ew-more").hidden = remaining <= 0;
+  $("ew-more").innerHTML = remaining > 0 ? `<button class="btn" type="button">Show ${Math.min(EWMC_PAGE_SIZE, remaining)} more (${remaining} remaining)</button>` : "";
+  if (remaining > 0) $("ew-more").querySelector("button").onclick = () => { EW.shown += EWMC_PAGE_SIZE; ewRenderRoster(); };
+}
+
+/* ---------- 10. The edit panel ---------- */
+function ewInputHtml(c, r) {
+  const v = r[c.key], k = esc(c.key);
+  const options = (list, labelOf) => list.map(o => `<option value="${esc(o)}"${o === v ? " selected" : ""}>${esc(labelOf ? labelOf(o) : o)}</option>`).join("");
+  switch (c.edit) {
+    case "tier":       return `<select data-k="${k}"><option value=""></option>${options(EWMC_TIERS.map(t => t.name))}</select>`;
+    case "likelihood": return `<select data-k="${k}">${options(EWMC_LIKELIHOODS, o => o || "—")}</select>`;
+    case "yesno":      return `<select data-k="${k}">${options(["", "Yes", "No"], o => o || "—")}</select>`;
+    case "money":      return `<input data-k="${k}" inputmode="numeric" value="${ewBlank(v) ? "" : esc(ewUsd(ewNum(v)))}" placeholder="— not entered">`;
+    case "number":     return `<input data-k="${k}" inputmode="numeric" value="${esc(v || "")}" placeholder="—">`;
+    case "notes":      return `<textarea data-k="${k}" placeholder="—">${esc(v)}</textarea>`;
+    default:           return `<input data-k="${k}" value="${esc(v)}" placeholder="—">`;
+  }
+}
+function ewEditorHtml(r) {
+  const readonly = EWMC_READONLY.map(c => {
+    const v = r[c.key];
+    const shown = c.show === "money" ? (ewNum(v) ? ewUsd(ewNum(v)) : "—") : c.show === "date" ? (ewDate(v) || "—") : (ewBlank(v) ? "—" : v);
+    return `<div><span class="l">${esc(c.label)}</span><span class="v">${esc(shown)}</span></div>`;
+  }).join("");
+  const fields = EWMC_EDITABLE.map(c => `<div class="ew-field${c.edit === "notes" ? " wide" : ""}"><label>${esc(c.label)}${c.hint ? ` <i>(${esc(c.hint)})</i>` : ""}</label>${ewInputHtml(c, r)}</div>`).join("");
+  return `<div class="ew-context">${readonly}</div><div class="ew-note">↑ read-only from Raiser’s Edge · the fields below save to the scoreboard</div>
+    <div class="ew-fields">${fields}</div>
+    <div class="ew-actions"><button class="btn" type="button" data-act="cancel">Cancel</button><button class="btn primary" type="button" data-act="save">Save changes</button></div>`;
+}
+function ewWireEditor(card, r) {
+  const save = card.querySelector('[data-act="save"]');
+  card.querySelector('[data-act="cancel"]').onclick = () => { EW.openId = null; ewRenderRoster(); };
+  card.querySelector(".ew-editor").addEventListener("input", () => { save.disabled = false; save.textContent = "Save changes"; });
+  save.onclick = () => ewSave(card, r, save);
+}
+
+/* ---------- 11. Saving ---------- */
+function ewSave(card, r, button) {
+  // Read the edited values
+  const changes = {};
+  card.querySelectorAll("[data-k]").forEach(input => {
+    const c = EWMC_EDITABLE.find(x => x.key === input.dataset.k);
+    const raw = input.value;
+    changes[c.key] = (c.edit === "money" || c.edit === "number") ? (String(raw).trim() === "" ? "" : ewNum(raw)) : raw;
+  });
+  button.disabled = true; button.textContent = "Saving…";
+
+  client.getUserIdentityToken()
+    .then(token => {
+      // The save flow expects { uit, id, "<Excel column>": value, ... }
+      const payload = { uit: token, id: r.cid };
+      EWMC_EDITABLE.forEach(c => payload[c.column] = changes[c.key]);
+      return fetch(EWMC_WRITE_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
+    })
+    .then(res => { if (!res.ok) throw new Error(`the save flow returned status ${res.status}`); return res.json(); })
+    .then(reply => {
+      if (!reply || reply.ok !== true) throw new Error("unexpected reply from the save flow");
+      Object.assign(r, changes);
+      ewRenderAll();                       // totals, sponsors and this card all refresh
+      ewToast(`Saved ${ewDisplayName(r)} ✓`);
+    })
+    .catch(e => { button.disabled = false; button.textContent = "Save changes"; ewToast(`Didn’t save ${ewDisplayName(r)}: ${e.message || e}. Nothing was written.`); });
+}
+function ewToast(text) {
+  let t = $("ew-toast");
+  if (!t) { t = document.createElement("div"); t.id = "ew-toast"; t.className = "ew-toast"; document.body.appendChild(t); }
+  t.textContent = text; t.hidden = false;
+  clearTimeout(t._timer); t._timer = setTimeout(() => t.hidden = true, 3600);
+}
+
+/* ---------- 12. Putting it together ---------- */
+function ewRenderAll() {
+  const t = ewTotals();
+  ewRenderProgress(t);
+  ewRenderSponsors(t);
+  ewRenderRoster();
+}
+$("ew-f-search").addEventListener("input", e => { EW.filter.search = e.target.value.trim().toLowerCase(); EW.shown = EWMC_PAGE_SIZE; ewRenderRoster(); });
+$("ew-f-fund").addEventListener("change", e => { EW.filter.fund = e.target.value; EW.shown = EWMC_PAGE_SIZE; ewRenderRoster(); });
+$("ew-f-lk").addEventListener("change", e => { EW.filter.lk = e.target.value; EW.shown = EWMC_PAGE_SIZE; ewRenderRoster(); });
+$("ew-f-clear").addEventListener("click", () => {
+  EW.filter = { search: "", fund: "", lk: "" }; EW.shown = EWMC_PAGE_SIZE;
+  ["ew-f-search", "ew-f-fund", "ew-f-lk"].forEach(id => $(id).value = "");
+  ewRenderRoster();
+});
 
 /* ===== Quick-look panel ===== */
 let lastFocus = null, current = null;
