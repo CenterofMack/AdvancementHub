@@ -214,6 +214,7 @@
   .pf-list .bs-tablewrap{max-height:360px;overflow:auto}
   .pf-list td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;text-align:left;white-space:normal}
   td.up{color:#1F6B3A} td.down{color:var(--red)}
+  .tag{display:inline-block;font-size:11px;color:#2E6B47;background:#EAF5EE;border-radius:4px;padding:1px 6px;margin-left:4px;white-space:nowrap}
   .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
@@ -1139,14 +1140,15 @@ function renderPortfolios() {
     { k: "Lapsed", note: `gave in ${m.priorL}, nothing in ${m.curL}`, rows: list.filter(x => x.a > 0 && x.b <= 0) },
     { k: "Decreased", note: "giving down", rows: list.filter(x => x.a > 0 && x.b > 0 && x.b < x.a) },
     { k: "Increased", note: "giving up", rows: list.filter(x => x.a > 0 && x.b > x.a) },
-    { k: "New", note: `nothing in ${m.priorL}`, rows: list.filter(x => x.a <= 0 && x.b > 0) }
+    { k: "New or renewed", note: `nothing in ${m.priorL}`, rows: list.filter(x => x.a <= 0 && x.b > 0) }
   ];
   groups.forEach(gp => gp.rows.sort((p, q) => Math.abs(q.b - q.a) - Math.abs(p.b - p.a)));
   const POOL = [];
   const tbl = gp => `<div class="pf-list"><h3>${gp.k} <small>· ${gp.rows.length.toLocaleString()} · ${esc(gp.note)}</small></h3>
     <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th>${esc(m.priorL)}</th><th>${esc(m.curL.replace(" money in + projected", " proj."))}</th><th>Change</th></tr></thead><tbody>
     ${gp.rows.length ? gp.rows.map(x => { POOL.push(x.r); const ch = x.b - x.a;
-      return `<tr><td class="txt name"><button data-pi="${POOL.length - 1}">${esc(x.r.Name)}</button></td><td>${x.a ? short(x.a) : "–"}</td><td>${x.b ? short(x.b) : "–"}</td><td class="${ch > 0 ? "up" : "down"}">${(ch > 0 ? "+" : "−") + short(Math.abs(ch))}</td></tr>`; }).join("")
+      const back = gp.k === "New or renewed" ? [...KEYS.years].map(k => +k.replace("Money In ", "")).filter(y => y < +m.priorL && num(x.r["Money In " + y]) > 0).sort((p, q) => q - p)[0] : null;
+      return `<tr><td class="txt name"><button data-pi="${POOL.length - 1}">${esc(x.r.Name)}</button>${back ? ` <span class="tag">gave in ${back}</span>` : ""}</td><td>${x.a ? short(x.a) : "–"}</td><td>${x.b ? short(x.b) : "–"}</td><td class="${ch > 0 ? "up" : "down"}">${(ch > 0 ? "+" : "−") + short(Math.abs(ch))}</td></tr>`; }).join("")
       : `<tr><td class="txt" colspan="4" style="color:var(--muted)">None</td></tr>`}
     </tbody></table></div></div>`;
   $("pf-changes").innerHTML = `<div class="card-head"><div><h2>Donor changes${PF.fr ? " — " + esc(PF.fr) : ""}</h2><div class="sub">Click a name for the quick look.</div></div>
@@ -1154,6 +1156,7 @@ function renderPortfolios() {
         <button type="button" data-pm="proj" aria-pressed="${PF.mode === "proj"}">${Y} projected vs ${Y - 1}</button>
         <button type="button" data-pm="last" aria-pressed="${PF.mode === "last"}">${Y - 1} vs ${Y - 2}</button></div>` : ""}</div></div>
     <div class="pf-grid">${groups.map(tbl).join("")}</div>
+    <p class="bs-note">“New or renewed” covers anyone with nothing in ${esc(m.priorL)}. A “gave in” tag marks a returning donor the data can see; the hub only has ${KEYS.years.map(k => k.replace("Money In ", "")).sort()[0]} forward, so someone returning after a longer gap shows without a tag.</p>
     <p class="bs-note">${PF.mode === "proj" ? `${Y} counts money in so far plus outstanding projections, so a household with an open projection isn’t lapsed yet.` : `Both years are complete, so this is a true year-over-year comparison.`}</p>`;
   $("pf-changes").querySelectorAll("[data-pm]").forEach(b => b.onclick = () => { PF.mode = b.dataset.pm; renderPortfolios(); });
   $("pf-changes").querySelectorAll("button[data-pi]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pi]));
