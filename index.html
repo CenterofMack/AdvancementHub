@@ -30,6 +30,9 @@
   .tab:hover{color:#fff}
   .tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
   .who{font-size:12px;color:#A8CAD3;padding-bottom:16px;white-space:nowrap}
+  /* Mackinac Center logo, shown in white on the top bar */
+  .brand .logo{display:block;height:30px;width:auto;max-width:200px;margin-bottom:6px;filter:brightness(0) invert(1)}
+  .brand .name{display:block}
   /* Other Reports menu */
   .tabmenu{position:relative;display:flex}
   .tab.has-menu::after{content:" ▾";font-size:11px}
@@ -375,7 +378,13 @@
 </head>
 <body>
 <header class="bar">
-  <div class="brand">Advancement Hub</div>
+  <div class="brand">
+    <!-- Logo: read from the repo (mackinac-logo.svg); until that file exists it borrows the one on mackinac.org.
+         It's shown in white so it reads on the teal bar. -->
+    <img class="logo" src="mackinac-logo.svg" alt="Mackinac Center for Public Policy"
+      onerror="if(!this.dataset.f){this.dataset.f='1';this.src='https://www.mackinac.org/include/images/logo.svg';}else{this.hidden=true;}">
+    <span class="name">Advancement Hub</span>
+  </div>
   <nav class="tabs" role="tablist" aria-label="Reports">
     <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
