@@ -30,6 +30,13 @@
   .tab:hover{color:#fff}
   .tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
   .who{font-size:12px;color:#AFC0DA;padding-bottom:16px;white-space:nowrap}
+  /* Other Reports menu */
+  .tabmenu{position:relative;display:flex}
+  .tab.has-menu::after{content:" ▾";font-size:11px}
+  .tabpop{position:absolute;left:0;top:100%;z-index:30;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(23,42,73,.20);padding:6px}
+  .tabitem{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:9px 12px;border-radius:4px;cursor:pointer;color:var(--ink);font-weight:500}
+  .tabitem:hover{background:#F0F3F8}
+  .tabitem[aria-selected="true"]{color:var(--navy-deep);font-weight:600;border-left-color:var(--gold);background:#F7F9FC}
 
   main{max-width:1320px;margin:0 auto;padding:28px}
   .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
@@ -70,6 +77,9 @@
   .ledger .row:last-child{border-bottom:0}
   .ledger .row.key{border-top:2px solid var(--navy);border-bottom:0;margin-top:2px;font-weight:600}
   .ledger dd{margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* Highlighted rows, matching the Projections workbook */
+  .ledger .row.hi{background:#FFF3B0;margin-left:-8px;margin-right:-8px;padding-left:8px;padding-right:8px;font-weight:600}
+  .ledger .row.sur{background:#F3F0E8;margin-left:-8px;margin-right:-8px;padding-left:8px;padding-right:8px}
   .neg{color:var(--red)}
   .footnote{color:var(--muted);font-size:12px;margin-top:16px;max-width:80ch}
 
@@ -324,6 +334,42 @@
   .ew-more .btn{width:100%}
   .ew-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--navy-deep);color:#fff;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.22);max-width:90vw;z-index:50}
   .bs-note{color:var(--muted);font-size:12.5px;margin:10px 0 0;font-style:italic;max-width:90ch}
+
+  /* ===== 2027 EWMC: event banner and two-column layout ===== */
+  .ew-banner{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:26px;align-items:center;background:var(--navy-deep);color:#fff;border-radius:10px;overflow:hidden;margin-bottom:22px}
+  .ew-banner img{display:block;width:100%;height:auto}
+  .ew-banner.noimg{grid-template-columns:1fr}
+  .ew-btext{padding:20px 26px 20px 0}
+  .ew-banner.noimg .ew-btext{padding:22px 26px}
+  .ew-kicker{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#E3C877}
+  .ew-banner h1{color:#fff;font-size:28px;margin:6px 0 4px}
+  .ew-bsub{color:#C9D4E6;font-size:15px}
+  .ew-bfacts{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px;color:#E4EAF3}
+  .ew-days{background:var(--gold);color:var(--navy-deep);font-weight:700;border-radius:999px;padding:1px 10px}
+  .ew-top{display:grid;grid-template-columns:minmax(0,9fr) minmax(0,11fr);gap:24px;align-items:start}
+  .ew-top .ew-hero{margin-bottom:0}
+  .ew-top .ew-label{margin-top:0}
+  .ew-tiers{background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px 22px 10px}
+  .ew-t{padding:14px 0 10px}
+  .ew-th{display:flex;align-items:baseline;gap:10px;border-bottom:2px solid var(--navy);padding-bottom:5px;margin-bottom:7px}
+  .ew-th .n{flex:1;font-family:var(--serif);font-weight:600;font-size:17px;color:var(--navy-deep)}
+  .ew-th .a{font-size:12.5px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums}
+  .ew-th .c{min-width:26px;text-align:center;font-size:11.5px;font-weight:600;color:var(--navy);background:#EEF2F7;border-radius:999px;padding:1px 8px}
+  .ew-t.empty .ew-th{border-bottom-color:var(--line)}
+  .ew-t.empty .ew-th .n,.ew-t.empty .ew-th .a{color:#8A94A6}
+  .ew-t.empty .ew-th .c{color:#8A94A6;background:#F3F5F8}
+  .ew-t ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 20px;font-size:13.5px}
+  .ew-t li{padding:3px 0}
+  .ew-t li.needs{color:var(--red)}
+  .ew-t li.needs small{font-size:10px;font-weight:700;margin-left:6px}
+  .ew-t .none{color:#A7AFBD;font-style:italic;font-size:12.5px}
+  @media (max-width:980px){ .ew-top{grid-template-columns:1fr} .ew-banner{grid-template-columns:1fr} .ew-btext{padding:4px 20px 20px} }
+
+  /* ===== Mailing Program ===== */
+  .mp-views{margin:0 0 14px}
+  #panel-Mailing .card > .sub{color:var(--muted);font-size:13px;margin:2px 0 14px}
+  .mp-plan{margin:10px 0 0;padding-left:20px;color:var(--ink)}
+  .mp-plan li{margin:4px 0}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
 </head>
@@ -335,9 +381,15 @@
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
     <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</button>
     <button class="tab" role="tab" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Scorecard</button>
-    <button class="tab" role="tab" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</button>
+    <button class="tab" role="tab" data-tab="Mailing" data-access="Mailing Program" aria-selected="false" hidden>Mailing Program</button>
     <button class="tab" role="tab" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
+    <div class="tabmenu" id="other-menu" hidden>
+      <button class="tab has-menu" type="button" id="other-btn" aria-haspopup="true" aria-expanded="false" aria-selected="false">Other Reports</button>
+      <div class="tabpop" id="other-pop" role="menu" hidden>
+        <button class="tabitem" type="button" role="menuitem" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</button>
+      </div>
+    </div>
   </nav>
   <div class="who" id="who"></div>
 </header>
@@ -419,12 +471,22 @@
     <div class="card" id="pf-changes"></div>
   </section>
   <section class="panel" id="panel-EWMC" hidden>
-    <div class="head">
-      <div><h1>2027 EWMC</h1><div class="ew-sub">An Evening with Mackinac Center · Campaign 27-EWMC · Sponsorship scoreboard</div></div>
-      <div class="actions"><span class="ew-badge">Live from Raiser’s Edge via SharePoint</span></div>
+    <!-- Event banner. The image is read from the repo (ewmc-2027-banner.jpg);
+         until that file exists it borrows the one on mackinac.org, and if neither loads the text stands alone. -->
+    <div class="ew-banner" id="ew-banner">
+      <img src="ewmc-2027-banner.jpg" alt="An Evening with the Mackinac Center 2027"
+           onerror="if(!this.dataset.f){this.dataset.f='1';this.src='https://www.mackinac.org/media/images/2026/sizes/848w/WHG_EWTMC_27.jpg';}else{this.hidden=true;this.parentNode.classList.add('noimg');}">
+      <div class="ew-btext">
+        <div class="ew-kicker">An Evening with the Mackinac Center 2027 · Sponsorship scoreboard</div>
+        <h1>Celebrating 40 Years of Liberty and Service</h1>
+        <div class="ew-bsub">Featuring Gary Sinise</div>
+        <div class="ew-bfacts"><span>Friday, May 21, 2027</span><span>Michigan Central Station, Detroit</span><span class="ew-days" id="ew-days" hidden></span></div>
+      </div>
     </div>
     <div id="ew-msg"></div>
     <div id="ew-body" hidden>
+     <div class="ew-top">
+      <div class="ew-col-money">
 
       <!-- Progress toward the event goal -->
       <div class="ew-hero">
@@ -449,9 +511,13 @@
         <div class="ew-foot"><span>If everything lands: <b id="ew-all">$0</b> (<span id="ew-all-pct">0%</span> of goal)</span><span id="ew-gap"></span></div>
       </div>
 
+      </div>
+      <div class="ew-col-sponsors">
       <!-- Official sponsors by tier -->
       <div class="ew-label">Official Sponsors <span><b id="ew-off-count">0</b> official sponsors · <b id="ew-off-amt">$0</b> confirmed</span></div>
-      <div class="ew-sponsors" id="ew-sponsors"></div>
+      <div class="ew-tiers" id="ew-sponsors"></div>
+      </div>
+     </div>
 
       <!-- Every sponsor prospect, click to edit -->
       <div class="ew-label">Sponsorship Dashboard <span>click a sponsor to edit</span></div>
@@ -464,6 +530,38 @@
       <div class="ew-count" id="ew-count"></div>
       <div class="ew-roster" id="ew-roster"></div>
       <div class="ew-more" id="ew-more" hidden></div>
+    </div>
+  </section>
+  <section class="panel" id="panel-Mailing" hidden>
+    <div class="head">
+      <div><h1>Mailing Program</h1><div class="asof" id="mp-sub"></div></div>
+      <div class="actions">
+        <div class="segbtn" role="group" aria-label="Which mailing program">
+          <button type="button" data-mp="Internal" aria-pressed="true">Internal</button>
+          <button type="button" data-mp="External" aria-pressed="false">External</button>
+        </div>
+      </div>
+    </div>
+    <div id="mp-Internal">
+      <div class="segbtn mp-views" role="group" aria-label="Report">
+        <button type="button" data-mpv="Tracking" aria-pressed="true">Traditional Tracking</button>
+        <button type="button" data-mpv="Cost" aria-pressed="false">Cost &amp; Return</button>
+      </div>
+      <div class="card" id="mpv-Tracking">
+        <h2>Traditional Tracking</h2>
+        <p class="sub">Year-to-date pacing: is this year ahead of or behind the last two?</p>
+        <div class="notice"><h2>Coming next</h2><p>These charts will appear here once the hub is connected to the Internal Mailing Program workbook:</p>
+          <ul class="mp-plan"><li>Impact: gross income and number of gifts, year to date</li><li>Bi-Monthly Mailing: gross income and number of gifts, year to date</li><li>Capitol Confidential: gross income and number of gifts, year to date</li></ul></div>
+      </div>
+      <div class="card" id="mpv-Cost" hidden>
+        <h2>Cost &amp; Return</h2>
+        <p class="sub">What each program costs against what it brings in.</p>
+        <div class="notice"><h2>Coming next</h2><p>These charts will appear here once the hub is connected to the Internal Mailing Program workbook:</p>
+          <ul class="mp-plan"><li>Gross income vs. expenses</li><li>Net income by program</li><li>Cost to raise $1 by program</li><li>Gross income by program</li></ul></div>
+      </div>
+    </div>
+    <div id="mp-External" hidden>
+      <div class="notice"><h2>External mailings are coming</h2><p>Reports for the external mailing program will appear here in a future update.</p></div>
     </div>
   </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
@@ -530,17 +628,62 @@ function deliver(blob, filename, fbId) {
 let ACCESS = {};
 const allowed = key => String(ACCESS[key] || "").trim().toLowerCase() === "yes";
 function selectTab(name) {
-  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
+  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
+  $("other-btn").setAttribute("aria-selected", !!document.querySelector(`#other-pop [data-tab="${name}"]`));
+  closeMenu();
   document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + name);
   closeDrawer();
   if (name === "Households") requestAnimationFrame(sizeTopScroll);
   if (name === "BoardSlides" && !BS.month && !BS.loading) loadBoard();
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
 }
-document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+document.querySelectorAll("[data-tab]").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
 function applyAccess(access) {
   ACCESS = access || {};
-  document.querySelectorAll(".tab").forEach(t => t.hidden = !allowed(t.dataset.access));
+  document.querySelectorAll("[data-tab]").forEach(t => t.hidden = !allowed(t.dataset.access));
+  // The Other Reports menu only shows if at least one report in it is allowed
+  $("other-menu").hidden = ![...document.querySelectorAll("#other-pop [data-tab]")].some(x => !x.hidden);
+}
+
+/* ===== Other Reports menu ===== */
+function closeMenu() { $("other-pop").hidden = true; $("other-btn").setAttribute("aria-expanded", "false"); }
+$("other-btn").addEventListener("click", e => {
+  e.stopPropagation();
+  const open = $("other-pop").hidden;
+  $("other-pop").hidden = !open; $("other-btn").setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("click", e => { if (!$("other-menu").contains(e.target)) closeMenu(); });
+
+/* ===== Mailing Program: Internal / External, and which report ===== */
+const MP = { prog: "Internal", view: "Tracking" };
+const MP_SUB = { Internal: "Internal mailings: Impact, Bi-Monthly Mailing and Capitol Confidential", External: "External mailings" };
+function mpRender() {
+  document.querySelectorAll("[data-mp]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mp === MP.prog));
+  document.querySelectorAll("[data-mpv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mpv === MP.view));
+  $("mp-Internal").hidden = MP.prog !== "Internal"; $("mp-External").hidden = MP.prog !== "External";
+  $("mpv-Tracking").hidden = MP.view !== "Tracking"; $("mpv-Cost").hidden = MP.view !== "Cost";
+  $("mp-sub").textContent = MP_SUB[MP.prog];
+}
+document.querySelectorAll("[data-mp]").forEach(b => b.addEventListener("click", () => { MP.prog = b.dataset.mp; mpRender(); }));
+document.querySelectorAll("[data-mpv]").forEach(b => b.addEventListener("click", () => { MP.view = b.dataset.mpv; mpRender(); }));
+mpRender();
+
+/* ===== Where the user is looking =====
+   Inside Raiser's Edge the hub grows to its full height and RE does the scrolling,
+   so "fixed" panels would land at the top of the hub instead of on screen.
+   This finds the part of the hub that's actually visible, so panels open there. */
+function visibleArea() {
+  return new Promise(resolve => {
+    if (window.parent === window || !("IntersectionObserver" in window)) return resolve(null);
+    let done = false, io = null;
+    const finish = v => { if (done) return; done = true; if (io) io.disconnect(); resolve(v); };
+    io = new IntersectionObserver(entries => {
+      const r = entries[entries.length - 1].intersectionRect;
+      finish(r.height > 60 ? { top: r.top + window.scrollY, height: r.height } : null);
+    });
+    io.observe(document.body);
+    setTimeout(() => finish(null), 400);
+  });
 }
 
 /* ===== Messages ===== */
@@ -572,6 +715,9 @@ function load() {
 }
 
 /* ===== Overview ===== */
+// The two yellow rows on the Projections workbook: the fundraising goal and the all-entities year-end total
+const ovHighlight = r => r.section === "Fundraising" &&
+  (/^\s*\d{4}\s+fundraising goal\s*$/i.test(r.label) || /total ye projections \(all entities\)/i.test(r.label));
 function dataThrough() {
   const v = HEADER.value; if (!v) return "";
   const d = toDate(v);
@@ -605,7 +751,8 @@ function renderOverview(rows) {
   $("ledgers").innerHTML = order.map(sec => `<div class="ledger"><h3>${esc(sec)}</h3><dl>` +
     OV.filter(r => r.section === sec).map(r => {
       const key = /surplus|total/i.test(r.label), neg = r.format !== "text" && num(r.value) < 0;
-      return `<div class="row${key ? " key" : ""}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${esc(fmtVal(r.value, r.format))}</dd></div>`;
+      const cls = (key ? " key" : "") + (ovHighlight(r) ? " hi" : /surplus/i.test(r.label) ? " sur" : "");
+      return `<div class="row${cls}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${esc(fmtVal(r.value, r.format))}</dd></div>`;
     }).join("") + `</dl></div>`).join("");
 }
 
@@ -633,6 +780,7 @@ function drawOverview(doc) {
         didParseCell: d => {
           if (d.section !== "body") return;
           if (/surplus|total/i.test(String(d.row.raw[0]))) { d.cell.styles.fontStyle = "bold"; d.cell.styles.fillColor = [236, 234, 226]; }
+          if (sec === "Fundraising" && ovHighlight({ section: sec, label: String(d.row.raw[0]) })) { d.cell.styles.fontStyle = "bold"; d.cell.styles.fillColor = [255, 240, 140]; }
           if (d.column.index === 1 && String(d.cell.raw).startsWith("-")) d.cell.styles.textColor = [179, 38, 30];
         },
         didDrawCell: d => { if (d.section === "body") { doc.setDrawColor(220, 224, 230); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } }
@@ -1567,13 +1715,24 @@ function ewRenderSponsors(t) {
   $("ew-sponsors").innerHTML = EWMC_TIERS.map(tier => {
     const rows = EW.rows.filter(r => r.lvl === tier.name && ewConfirmed(r));
     const isAddl = tier.name === "Additional Donation";
+    const title = isAddl ? "Additional Donations" : tierShort(tier.name) + (/sponsor/i.test(tier.name) ? "" : " Sponsor");
     const names = rows.length
       ? "<ul>" + rows.map(r => `<li class="${ewNeedsNames(r) ? "needs" : ""}">${esc(ewDisplayName(r))}${ewNeedsNames(r) ? "<small>(needs guest names)</small>" : ""}</li>`).join("") + "</ul>"
       : `<div class="none">None yet</div>`;
-    return `<div class="ew-tier${isAddl ? " wide" : ""}"><h3><span>${isAddl ? "Additional Donations" : tierShort(tier.name)}</span><small>${rows.length}</small></h3>` +
-      (isAddl ? "" : `<div class="amt">${ewUsd(tier.amount)} tier</div>`) + names + `</div>`;
+    return `<div class="ew-t${rows.length ? "" : " empty"}"><div class="ew-th"><span class="n">${esc(title)}</span>` +
+      (isAddl ? "" : `<span class="a">${ewUsd(tier.amount)}</span>`) + `<span class="c">${rows.length}</span></div>` + names + `</div>`;
   }).join("");
 }
+
+// Days until the event, shown in the banner
+function ewCountdown() {
+  const el = $("ew-days"); if (!el) return;
+  const now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((new Date(2027, 4, 21) - start) / 86400000);
+  el.hidden = days < 0;
+  el.textContent = days > 1 ? days + " days to go" : days === 1 ? "Tomorrow" : "Today";
+}
+ewCountdown();
 
 /* ---------- 9. Drawing: the sponsor list ---------- */
 function ewFillFundraisers() {
@@ -1685,6 +1844,10 @@ function ewToast(text) {
   let t = $("ew-toast");
   if (!t) { t = document.createElement("div"); t.id = "ew-toast"; t.className = "ew-toast"; document.body.appendChild(t); }
   t.textContent = text; t.hidden = false;
+  visibleArea().then(a => {
+    if (a) { t.style.position = "absolute"; t.style.top = (a.top + a.height - 70) + "px"; t.style.bottom = "auto"; }
+    else { t.style.position = ""; t.style.top = ""; t.style.bottom = ""; }
+  });
   clearTimeout(t._timer); t._timer = setTimeout(() => t.hidden = true, 3600);
 }
 
@@ -1739,7 +1902,14 @@ function openDrawer(r) {
   $("dr-body").innerHTML = html;
   if (canEdit) $("ed-save").onclick = () => saveEdit(r);
   $("dr-open").hidden = !String(r["System Record ID"] || "").trim();
-  $("scrim").hidden = false; $("drawer").hidden = false; $("dr-close").focus();
+  $("scrim").hidden = false;
+  visibleArea().then(a => {
+    const d = $("drawer");
+    if (a) { d.style.position = "absolute"; d.style.top = a.top + "px"; d.style.bottom = "auto"; d.style.height = a.height + "px"; }
+    else { d.style.position = ""; d.style.top = ""; d.style.bottom = ""; d.style.height = ""; }
+    if ($("scrim").hidden) return;              // closed before it finished opening
+    d.hidden = false; $("dr-close").focus({ preventScroll: true });
+  });
 }
 function saveEdit(r) {
   const msg = $("ed-msg"), btn = $("ed-save");
@@ -1761,9 +1931,9 @@ function saveEdit(r) {
     .catch(() => { msg.className = "msg bad"; msg.textContent = "Couldn't reach the save service. Try again."; })
     .finally(() => { btn.disabled = false; });
 }
-function closeDrawer() { if ($("drawer").hidden) return; $("scrim").hidden = true; $("drawer").hidden = true; if (lastFocus) lastFocus.focus(); }
+function closeDrawer() { if ($("drawer").hidden && $("scrim").hidden) return; $("scrim").hidden = true; $("drawer").hidden = true; if (lastFocus) lastFocus.focus(); }
 $("dr-close").onclick = closeDrawer; $("scrim").onclick = closeDrawer;
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDrawer(); closeMenu(); } });
 $("dr-open").onclick = () => {
   const url = RECORD_URL(String(current["System Record ID"]).trim());
   const w = window.open(url, "_blank");
