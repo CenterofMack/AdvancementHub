@@ -31,8 +31,9 @@
   .tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
   .who{font-size:12px;color:#A8CAD3;padding-bottom:16px;white-space:nowrap}
   /* Mackinac Center logo, shown in white on the top bar */
-  .brand .logo{display:block;height:30px;width:auto;max-width:200px;margin-bottom:6px;filter:brightness(0) invert(1)}
-  .brand .name{display:block}
+  /* Mackinac Center logo, full color, at the top of every page */
+  .pagelogo{margin:0 0 14px}
+  .pagelogo img{display:block;height:46px;width:auto;max-width:260px}
   /* Other Reports menu */
   .tabmenu{position:relative;display:flex}
   .tab.has-menu::after{content:" ▾";font-size:11px}
@@ -177,6 +178,35 @@
   .soon,.loading{color:var(--muted)}
   .loading{padding:40px 0}
 
+  /* ===== Projections Data table: calmer, report-style look =====
+     Group headers become white with a thin colored rule instead of solid color blocks,
+     names lose the underline (it shows on hover), and the highlighted columns get a light tint. */
+  .tablecard{box-shadow:0 1px 3px rgba(16,40,52,.06)}
+  tr.grp th{background:#fff!important;color:var(--navy-deep)!important;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-top:3px solid #C9D2DF;border-bottom:1px solid var(--line)}
+  tr.grp th.b-con{border-top-color:var(--navy)}
+  tr.grp th.b-proj{border-top-color:#2F5C9A}
+  tr.grp th.b-cur{border-top-color:#2E6B47}
+  tr.grp th.b-prior{border-top-color:#8A94A6}
+  tr.grp th.b-opp{border-top-color:#B08A2E}
+  tr.grp th.b-oth,tr.grp th.b-more{border-top-color:#A7AFBD}
+  tr.grp th.gs,.gs{border-left:1px solid #E3E7ED}
+  tr.cols th{background:#F7F9FB;color:var(--muted);font-size:11.5px;font-weight:600}
+  tr.cols th[aria-sort]{color:var(--navy-deep)}
+  tr.cols th.t-proj{background:#EEF3FA;color:#2F5C9A}
+  tr.cols th.t-cur{background:#EDF6F0;color:#2E6B47}
+  #hh td{padding:9px 12px;border-bottom:1px solid #F0F2F5;font-size:13.5px}
+  #hh td.t-proj{background:#F6F9FD;color:var(--ink);font-weight:600}
+  #hh td.t-cur{background:#F5FAF7;color:var(--ink);font-weight:600}
+  #hh tbody tr:hover td{background:#F2F6F8}
+  #hh tbody tr:hover td.t-proj{background:#EAF1FA}
+  #hh tbody tr:hover td.t-cur{background:#E9F4ED}
+  #hh td.zero{color:#C8CDD5}
+  #hh td.name button{border-bottom:0;color:var(--navy-deep);font-weight:500}
+  #hh td.name button:hover{text-decoration:underline}
+  #hh tfoot td{background:#F7F9FB;border-top:2px solid var(--navy-deep)}
+  #hh tfoot td.t-proj{background:#EEF3FA} #hh tfoot td.t-cur{background:#EDF6F0}
+  #hh tfoot td,#hh tfoot td.t-proj,#hh tfoot td.t-cur{font-weight:700;color:var(--navy-deep)}
+  .topscroll{background:#fff}
   /* ===== Board Slides ===== */
   .bs-through{display:flex;gap:8px;align-items:center;color:var(--muted)}
   .bs-through select{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:#fff;min-width:170px}
@@ -371,6 +401,12 @@
   /* ===== Mailing Program ===== */
   .mp-views{margin:0 0 14px}
   #panel-Mailing .card > .sub{color:var(--muted);font-size:13px;margin:2px 0 14px}
+  .mp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:22px}
+  .mp-chart h4{margin:0 0 4px;font-size:13.5px;font-weight:600;color:var(--navy-deep)}
+  .mp-pace{display:flex;flex-wrap:wrap;gap:6px 18px;margin:2px 0 14px;font-size:13px;color:var(--muted)}
+  .mp-pace b{color:var(--ink)}
+  .mp-pace .up{color:#1F6B3A;font-weight:600} .mp-pace .down{color:var(--red);font-weight:600}
+  .mp-flag{background:#FBF0D8;border:1px solid #F0DDB0;color:#7A5C14;border-radius:8px;padding:9px 13px;font-size:13px;margin:0 0 16px}
   .mp-plan{margin:10px 0 0;padding-left:20px;color:var(--ink)}
   .mp-plan li{margin:4px 0}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
@@ -378,13 +414,7 @@
 </head>
 <body>
 <header class="bar">
-  <div class="brand">
-    <!-- Logo: read from the repo (mackinac-logo.svg); until that file exists it borrows the one on mackinac.org.
-         It's shown in white so it reads on the teal bar. -->
-    <img class="logo" src="mackinac-logo.svg" alt="Mackinac Center for Public Policy"
-      onerror="if(!this.dataset.f){this.dataset.f='1';this.src='https://www.mackinac.org/include/images/logo.svg';}else{this.hidden=true;}">
-    <span class="name">Advancement Hub</span>
-  </div>
+  <div class="brand">Advancement Hub</div>
   <nav class="tabs" role="tablist" aria-label="Reports">
     <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
     <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
@@ -404,6 +434,9 @@
 </header>
 
 <main>
+  <!-- Logo: read from the repo (mackinac-logo.svg); until that file exists it borrows the one on mackinac.org -->
+  <div class="pagelogo"><img src="mackinac-logo.svg" alt="Mackinac Center for Public Policy"
+    onerror="if(!this.dataset.f){this.dataset.f='1';this.src='https://www.mackinac.org/include/images/logo.svg';}else{this.parentNode.hidden=true;}"></div>
   <div class="loading" id="loading">Loading projections…</div>
   <div id="status"></div>
 
@@ -551,23 +584,14 @@
         </div>
       </div>
     </div>
-    <div id="mp-Internal">
+    <div id="mp-msg"></div>
+    <div id="mp-Internal" hidden>
       <div class="segbtn mp-views" role="group" aria-label="Report">
         <button type="button" data-mpv="Tracking" aria-pressed="true">Traditional Tracking</button>
         <button type="button" data-mpv="Cost" aria-pressed="false">Cost &amp; Return</button>
       </div>
-      <div class="card" id="mpv-Tracking">
-        <h2>Traditional Tracking</h2>
-        <p class="sub">Year-to-date pacing: is this year ahead of or behind the last two?</p>
-        <div class="notice"><h2>Coming next</h2><p>These charts will appear here once the hub is connected to the Internal Mailing Program workbook:</p>
-          <ul class="mp-plan"><li>Impact: gross income and number of gifts, year to date</li><li>Bi-Monthly Mailing: gross income and number of gifts, year to date</li><li>Capitol Confidential: gross income and number of gifts, year to date</li></ul></div>
-      </div>
-      <div class="card" id="mpv-Cost" hidden>
-        <h2>Cost &amp; Return</h2>
-        <p class="sub">What each program costs against what it brings in.</p>
-        <div class="notice"><h2>Coming next</h2><p>These charts will appear here once the hub is connected to the Internal Mailing Program workbook:</p>
-          <ul class="mp-plan"><li>Gross income vs. expenses</li><li>Net income by program</li><li>Cost to raise $1 by program</li><li>Gross income by program</li></ul></div>
-      </div>
+      <div id="mpv-Tracking"></div>
+      <div id="mpv-Cost" hidden></div>
     </div>
     <div id="mp-External" hidden>
       <div class="notice"><h2>External mailings are coming</h2><p>Reports for the external mailing program will appear here in a future update.</p></div>
@@ -645,6 +669,7 @@ function selectTab(name) {
   if (name === "Households") requestAnimationFrame(sizeTopScroll);
   if (name === "BoardSlides" && !BS.month && !BS.loading) loadBoard();
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
+  if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
 }
 document.querySelectorAll("[data-tab]").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
 function applyAccess(access) {
@@ -663,19 +688,213 @@ $("other-btn").addEventListener("click", e => {
 });
 document.addEventListener("click", e => { if (!$("other-menu").contains(e.target)) closeMenu(); });
 
-/* ===== Mailing Program: Internal / External, and which report ===== */
-const MP = { prog: "Internal", view: "Tracking" };
+/* ===== Mailing Program =====
+   Data comes from the "Hub - Mailing Program" flow, which runs the Hub Export
+   Office Script in Internal Mailing Program - Live.xlsx and sends back:
+     settings (data-through date, report year, last complete month, view)
+     monthly  (gifts and amount by month, by year, per program)
+     byIssue  (the yearly metrics block per program, from the By Issue tab)
+     issues   (one row per mailing, from Issues & Costs)
+   It loads the first time the tab is opened, then stays loaded. */
+const MAILING_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/10/workflows/3deacbca1425429ba318a9d0bf00e81d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ewVzuzfFlHLw-0KwmYjTt24ZcHYkywHphWq5IURs2kM";
+const MP = { prog: "Internal", view: "Tracking", data: null, loaded: false, loading: false };
 const MP_SUB = { Internal: "Internal mailings: Impact, Bi-Monthly Mailing and Capitol Confidential", External: "External mailings" };
+const MP_PROGRAMS = [
+  { key: "Impact", name: "Impact Newsletter", color: "#006C85" },
+  { key: "BMM",    name: "Bi-Monthly Mailing (BMM)", color: "#D9822B" },
+  { key: "CC",     name: "Capitol Confidential (CC)", color: "#7A5C99" }
+];
+const MP_MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MP_MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
 function mpRender() {
   document.querySelectorAll("[data-mp]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mp === MP.prog));
   document.querySelectorAll("[data-mpv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mpv === MP.view));
-  $("mp-Internal").hidden = MP.prog !== "Internal"; $("mp-External").hidden = MP.prog !== "External";
+  $("mp-sub").textContent = MP_SUB[MP.prog] + (MP.data && MP.prog === "Internal" ? "  ·  " + mpThrough() : "");
+  $("mp-External").hidden = MP.prog !== "External";
+  $("mp-Internal").hidden = MP.prog !== "Internal" || !MP.loaded;
+  $("mp-msg").hidden = MP.prog !== "Internal";
   $("mpv-Tracking").hidden = MP.view !== "Tracking"; $("mpv-Cost").hidden = MP.view !== "Cost";
-  $("mp-sub").textContent = MP_SUB[MP.prog];
 }
 document.querySelectorAll("[data-mp]").forEach(b => b.addEventListener("click", () => { MP.prog = b.dataset.mp; mpRender(); }));
 document.querySelectorAll("[data-mpv]").forEach(b => b.addEventListener("click", () => { MP.view = b.dataset.mpv; mpRender(); }));
 mpRender();
+
+function mpMessage(title, text, retry) {
+  $("mp-msg").innerHTML = text === undefined
+    ? `<div class="loading">${esc(title)}</div>`
+    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="mp-retry">Try again</button>' : ""}</div>`;
+  if (retry) $("mp-retry").onclick = mpLoad;
+}
+function mpLoad() {
+  MP.loading = true;
+  mpMessage("Loading the Internal Mailing Program numbers…");
+  client.getUserIdentityToken()
+    .then(token => fetch(MAILING_URL, { method: "POST", body: token }))
+    .then(async res => {
+      if (res.status === 403) { mpMessage("You don't have access to the Mailing Program", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      if (!res.ok) { mpMessage("The Mailing Program didn't load", `The data service returned an error (status ${res.status}).`, true); return; }
+      const d = await res.json();
+      if (!d.mailing || !Array.isArray(d.mailing.monthly)) { mpMessage("The Mailing Program didn't load", "The data service sent back something unexpected.", true); return; }
+      MP.data = d.mailing; MP.loaded = true;
+      $("mp-msg").innerHTML = "";
+      mpDrawTracking(); mpDrawCost(); mpRender();
+    })
+    .catch(() => mpMessage("The Mailing Program didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
+    .finally(() => { MP.loading = false; });
+}
+
+// The month the current-year lines stop at: the last complete month
+function mpCut() {
+  const st = MP.data.settings || {}, m = Math.round(num(st.lastCompleteMonth));
+  return m >= 1 && m <= 12 ? m : 12;
+}
+function mpThrough() {
+  const st = MP.data.settings || {};
+  return "Data through " + fmtDate(st.dataThrough) + (st.view ? "  ·  View: " + st.view : "");
+}
+
+/* --- Small SVG charts --- */
+// Axis with round steps (1, 2 or 5 × a power of ten) covering lo..hi, always including 0
+function mpScale(lo, hi) {
+  lo = Math.min(0, lo); hi = Math.max(0, hi); if (hi === lo) hi = lo + 1;
+  const raw = (hi - lo) / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  const step = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+  const top = Math.ceil(hi / step) * step, bot = Math.floor(lo / step) * step, ticks = [];
+  for (let v = top; v >= bot - step / 2; v -= step) ticks.push(Math.abs(v) < step / 1e6 ? 0 : v);
+  return { top, bot, ticks };
+}
+const mpMoney = v => short(v);
+const mpCount = v => Math.round(v).toLocaleString("en-US");
+function mpLegend(items) {
+  return `<div class="bs-legend">` + items.map(it => `<span><i class="sw" style="background:${it.color}"></i>${esc(it.name)}</span>`).join("") + `</div>`;
+}
+// Lines over Jan–Dec. series: [{ name, color, width, values: [12 numbers or null] }]
+function mpLineChart(series, fmt, label) {
+  const W = 560, H = 250, L = 62, R = 14, T = 14, B = 30;
+  const all = series.flatMap(s => s.values.filter(v => v !== null));
+  const sc = mpScale(0, Math.max(1, ...all)), max = sc.top;
+  const x = i => L + (W - L - R) * i / 11, y = v => T + (H - T - B) * (1 - v / max);
+  let g = "";
+  sc.ticks.forEach(v => { const yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 8}" y="${yy + 4}" text-anchor="end">${esc(fmt(v))}</text>`; });
+  MP_MON.forEach((m, i) => { g += `<text class="ax" x="${x(i)}" y="${H - 8}" text-anchor="middle">${m}</text>`; });
+  series.forEach(s => {
+    let d = "", on = false;
+    s.values.forEach((v, i) => { if (v === null) { on = false; return; } d += (on ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); on = true; });
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}"/>`;
+    s.values.forEach((v, i) => { if (v === null) return;
+      g += `<circle cx="${x(i)}" cy="${y(v)}" r="${(s.width || 2) + 1}" fill="${s.color}"/><circle cx="${x(i)}" cy="${y(v)}" r="10" fill="transparent" data-tip="${esc(s.name)} ${MP_MON[i]}: ${esc(fmt(v))}"/>`; });
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+// Grouped bars, negatives allowed. cats: ["2022", …]; series: [{ name, color, values: [number or null per cat] }]
+function mpBarChart(cats, series, fmt, label) {
+  const W = 560, H = 270, L = 66, R = 14, T = 14, B = 30;
+  const all = series.flatMap(s => s.values.filter(v => v !== null));
+  const sc = mpScale(Math.min(0, ...all), Math.max(0, ...all)), top = sc.top, span = (sc.top - sc.bot) || 1;
+  const y = v => T + (H - T - B) * (top - v) / span;
+  const gw = (W - L - R) / cats.length, bw = Math.min(34, gw * 0.72 / series.length);
+  let g = "";
+  sc.ticks.forEach(v => { const yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 8}" y="${yy + 4}" text-anchor="end">${esc(fmt(v))}</text>`; });
+  cats.forEach((c, ci) => {
+    const gx = L + gw * ci + (gw - bw * series.length) / 2;
+    series.forEach((s, si) => {
+      const v = s.values[ci]; if (v === null || v === undefined) return;
+      const y0 = y(0), yv = y(v);
+      g += `<rect x="${gx + bw * si}" y="${Math.min(y0, yv)}" width="${bw - 2}" height="${Math.max(1, Math.abs(yv - y0))}" fill="${s.color}" rx="2" data-tip="${esc(s.name)} ${esc(c)}: ${esc(fmt(v))}"/>`;
+    });
+    g += `<text class="ax" x="${L + gw * (ci + 0.5)}" y="${H - 8}" text-anchor="middle">${esc(c)}</text>`;
+  });
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#8A94A6"/>`;
+  return svgOpen(W, H, label) + g + "</svg>";
+}
+
+/* --- Traditional Tracking: year-to-date pacing --- */
+function mpDrawTracking() {
+  const d = MP.data, cut = mpCut(), year = Math.round(num(d.settings && d.settings.reportYear)) || new Date().getFullYear();
+  const yearColors = [{ color: "#A7AFBD", width: 2 }, { color: "#5B9BD5", width: 2 }, { color: "var(--navy-deep)", width: 3 }];
+  let html = `<div class="card"><h2>Traditional Tracking</h2>
+    <p class="sub">Running total by gift date. Is this year ahead of or behind the last two? ${year} is shown through ${MP_MONTH_FULL[cut - 1]}, the last complete month.</p>`;
+  MP_PROGRAMS.forEach(p => {
+    const prog = d.monthly.find(m => m.program === p.key); if (!prog) return;
+    const yrs = prog.years.filter(y => y.year <= year).sort((a, b) => a.year - b.year).slice(-3);
+    const cum = (vals, stopAt) => { let t = 0; return vals.map((v, i) => { if (i >= stopAt) return null; t += num(v); return t; }); };
+    const build = key => yrs.map((y, i) => ({ name: String(y.year), ...yearColors[yearColors.length - yrs.length + i], values: cum(y[key], y.year === year ? cut : 12) }));
+    const inc = build("amount"), gifts = build("gifts");
+    // Pace: this year through the cut month vs. last year at the same point
+    const cur = inc.find(s => s.name === String(year)), prev = inc.find(s => s.name === String(year - 1));
+    const curG = gifts.find(s => s.name === String(year)), prevG = gifts.find(s => s.name === String(year - 1));
+    const at = s => s ? num(s.values[cut - 1]) : 0, chg = (a, b) => b ? (a - b) / b : null;
+    const pc = v => v === null ? "" : `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : ""}${(v * 100).toFixed(0)}% vs. ${year - 1}</span>`;
+    html += `<h3 style="margin:22px 0 4px;font-family:var(--serif);font-size:18px;color:var(--navy-deep)">${esc(p.name)}</h3>
+      <div class="mp-pace"><span>${year} through ${MP_MON[cut - 1]}: <b>${money(at(cur))}</b> ${pc(chg(at(cur), at(prev)))}</span>
+        <span><b>${mpCount(at(curG))}</b> gifts ${pc(chg(at(curG), at(prevG)))}</span></div>
+      <div class="mp-grid">
+        <div class="mp-chart chart"><h4>Gross income, year to date</h4>${mpLineChart(inc, mpMoney, p.name + " gross income year to date")}</div>
+        <div class="mp-chart chart"><h4>Number of gifts, year to date</h4>${mpLineChart(gifts, mpCount, p.name + " gifts year to date")}</div>
+      </div>${mpLegend(inc)}`;
+  });
+  $("mpv-Tracking").innerHTML = html + `</div>`;
+}
+
+/* --- Cost & Return: what each program costs against what it brings in --- */
+function mpDrawCost() {
+  const d = MP.data;
+  const block = key => d.byIssue.find(b => b.program === key);
+  const metric = (b, startsWith) => { const m = b && b.metrics.find(x => x.name.toLowerCase().startsWith(startsWith)); return m ? m.values : []; };
+  const total = block("Total") || d.byIssue[0];
+  const yearIdx = total.columns.map((c, i) => /^\d{4}$/.test(c) ? i : -1).filter(i => i >= 0);
+  const cats = yearIdx.map(i => total.columns[i]);
+  const pick = vals => yearIdx.map(i => vals[i] === undefined ? null : vals[i]);
+  const progs = MP_PROGRAMS.filter(p => block(p.key));
+
+  // Flags for the current year: issues still coming in, or missing expenses
+  const lastCol = yearIdx[yearIdx.length - 1], curYear = total.columns[lastCol];
+  const inProg = num(metric(total, "issues still in progress")[lastCol]), missing = num(metric(total, "issues missing expenses")[lastCol]);
+  const flags = [];
+  if (missing) flags.push(`${missing} ${curYear} issue${missing === 1 ? " has" : "s have"} no expenses entered yet, so ${curYear} costs are understated`);
+  if (inProg) flags.push(`${inProg} ${curYear} issue${inProg === 1 ? " is" : "s are"} still bringing in gifts`);
+
+  const ratio = v => "$" + Number(v).toFixed(2);
+  const gross = mpBarChart(cats, [
+    { name: "Gross income", color: "#2E6B47", values: pick(metric(total, "gross income")) },
+    { name: "Expenses", color: "#A7AFBD", values: pick(metric(total, "expenses")) }], mpMoney, "Internal program gross income vs expenses");
+  const net = mpBarChart(cats, progs.map(p => ({ name: p.name, color: p.color, values: pick(metric(block(p.key), "net income")) })), mpMoney, "Net income by program");
+  const cost = mpLineChartYears(cats, progs.map(p => ({ name: p.name, color: p.color, values: pick(metric(block(p.key), "cost to raise")) })), ratio, "Cost to raise $1 by program");
+  const byProg = mpBarChart(cats, progs.map(p => ({ name: p.name, color: p.color, values: pick(metric(block(p.key), "gross income")) })), mpMoney, "Gross income by program");
+
+  $("mpv-Cost").innerHTML = `<div class="card"><h2>Cost &amp; Return</h2>
+    <p class="sub">What each program costs against what it brings in. Income is credited to the issue that prompted it and grouped by the year the issue mailed.</p>
+    ${flags.length ? `<div class="mp-flag">Heads up: ${esc(flags.join("; "))}.</div>` : ""}
+    <div class="mp-grid">
+      <div class="mp-chart chart"><h4>Internal program: gross income vs. expenses</h4>${gross}${mpLegend([{ name: "Gross income", color: "#2E6B47" }, { name: "Expenses", color: "#A7AFBD" }])}</div>
+      <div class="mp-chart chart"><h4>Net income by program</h4>${net}${mpLegend(progs)}</div>
+      <div class="mp-chart chart"><h4>Cost to raise $1 by program</h4>${cost}${mpLegend(progs)}<p class="bs-note">Lower is better. Above $1.00 means the program cost more than it raised.</p></div>
+      <div class="mp-chart chart"><h4>Gross income by program</h4>${byProg}${mpLegend(progs)}</div>
+    </div></div>`;
+}
+// Lines across years (used for cost to raise $1)
+function mpLineChartYears(cats, series, fmt, label) {
+  const W = 560, H = 270, L = 62, R = 14, T = 14, B = 30;
+  const all = series.flatMap(s => s.values.filter(v => v !== null));
+  const sc = mpScale(0, Math.max(1, ...all)), max = sc.top;
+  const x = i => L + 20 + (W - L - R - 40) * (cats.length === 1 ? 0.5 : i / (cats.length - 1)), y = v => T + (H - T - B) * (1 - v / max);
+  let g = "";
+  sc.ticks.forEach(v => { const yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 8}" y="${yy + 4}" text-anchor="end">${esc(fmt(v))}</text>`; });
+  if (max > 1) g += `<line x1="${L}" x2="${W - R}" y1="${y(1)}" y2="${y(1)}" stroke="#B3261E" stroke-dasharray="4 4"/><text class="ax" x="${L + 4}" y="${y(1) - 5}" style="fill:#B3261E">break-even</text>`;
+  cats.forEach((c, i) => { g += `<text class="ax" x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(c)}</text>`; });
+  series.forEach(s => {
+    let d = "", on = false;
+    s.values.forEach((v, i) => { if (v === null) { on = false; return; } d += (on ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); on = true; });
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`;
+    s.values.forEach((v, i) => { if (v === null) return;
+      g += `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${s.color}"/><circle cx="${x(i)}" cy="${y(v)}" r="10" fill="transparent" data-tip="${esc(s.name)} ${esc(cats[i])}: ${esc(fmt(v))}"/>`; });
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
 
 /* ===== Where the user is looking =====
    Inside Raiser's Edge the hub grows to its full height and RE does the scrolling,
