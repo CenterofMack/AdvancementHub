@@ -1242,7 +1242,7 @@ function renderDonorMap() {
     <div class="td-split">
       <div class="st"><b>${pctOf(mi.n, known.n)}</b><span>of households are in Michigan (${pctOf(known.n - mi.n, known.n)} elsewhere)</span></div>
       <div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>
-      <div class="st"><b>${Object.keys(st).length}</b><span>states with at least one giving household</span></div>
+      <div class="st"><b>${Object.keys(st).length}</b><span>states and DC with at least one giving household</span></div>
     </div>
     <div class="td-maps${sel ? " sel" : ""}">
       <div class="chart"><h4>By state</h4>${usSvg}</div>
