@@ -80,7 +80,7 @@
   .td-maps path.area:hover{stroke:var(--navy-deep);stroke-width:1.4}
   .td-legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
   .td-legend i{display:inline-block;width:26px;height:10px;border-radius:2px}
-  .td-maps.sel{grid-template-columns:minmax(220px,1.3fr) minmax(0,3fr) minmax(0,2fr)}
+  .td-maps.sel{grid-template-columns:minmax(0,3fr) minmax(0,2fr) minmax(230px,1.3fr)}
   .td-maps path.area{cursor:pointer}
   .td-maps path.area.on{stroke:var(--gold);stroke-width:2.2}
   .td-list{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;max-height:520px;overflow:auto}
@@ -1215,7 +1215,7 @@ function renderDonorMap() {
   const sel = PF.tdSel, picked = sel ? (sel.type === "st" ? st : co)[sel.key] : null;
   const list = !sel ? "" : `<div class="td-list"><div class="hd"><b>${esc(sel.label)}</b><button type="button" id="td-clear" aria-label="Close list">×</button></div>
     ${picked ? `<p class="meta">${picked.n.toLocaleString("en-US")} household${picked.n === 1 ? "" : "s"} · ${esc(ovMoney(picked.amt))} · click a name for details</p>
-      <ol>${picked.rows.sort((a, b) => b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(ovMoney(x.v))}</span></li>`).join("")}</ol>`
+      <ol>${picked.rows.sort((a, b) => b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(money(x.v))}</span></li>`).join("")}</ol>`
       : `<p class="meta">No giving households here for this year.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Donors by state">` +
     g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") + `</svg>`;
@@ -1230,9 +1230,10 @@ function renderDonorMap() {
       <div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>
       <div class="st"><b>${Object.keys(st).length}</b><span>states with at least one giving household</span></div>
     </div>
-    <div class="td-maps${sel ? " sel" : ""}">${list}
+    <div class="td-maps${sel ? " sel" : ""}">
       <div class="chart"><h4>By state</h4>${usSvg}</div>
       <div class="chart"><h4>Michigan by county</h4>${coKey ? miSvg : `<p class="sub">No county column in the data.</p>`}</div>
+      ${list}
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
     <p class="bs-note">Gifts under $1k aren't on the map because they're rolled into one line without addresses.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file (${esc(ovMoney(unknown.amt))}) and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
