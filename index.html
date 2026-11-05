@@ -633,6 +633,10 @@ const num = v => { if (v === null || v === undefined || v === "") return 0; cons
 const money = n => (n < 0 ? "-$" : "$") + Math.round(Math.abs(n)).toLocaleString("en-US");
 const short = n => { const a = Math.abs(n), s = n < 0 ? "-$" : "$"; if (a >= 1e6) return s + (a/1e6).toFixed(1) + "M"; if (a >= 1e3) return s + Math.round(a/1e3) + "K"; return s + Math.round(a); };
 const shortM = n => (n < 0 ? "-$" : "$") + (Math.abs(n)/1e6).toFixed(1) + "M";
+// Overview amounts, rounded the way leadership reads them: $13.7M at a million and up, otherwise $344K
+const ovMoney = n => { const a = Math.abs(n), s = n < 0 && Math.round(a / 1e3) > 0 ? "-$" : "$";
+  if (a >= 999500) return s + (a / 1e6).toFixed(1) + "M";
+  return s + Math.round(a / 1e3) + (Math.round(a / 1e3) ? "K" : ""); };
 const pct = n => (n*100).toFixed(1) + "%";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const pdfText = s => String(s ?? "").replace(/[\u2014\u2013\u2212]/g, "-").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
@@ -970,17 +974,17 @@ function renderOverview(rows) {
       <div class="goal" style="left:calc(${goal/scale*100}% - 1px)"><span>Goal</span></div>
     </div>
     <div class="legend">
-      <span><i class="sw" style="background:var(--navy)"></i>Money in <b>${money(moneyIn)}</b></span>
-      <span><i class="sw" style="background:var(--sky)"></i>Projected, not yet in <b>${money(projected)}</b></span>
-      <span><i class="sw" style="background:var(--gold)"></i>Fundraising goal <b>${money(goal)}</b></span>
-      <span>Original projection <b>${money(v(0))}</b></span>
+      <span><i class="sw" style="background:var(--navy)"></i>Money in <b>${ovMoney(moneyIn)}</b></span>
+      <span><i class="sw" style="background:var(--sky)"></i>Projected, not yet in <b>${ovMoney(projected)}</b></span>
+      <span><i class="sw" style="background:var(--gold)"></i>Fundraising goal <b>${ovMoney(goal)}</b></span>
+      <span>Original projection <b>${ovMoney(v(0))}</b></span>
     </div>`;
   const order = [...new Set(OV.filter(r => r.section !== "Header").map(r => r.section))];
   $("ledgers").innerHTML = order.map(sec => `<div class="ledger"><h3>${esc(sec)}</h3><dl>` +
     OV.filter(r => r.section === sec).map(r => {
       const key = /surplus|total/i.test(r.label), neg = r.format !== "text" && num(r.value) < 0;
       const cls = (key ? " key" : "") + (ovHighlight(r) ? " hi" : /surplus/i.test(r.label) ? " sur" : "");
-      return `<div class="row${cls}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${esc(fmtVal(r.value, r.format))}</dd></div>`;
+      return `<div class="row${cls}"><dt>${esc(r.label)}</dt><dd class="${neg ? "neg" : ""}">${esc(r.format === "money" ? ovMoney(num(r.value)) : fmtVal(r.value, r.format))}</dd></div>`;
     }).join("") + `</dl></div>`).join("");
 }
 
@@ -1001,7 +1005,7 @@ function drawOverview(doc) {
       doc.autoTable({
         startY: y, margin: { left: x }, tableWidth: colW, theme: "plain",
         head: [[pdfText(titles[sec] || sec), ""]],
-        body: rows.map(r => [pdfText(r.label), r.format === "pct" ? pct(num(r.value)) : r.format === "money" ? shortM(num(r.value)) : pdfText(r.value)]),
+        body: rows.map(r => [pdfText(r.label), r.format === "pct" ? pct(num(r.value)) : r.format === "money" ? ovMoney(num(r.value)) : pdfText(r.value)]),
         styles: { font: "helvetica", fontSize: 8, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 }, textColor: [28, 37, 51] },
         headStyles: { fillColor: [68, 84, 106], textColor: 255, fontStyle: "bold" },
         columnStyles: { 1: { halign: "right", cellWidth: 56 } },
