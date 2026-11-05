@@ -61,6 +61,19 @@
   .hero-pct{text-align:right}
   .hero-pct .big{font-family:var(--serif);font-weight:700;font-size:32px;color:var(--navy)}
   .hero-pct .big.under{color:var(--red)}
+  .pf-views{margin:0 0 16px}
+  .conc{margin-top:0}
+  .conc h2{margin:0 0 6px}
+  .conc .lead{font-family:var(--serif);font-size:20px;line-height:1.35;color:var(--navy-deep);margin:4px 0 16px;max-width:70ch}
+  .conc .lead b{color:var(--navy)}
+  .conc table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .conc th{text-align:right;font-size:11.5px;font-weight:600;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line);background:#F7F9FB}
+  .conc th:first-child,.conc td:first-child{text-align:left}
+  .conc td{text-align:right;padding:8px 10px;border-bottom:1px solid #F0F2F5}
+  .conc tr.cur td{font-weight:600;background:#F6F9FD}
+  .conc .share{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+  .conc .share i{display:inline-block;height:6px;border-radius:3px;background:var(--navy);opacity:.55}
+  .conc .tablewrap2{overflow-x:auto}
   .hero-kicker{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .seg .lbl{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
   .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:32px 0 8px}
@@ -508,9 +521,23 @@
       <div><h1>Portfolio Scorecard</h1><div class="asof" id="pf-asof"></div></div>
       <div class="actions"><label class="bs-through" for="pf-fr">Fundraiser <select id="pf-fr"></select></label></div>
     </div>
-    <div class="card" id="pf-summary"></div>
-    <div class="card" id="pf-all"></div>
-    <div class="card" id="pf-changes"></div>
+    <!-- Sub-tabs. The Fundraiser filter above applies to every one of them.
+         To add a report later: add a button here with data-pfv="Name" and a <div class="pfv" data-pfv="Name">. -->
+    <div class="segbtn pf-views" role="group" aria-label="Report">
+      <button type="button" data-pfv="Portfolios" aria-pressed="true">Portfolios</button>
+      <button type="button" data-pfv="Changes" aria-pressed="false">Donor Changes</button>
+      <button type="button" data-pfv="TopDonors" aria-pressed="false">Top Donors</button>
+    </div>
+    <div class="pfv" data-pfv="Portfolios">
+      <div class="card" id="pf-summary"></div>
+      <div class="card" id="pf-all"></div>
+    </div>
+    <div class="pfv" data-pfv="Changes" hidden>
+      <div class="card" id="pf-changes"></div>
+    </div>
+    <div class="pfv" data-pfv="TopDonors" hidden>
+      <div class="card conc" id="conc"></div>
+    </div>
   </section>
   <section class="panel" id="panel-EWMC" hidden>
     <!-- Event banner. The image is read from the repo (ewmc-2027-banner.jpg);
@@ -1029,6 +1056,45 @@ function drawOverview(doc) {
 
 /* ===== Households ===== */
 let ROWS = [], COLS = [], ALLCOLS = [], HAS_ACTIVE = false, KEYS = { years: [] }, sortKey = null, sortDir = -1, shown = PAGE, VIEW = [];
+/* ===== Where the money comes from (donor concentration) =====
+   From the Projections rows: rank households by money for a year and see what share the top ones give.
+   The current year uses Money In + Projected (so "if we end this way"); past years use Money In.
+   The Gifts Under $1k line counts in the total but isn't ranked, since those donors aren't listed one by one. */
+const CONC_TOPS = [10, 25, 50, 100];
+function concFor(key, pool) {
+  const under = r => /gifts under \$?1k/i.test(String(r.Name ?? ""));
+  const real = pool;
+  const total = real.reduce((t, r) => t + Math.max(0, num(r[key])), 0);
+  const ranked = real.filter(r => !under(r)).map(r => Math.max(0, num(r[key]))).filter(v => v > 0).sort((a, b) => b - a);
+  if (!total || !ranked.length) return null;
+  const cum = []; ranked.reduce((t, v, i) => (cum[i] = t + v), 0);
+  const shareTop = n => cum[Math.min(n, ranked.length) - 1] / total;
+  const halfFrom = cum.findIndex(c => c >= total / 2) + 1;   // 0 means even every listed household together is under half
+  return { total, count: ranked.length, shareTop, halfFrom };
+}
+function renderConcentration() {
+  const box = $("conc"); if (!box) return;
+  const curYear = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
+  const rows = [];
+  if (KEYS.total) rows.push({ label: curYear + " if it ends as projected", key: KEYS.total, cur: true });
+  KEYS.years.filter(k => k !== KEYS.curYear).forEach(k => rows.push({ label: k.replace("Money In ", ""), key: k }));
+  const pool = ROWS.filter(r => String(r.Name ?? "").trim() !== "" && (!PF.fr || r.Solicitor === PF.fr));
+  const data = rows.map(r => ({ ...r, c: concFor(r.key, pool) })).filter(r => r.c);
+  if (!data.length) { box.innerHTML = `<h2>Top Donors${PF.fr ? " — " + esc(PF.fr) : ""}</h2><p class="sub">No giving to show for this portfolio.</p>`; return; }
+  const lead = data[0].c, n = 25;
+  const bar = v => `<span class="share">${pct(v)}<i style="width:${Math.round(v * 60)}px"></i></span>`;
+  box.innerHTML = `<h2>Where the money comes from${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
+    <p class="lead">${data[0].cur ? `If ${esc(curYear)} ends as projected, the` : "The"} top <b>${n}</b> households${PF.fr ? " in this portfolio" : ""} will give <b>${pct(lead.shareTop(n))}</b> of the money.
+      ${lead.halfFrom ? `Half of it comes from just the top <b>${lead.halfFrom}</b>.` : ""}</p>
+    <div class="tablewrap2"><table>
+      <thead><tr><th>Year</th><th>Households giving</th>${CONC_TOPS.map(t => `<th>Top ${t}</th>`).join("")}<th>Half the money from</th><th>Total</th></tr></thead>
+      <tbody>${data.map(r => `<tr class="${r.cur ? "cur" : ""}"><td>${esc(r.label)}</td><td>${r.c.count.toLocaleString("en-US")}</td>
+        ${CONC_TOPS.map(t => `<td>${bar(r.c.shareTop(t))}</td>`).join("")}
+        <td>${r.c.halfFrom ? "top " + r.c.halfFrom : "—"}</td><td>${ovMoney(r.c.total)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="bs-note">Households are grouped the way the Projections workbook groups them, so couples count once. Gifts under $1k count toward the total but aren't ranked, since those donors aren't listed individually. For comparison, the familiar fundraising rules of thumb are 80/20, 95/5 and 97/3.</p>`;
+}
+
 function buildTable(rows) {
   ROWS = rows;
   const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -1629,7 +1695,14 @@ document.addEventListener("mousemove", e => {
 });
 
 /* ===== Portfolio Scorecard ===== */
-const PF = { fr: "", mode: "proj", incProj: true };
+const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios" };
+function pfShowView() {
+  document.querySelectorAll("[data-pfv]").forEach(el => {
+    if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.pfv === PF.view);
+    else el.hidden = el.dataset.pfv !== PF.view;
+  });
+}
+document.querySelectorAll("button[data-pfv]").forEach(b => b.addEventListener("click", () => { PF.view = b.dataset.pfv; pfShowView(); }));
 const pfReal = () => ROWS.filter(r => String(r.Name ?? "").trim() !== "");
 function pfYears() { return KEYS.years.map(k => +k.replace("Money In ", "")).sort((a, b) => a - b); }
 function pfTotals(rows) {
@@ -1659,6 +1732,7 @@ function chartPortfolio(items, label) {
   return svgOpen(W, H, label) + g + "</svg>";
 }
 function renderPortfolios() {
+  renderConcentration(); pfShowView();
   const Y = +KEYS.curYear.replace("Money In ", ""), yrs = pfYears(), all = pfReal();
   const mine = PF.fr ? all.filter(r => r.Solicitor === PF.fr) : all;
   const t = pfTotals(mine), cur = t.yr[KEYS.curYear], prev = t.yr["Money In " + (Y - 1)] || 0;
