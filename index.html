@@ -62,6 +62,25 @@
   .hero-pct .big{font-family:var(--serif);font-weight:700;font-size:32px;color:var(--navy)}
   .hero-pct .big.under{color:var(--red)}
   .pf-views{margin:0 0 16px}
+  #panel-Portfolios .pfv > .card{margin-bottom:18px}
+  /* Donor pyramid */
+  .pyr svg{display:block;width:100%;height:auto;max-width:980px;margin:0 auto}
+  .pyr .t-lvl{font-size:15px;fill:var(--ink)} .pyr .t-amt{font-size:15px;fill:var(--ink);font-variant-numeric:tabular-nums}
+  .pyr .t-n{font-size:22px;fill:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+  .pyr .t-tot{font-size:16px;font-weight:700;fill:var(--navy-deep)}
+  /* Donor map */
+  .td-split{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 16px}
+  .td-split .st{flex:1 1 200px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;background:#fff}
+  .td-split .st b{display:block;font-family:var(--serif);font-size:24px;color:var(--navy-deep)}
+  .td-split .st span{font-size:12.5px;color:var(--muted)}
+  .td-maps{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;align-items:start}
+  .td-maps h4{margin:0 0 6px;font-size:13.5px;color:var(--navy-deep)}
+  .td-maps svg{display:block;width:100%;height:auto}
+  .td-maps path.area{stroke:#fff;stroke-width:.6}
+  .td-maps path.area:hover{stroke:var(--navy-deep);stroke-width:1.4}
+  .td-legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+  .td-legend i{display:inline-block;width:26px;height:10px;border-radius:2px}
+  @media (max-width:900px){ .td-maps{grid-template-columns:1fr} }
   .conc{margin-top:0}
   .conc h2{margin:0 0 6px}
   .conc .lead{font-family:var(--serif);font-size:20px;line-height:1.35;color:var(--navy-deep);margin:4px 0 16px;max-width:70ch}
@@ -536,7 +555,9 @@
       <div class="card" id="pf-changes"></div>
     </div>
     <div class="pfv" data-pfv="TopDonors" hidden>
+      <div class="card" id="td-pyr"></div>
       <div class="card conc" id="conc"></div>
+      <div class="card" id="td-map"></div>
     </div>
   </section>
   <section class="panel" id="panel-EWMC" hidden>
@@ -1072,6 +1093,131 @@ function concFor(key, pool) {
   const halfFrom = cum.findIndex(c => c >= total / 2) + 1;   // 0 means even every listed household together is under half
   return { total, count: ranked.length, shareTop, halfFrom };
 }
+/* ===== Top Donors: donor pyramid and donor map ===== */
+const TD_TIERS = [
+  { label: "Over $1.0M", min: 1e6 }, { label: "$100K – $999K", min: 1e5 }, { label: "$10K – $99K", min: 1e4 },
+  { label: "$1K – $9K", min: 1e3 }, { label: "$1 – $999", min: 0 }];
+const isUnderLine = r => /gifts under \$?1k/i.test(String(r.Name ?? ""));
+function tdPool() { return ROWS.filter(r => String(r.Name ?? "").trim() !== "" && (!PF.fr || r.Solicitor === PF.fr)); }
+function tdYearOptions() {
+  const cy = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
+  return [...(KEYS.total ? [{ key: KEYS.total, label: cy + " if it ends as projected" }] : []),
+    ...KEYS.years.filter(k => k !== KEYS.curYear).map(k => ({ key: k, label: k.replace("Money In ", "") }))];
+}
+function tdYearSwitch(id) {
+  const opts = tdYearOptions(); if (!PF.tdKey || !opts.some(o => o.key === PF.tdKey)) PF.tdKey = opts[0] && opts[0].key;
+  return `<div class="segbtn" role="group" aria-label="Year">` + opts.map(o =>
+    `<button type="button" data-tdk="${esc(o.key)}" aria-pressed="${o.key === PF.tdKey}">${esc(o.label.replace(" if it ends as projected", " projected"))}</button>`).join("") + `</div>`;
+}
+function tdWireYear(box) {
+  box.querySelectorAll("[data-tdk]").forEach(b => b.onclick = () => { PF.tdKey = b.dataset.tdk; renderTopDonors(); });
+}
+function renderTopDonors() { renderPyramid(); renderConcentration(); renderDonorMap(); }
+
+function renderPyramid() {
+  const box = $("td-pyr"); if (!box) return;
+  const sw = tdYearSwitch(), key = PF.tdKey, pool = tdPool();
+  const yearLbl = (tdYearOptions().find(o => o.key === key) || {}).label || "";
+  const tiers = TD_TIERS.map(t => ({ ...t, n: 0, amt: 0 }));
+  let rolled = 0;
+  pool.forEach(r => {
+    const v = Math.max(0, num(r[key])); if (!v) return;
+    if (isUnderLine(r)) { rolled += v; tiers[4].amt += v; return; }
+    const t = tiers.find(t => v >= t.min); t.n++; t.amt += v;
+  });
+  const total = tiers.reduce((a, t) => a + t.amt, 0), listed = tiers.reduce((a, t) => a + t.n, 0);
+  // Drawing: full-width shaded rows, a pyramid in the middle, level on the left, dollars on the right
+  const W = 960, rowH = 64, top = 8, H = top + rowH * 5 + 54, cx = W / 2, baseHalf = 240;
+  let g = "";
+  tiers.forEach((t, i) => {
+    const y0 = top + rowH * i, y1 = y0 + rowH;
+    g += `<rect x="0" y="${y0}" width="${W}" height="${rowH}" fill="${i % 2 ? "#FFFFFF" : "#F1F3F6"}"/>`;
+    const w0 = baseHalf * (i / 5), w1 = baseHalf * ((i + 1) / 5);
+    const shade = ["#004B5D", "#00576C", "#006278", "#006C85", "#0B7891"][i];
+    g += `<polygon points="${cx - w0},${y0 + 1} ${cx + w0},${y0 + 1} ${cx + w1},${y1 - 1} ${cx - w1},${y1 - 1}" fill="${shade}"
+      data-tip="${esc(t.label)}: ${t.n.toLocaleString("en-US")}${i === 4 && rolled ? "+" : ""} households, ${esc(money(t.amt))}"/>`;
+    const nTxt = i === 4 && rolled ? (t.n ? t.n.toLocaleString("en-US") + "+" : "many") : t.n.toLocaleString("en-US");
+    g += `<text class="t-n" x="${cx}" y="${y0 + rowH / 2 + (i === 0 ? 14 : 8)}" text-anchor="middle" style="${i === 0 ? "font-size:18px" : ""}">${nTxt}</text>`;
+    g += `<text class="t-lvl" x="24" y="${y0 + rowH / 2 + 5}">${esc(t.label)}</text>`;
+    g += `<text class="t-amt" x="${W - 24}" y="${y0 + rowH / 2 + 5}" text-anchor="end">${esc(ovMoney(t.amt))}</text>`;
+  });
+  const ty = top + rowH * 5 + 34;
+  g += `<text class="t-tot" x="24" y="${ty}">Total</text>
+    <text class="t-tot" x="${cx}" y="${ty}" text-anchor="middle">${listed.toLocaleString("en-US")} households${rolled ? " + gifts under $1K" : ""}</text>
+    <text class="t-tot" x="${W - 24}" y="${ty}" text-anchor="end">${esc(ovMoney(total))}</text>`;
+  box.innerHTML = `<div class="card-head"><div><h2>${esc(yearLbl.replace(" if it ends as projected", ""))} Donor Pyramid${/projected/.test(yearLbl) ? " (as projected)" : ""}${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
+      <div class="sub">Households by giving level for the year. Hover a level for exact figures.</div></div>${sw}</div>
+    <div class="pyr chart">${svgOpen(W, H, yearLbl + " donor pyramid")}${g}</svg></div>
+    ${rolled ? `<p class="bs-note">The $1 – $999 level includes the Gifts Under $1k line (${esc(money(rolled))}). Those donors are rolled into one line in the Projections workbook, so the household count for that level only covers the small donors listed by name, hence the “+”.</p>` : ""}`;
+  tdWireYear(box);
+}
+
+/* --- Donor map: by state, plus Michigan by county --- */
+const GEO = { data: null, loading: null };
+function loadGeo() {
+  if (!GEO.loading) GEO.loading = fetch("lib/geo.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(d => (GEO.data = d)).catch(e => { GEO.loading = null; throw e; });
+  return GEO.loading;
+}
+const US_NAMES = { AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming" };
+const US_BY_NAME = Object.fromEntries(Object.entries(US_NAMES).map(([a, n]) => [n.toLowerCase(), a]));
+function stateAbbr(v) {
+  const t = String(v ?? "").trim(); if (!t) return "";
+  if (US_NAMES[t.toUpperCase()]) return t.toUpperCase();
+  return US_BY_NAME[t.toLowerCase()] || "";
+}
+const countyKey = v => String(v ?? "").trim().replace(/\s+county$/i, "").replace(/^st\.?\s/i, "st ").toLowerCase();
+const TD_SCALE = ["#E3EEF1", "#B5D3DB", "#7FB2C0", "#3F8CA0", "#006C85", "#004B5D"];
+function tdBuckets(values) {
+  const v = values.filter(x => x > 0).sort((a, b) => a - b); if (!v.length) return () => TD_SCALE[0];
+  const q = [0.2, 0.4, 0.6, 0.8, 0.95].map(p => v[Math.min(v.length - 1, Math.floor(p * v.length))]);
+  return x => !(x > 0) ? "#F3F5F8" : TD_SCALE[q.findIndex(t => x <= t) === -1 ? 5 : q.findIndex(t => x <= t)];
+}
+function renderDonorMap() {
+  const box = $("td-map"); if (!box) return;
+  const ks = ROWS.length ? Object.keys(ROWS[0]) : [];
+  const stKey = ks.find(k => /preferred state/i.test(k)) || ks.find(k => /^state$/i.test(k));
+  const coKey = ks.find(k => /preferred county/i.test(k)) || ks.find(k => /^county$/i.test(k));
+  const head = `<div class="card-head"><div><h2>Where our donors are${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
+    <div class="sub">By each household's preferred address. Hover a state or county for figures.</div></div>
+    <div class="segbtn" role="group" aria-label="Measure"><button type="button" data-tdm="dollars" aria-pressed="${PF.tdMetric !== "households"}">Dollars</button><button type="button" data-tdm="households" aria-pressed="${PF.tdMetric === "households"}">Households</button></div></div>`;
+  if (!stKey) { box.innerHTML = head + `<div class="notice"><p>The Projections data doesn't include a Preferred State column yet, so the map can't be drawn.</p></div>`; return; }
+  if (!GEO.data) { box.innerHTML = head + `<div class="loading">Loading the map…</div>`;
+    loadGeo().then(renderDonorMap).catch(() => { box.innerHTML = head + `<div class="notice err"><p>The map file (lib/geo.json) couldn't be loaded.</p></div>`; }); return; }
+  const key = PF.tdKey || KEYS.total, byHH = PF.tdMetric === "households";
+  const st = {}, co = {}; let mi = { n: 0, amt: 0 }, all = { n: 0, amt: 0 }, unknown = { n: 0, amt: 0 };
+  tdPool().forEach(r => {
+    const v = Math.max(0, num(r[key])); if (!v || isUnderLine(r)) return;
+    all.n++; all.amt += v;
+    const a = stateAbbr(r[stKey]);
+    if (!a) { unknown.n++; unknown.amt += v; return; }
+    (st[a] = st[a] || { n: 0, amt: 0 }); st[a].n++; st[a].amt += v;
+    if (a === "MI") { mi.n++; mi.amt += v;
+      if (coKey) { const c = countyKey(r[coKey]); if (c) { (co[c] = co[c] || { n: 0, amt: 0 }); co[c].n++; co[c].amt += v; } } }
+  });
+  const val = o => o ? (byHH ? o.n : o.amt) : 0, fmt = o => o ? `${ovMoney(o.amt)} · ${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}` : "none";
+  const g = GEO.data, cS = tdBuckets(Object.values(st).map(val)), cC = tdBuckets(Object.values(co).map(val));
+  const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Donors by state">` +
+    g.us.states.map(s => `<path class="area" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") + `</svg>`;
+  const miSvg = `<svg viewBox="${g.mi.viewBox}" role="img" aria-label="Michigan donors by county">` +
+    g.mi.counties.map(c => { const o = co[countyKey(c.name)]; return `<path class="area" d="${c.d}" fill="${cC(val(o))}" data-tip="${esc(c.name)} County: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
+  const pctOf = (a, b) => b ? Math.round(a / b * 100) + "%" : "—";
+  const known = { n: all.n - unknown.n, amt: all.amt - unknown.amt };
+  box.innerHTML = head + `
+    <div class="td-split">
+      <div class="st"><b>${pctOf(mi.n, known.n)}</b><span>of households are in Michigan (${pctOf(known.n - mi.n, known.n)} elsewhere)</span></div>
+      <div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>
+      <div class="st"><b>${Object.keys(st).length}</b><span>states with at least one giving household</span></div>
+    </div>
+    <div class="td-maps">
+      <div class="chart"><h4>By state</h4>${usSvg}</div>
+      <div class="chart"><h4>Michigan by county</h4>${coKey ? miSvg : `<p class="sub">No county column in the data.</p>`}</div>
+    </div>
+    <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
+    <p class="bs-note">Gifts under $1k aren't on the map because they're rolled into one line without addresses.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file (${esc(ovMoney(unknown.amt))}) and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
+  box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(); });
+}
+
 function renderConcentration() {
   const box = $("conc"); if (!box) return;
   const curYear = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
@@ -1732,7 +1878,7 @@ function chartPortfolio(items, label) {
   return svgOpen(W, H, label) + g + "</svg>";
 }
 function renderPortfolios() {
-  renderConcentration(); pfShowView();
+  renderTopDonors(); pfShowView();
   const Y = +KEYS.curYear.replace("Money In ", ""), yrs = pfYears(), all = pfReal();
   const mine = PF.fr ? all.filter(r => r.Solicitor === PF.fr) : all;
   const t = pfTotals(mine), cur = t.yr[KEYS.curYear], prev = t.yr["Money In " + (Y - 1)] || 0;
