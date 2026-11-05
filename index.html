@@ -107,6 +107,12 @@
   .conc .share{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
   .conc .share i{display:inline-block;height:6px;border-radius:3px;background:var(--navy);opacity:.55}
   .conc .tablewrap2{overflow-x:auto}
+  /* Faded leadership photo and quote behind the Overview's top section */
+  #hero{position:relative;overflow:hidden}
+  #hero > *:not(.hero-photo){position:relative;z-index:1}
+  .hero-photo{position:absolute;right:0;top:0;height:100%;width:auto;max-width:55%;object-fit:cover;object-position:center top;opacity:.11;pointer-events:none;
+    -webkit-mask-image:linear-gradient(to left,#000 55%,transparent);mask-image:linear-gradient(to left,#000 55%,transparent)}
+  .hero-quote{text-align:right;font-family:var(--serif);font-style:italic;font-size:13px;color:var(--muted);margin-top:6px}
   .hero-kicker{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .seg .lbl{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
   .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:32px 0 8px}
@@ -1027,6 +1033,9 @@ function renderOverview(rows) {
   const goal = v(1), moneyIn = v(2), projected = v(3), ye = v(4), vsGoal = v(5), pctGoal = v(6);
   const scale = Math.max(goal, ye) * 1.08 || 1;
   $("hero").innerHTML = `
+    <!-- Photo: read from the repo (hero-photo.jpg); until that file exists it borrows the one on mackinac.org -->
+    <img class="hero-photo" src="hero-photo.jpg" alt="" aria-hidden="true"
+      onerror="if(!this.dataset.f){this.dataset.f='1';this.src='https://www.mackinac.org/media/images/2026/sizes/1200w/Mike%26Joe.jpg';}else{this.remove();}">
     <div class="hero-top">
       <div><div class="hero-kicker">In the door today</div><div class="hero-figure">${ovMoney(moneyIn)}</div>
         <div class="hero-sub">${goal ? pct(moneyIn / goal) + " of the " + ovMoney(goal) + " goal" : ""} · money received so far</div></div>
@@ -1043,7 +1052,8 @@ function renderOverview(rows) {
       <span><i class="sw" style="background:var(--sky)"></i>Projected, not yet in <b>${ovMoney(projected)}</b></span>
       <span><i class="sw" style="background:var(--gold)"></i>Fundraising goal <b>${ovMoney(goal)}</b></span>
       <span>Original projection <b>${ovMoney(v(0))}</b></span>
-    </div>`;
+    </div>
+    <div class="hero-quote">“You best keep fundraising.”</div>`;
   const order = [...new Set(OV.filter(r => r.section !== "Header").map(r => r.section))];
   $("ledgers").innerHTML = order.map(sec => `<div class="ledger"><h3>${esc(sec)}</h3><dl>` +
     OV.filter(r => r.section === sec).map(r => {
