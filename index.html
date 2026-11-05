@@ -61,7 +61,9 @@
   .hero-pct{text-align:right}
   .hero-pct .big{font-family:var(--serif);font-weight:700;font-size:32px;color:var(--navy)}
   .hero-pct .big.under{color:var(--red)}
-  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:22px 0 8px}
+  .hero-kicker{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .seg .lbl{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
+  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:32px 0 8px}
   .seg{position:absolute;top:0;bottom:0}
   .seg.in{background:var(--navy);border-radius:5px 0 0 5px}
   .seg.proj{background:repeating-linear-gradient(135deg,var(--sky) 0 7px,#A7C3E7 7px 14px)}
@@ -963,11 +965,13 @@ function renderOverview(rows) {
   const scale = Math.max(goal, ye) * 1.08 || 1;
   $("hero").innerHTML = `
     <div class="hero-top">
-      <div><div class="hero-figure">${short(ye)}</div><div class="hero-sub">${esc(fr[4] ? fr[4].label : "Year-end projection")} against a ${short(goal)} goal</div></div>
-      <div class="hero-pct"><div class="big ${pctGoal < 1 ? "under" : ""}">${pct(pctGoal)}</div><div class="hero-sub">${vsGoal >= 0 ? short(vsGoal) + " over goal" : short(-vsGoal) + " short of goal"}</div></div>
+      <div><div class="hero-kicker">In the door today</div><div class="hero-figure">${ovMoney(moneyIn)}</div>
+        <div class="hero-sub">${goal ? pct(moneyIn / goal) + " of the " + ovMoney(goal) + " goal" : ""} · money received so far</div></div>
+      <div class="hero-pct"><div class="hero-kicker">Projected by year end</div><div class="big ${pctGoal < 1 ? "under" : ""}">${ovMoney(ye)}</div>
+        <div class="hero-sub">${pct(pctGoal)} of goal · ${vsGoal >= 0 ? ovMoney(vsGoal) + " over" : ovMoney(-vsGoal) + " short"} if every projection comes in</div></div>
     </div>
     <div class="track" role="img" aria-label="${short(moneyIn)} in, ${short(projected)} projected, goal ${short(goal)}">
-      <div class="seg in" style="left:0;width:${moneyIn/scale*100}%"></div>
+      <div class="seg in" style="left:0;width:${moneyIn/scale*100}%">${moneyIn / scale > 0.18 ? `<span class="lbl">In the door ${ovMoney(moneyIn)}</span>` : ""}</div>
       <div class="seg proj" style="left:${moneyIn/scale*100}%;width:${projected/scale*100}%"></div>
       <div class="goal" style="left:calc(${goal/scale*100}% - 1px)"><span>Goal</span></div>
     </div>
