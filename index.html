@@ -80,7 +80,20 @@
   .td-maps path.area:hover{stroke:var(--navy-deep);stroke-width:1.4}
   .td-legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
   .td-legend i{display:inline-block;width:26px;height:10px;border-radius:2px}
-  @media (max-width:900px){ .td-maps{grid-template-columns:1fr} }
+  .td-maps.sel{grid-template-columns:minmax(220px,1.3fr) minmax(0,3fr) minmax(0,2fr)}
+  .td-maps path.area{cursor:pointer}
+  .td-maps path.area.on{stroke:var(--gold);stroke-width:2.2}
+  .td-list{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;max-height:520px;overflow:auto}
+  .td-list .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:2px solid var(--navy);padding-bottom:6px;margin-bottom:4px}
+  .td-list .hd b{font-family:var(--serif);font-size:16px;color:var(--navy-deep)}
+  .td-list .hd button{background:none;border:0;font-size:18px;line-height:1;color:var(--muted);cursor:pointer}
+  .td-list .meta{font-size:12px;color:var(--muted);margin:0 0 6px}
+  .td-list ol{list-style:none;margin:0;padding:0}
+  .td-list li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #F0F2F5;font-size:13px}
+  .td-list li button{background:none;border:0;padding:0;text-align:left;color:var(--navy-deep);font-weight:500;cursor:pointer}
+  .td-list li button:hover{text-decoration:underline}
+  .td-list li span{font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+  @media (max-width:900px){ .td-maps,.td-maps.sel{grid-template-columns:1fr} }
   .conc{margin-top:0}
   .conc h2{margin:0 0 6px}
   .conc .lead{font-family:var(--serif);font-size:20px;line-height:1.35;color:var(--navy-deep);margin:4px 0 16px;max-width:70ch}
@@ -1179,28 +1192,36 @@ function renderDonorMap() {
   const stKey = ks.find(k => /preferred state/i.test(k)) || ks.find(k => /^state$/i.test(k));
   const coKey = ks.find(k => /preferred county/i.test(k)) || ks.find(k => /^county$/i.test(k));
   const head = `<div class="card-head"><div><h2>Where our donors are${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
-    <div class="sub">By each household's preferred address. Hover a state or county for figures.</div></div>
+    <div class="sub">By each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div>
     <div class="segbtn" role="group" aria-label="Measure"><button type="button" data-tdm="dollars" aria-pressed="${PF.tdMetric !== "households"}">Dollars</button><button type="button" data-tdm="households" aria-pressed="${PF.tdMetric === "households"}">Households</button></div></div>`;
   if (!stKey) { box.innerHTML = head + `<div class="notice"><p>The Projections data doesn't include a Preferred State column yet, so the map can't be drawn.</p></div>`; return; }
   if (!GEO.data) { box.innerHTML = head + `<div class="loading">Loading the map…</div>`;
     loadGeo().then(renderDonorMap).catch(() => { box.innerHTML = head + `<div class="notice err"><p>The map file (lib/geo.json) couldn't be loaded.</p></div>`; }); return; }
   const key = PF.tdKey || KEYS.total, byHH = PF.tdMetric === "households";
   const st = {}, co = {}; let mi = { n: 0, amt: 0 }, all = { n: 0, amt: 0 }, unknown = { n: 0, amt: 0 };
+  const add = (bag, k, r, v) => { (bag[k] = bag[k] || { n: 0, amt: 0, rows: [] }); bag[k].n++; bag[k].amt += v; bag[k].rows.push({ r, v }); };
   tdPool().forEach(r => {
     const v = Math.max(0, num(r[key])); if (!v || isUnderLine(r)) return;
     all.n++; all.amt += v;
     const a = stateAbbr(r[stKey]);
     if (!a) { unknown.n++; unknown.amt += v; return; }
-    (st[a] = st[a] || { n: 0, amt: 0 }); st[a].n++; st[a].amt += v;
+    add(st, a, r, v);
     if (a === "MI") { mi.n++; mi.amt += v;
-      if (coKey) { const c = countyKey(r[coKey]); if (c) { (co[c] = co[c] || { n: 0, amt: 0 }); co[c].n++; co[c].amt += v; } } }
+      if (coKey) { const c = countyKey(r[coKey]); if (c) add(co, c, r, v); } }
   });
   const val = o => o ? (byHH ? o.n : o.amt) : 0, fmt = o => o ? `${ovMoney(o.amt)} · ${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}` : "none";
   const g = GEO.data, cS = tdBuckets(Object.values(st).map(val)), cC = tdBuckets(Object.values(co).map(val));
+  // The area picked on the map: its households, largest first, each opening the quick look (with the RE link)
+  const sel = PF.tdSel, picked = sel ? (sel.type === "st" ? st : co)[sel.key] : null;
+  const list = !sel ? "" : `<div class="td-list"><div class="hd"><b>${esc(sel.label)}</b><button type="button" id="td-clear" aria-label="Close list">×</button></div>
+    ${picked ? `<p class="meta">${picked.n.toLocaleString("en-US")} household${picked.n === 1 ? "" : "s"} · ${esc(ovMoney(picked.amt))} · click a name for details</p>
+      <ol>${picked.rows.sort((a, b) => b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(ovMoney(x.v))}</span></li>`).join("")}</ol>`
+      : `<p class="meta">No giving households here for this year.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Donors by state">` +
-    g.us.states.map(s => `<path class="area" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") + `</svg>`;
+    g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") + `</svg>`;
   const miSvg = `<svg viewBox="${g.mi.viewBox}" role="img" aria-label="Michigan donors by county">` +
-    g.mi.counties.map(c => { const o = co[countyKey(c.name)]; return `<path class="area" d="${c.d}" fill="${cC(val(o))}" data-tip="${esc(c.name)} County: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
+    g.mi.counties.map(c => { const k = countyKey(c.name), o = co[k];
+      return `<path class="area${sel && sel.type === "co" && sel.key === k ? " on" : ""}" d="${c.d}" fill="${cC(val(o))}" data-area="co|${esc(k)}|${esc(c.name)} County" data-tip="${esc(c.name)} County: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
   const pctOf = (a, b) => b ? Math.round(a / b * 100) + "%" : "—";
   const known = { n: all.n - unknown.n, amt: all.amt - unknown.amt };
   box.innerHTML = head + `
@@ -1209,13 +1230,21 @@ function renderDonorMap() {
       <div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>
       <div class="st"><b>${Object.keys(st).length}</b><span>states with at least one giving household</span></div>
     </div>
-    <div class="td-maps">
+    <div class="td-maps${sel ? " sel" : ""}">${list}
       <div class="chart"><h4>By state</h4>${usSvg}</div>
       <div class="chart"><h4>Michigan by county</h4>${coKey ? miSvg : `<p class="sub">No county column in the data.</p>`}</div>
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
     <p class="bs-note">Gifts under $1k aren't on the map because they're rolled into one line without addresses.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file (${esc(ovMoney(unknown.amt))}) and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(); });
+  // Click a state or county to list its households; click it again (or ×) to close the list
+  box.querySelectorAll("path[data-area]").forEach(pth => pth.onclick = () => {
+    const [type, k, label] = pth.dataset.area.split("|");
+    PF.tdSel = PF.tdSel && PF.tdSel.type === type && PF.tdSel.key === k ? null : { type, key: k, label };
+    renderDonorMap();
+  });
+  if ($("td-clear")) $("td-clear").onclick = () => { PF.tdSel = null; renderDonorMap(); };
+  if (picked) box.querySelectorAll("[data-tdr]").forEach(b => b.onclick = () => openDrawer(picked.rows[+b.dataset.tdr].r));
 }
 
 function renderConcentration() {
