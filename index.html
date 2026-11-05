@@ -83,6 +83,7 @@
   .td-maps.sel{grid-template-columns:minmax(0,3fr) minmax(0,2fr) minmax(230px,1.3fr)}
   .td-maps path.area{cursor:pointer}
   .td-maps path.area.on{stroke:var(--gold);stroke-width:2.2}
+  .td-maps .area:focus-visible{outline:none;stroke:var(--gold);stroke-width:2.6}
   .td-list{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;max-height:520px;overflow:auto}
   .td-list .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:2px solid var(--navy);padding-bottom:6px;margin-bottom:4px}
   .td-list .hd b{font-family:var(--serif);font-size:16px;color:var(--navy-deep)}
@@ -468,7 +469,7 @@
     <button class="tab" role="tab" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</button>
     <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
     <div class="tabmenu" id="other-menu" hidden>
-      <button class="tab has-menu" type="button" id="other-btn" aria-haspopup="true" aria-expanded="false" aria-selected="false">Other Reports</button>
+      <button class="tab has-menu" type="button" id="other-btn" aria-haspopup="true" aria-controls="other-pop" aria-expanded="false" aria-selected="false">Other Reports</button>
       <div class="tabpop" id="other-pop" role="menu" hidden>
         <button class="tabitem" type="button" role="menuitem" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</button>
         <button class="tabitem" type="button" role="menuitem" data-tab="Mailing" data-access="Mailing Program" aria-selected="false" hidden>Mailing Program</button>
@@ -1196,7 +1197,7 @@ function tdDcMarker(g, st, val, cS, fmt, sel) {
   const on = sel && sel.type === "st" && sel.key === "DC";
   return `<line x1="${x}" y1="${y}" x2="${mx}" y2="${my}" stroke="#8A94A6" stroke-width=".8"/>
     <circle class="area${on ? " on" : ""}" cx="${mx}" cy="${my}" r="8" fill="${cS(val(st.DC))}" stroke="${on ? "var(--gold)" : "#8A94A6"}" stroke-width="${on ? 2.2 : 1}" style="cursor:pointer"
-      data-area="st|DC|Washington, DC" data-tip="Washington, DC: ${esc(fmt(st.DC))}"/>
+      data-area="st|DC|Washington, DC" tabindex="0" role="button" aria-label="Washington, DC: ${esc(fmt(st.DC))}" data-tip="Washington, DC: ${esc(fmt(st.DC))}"/>
     <text x="${mx + 12}" y="${my + 4}" style="font-size:11px;fill:var(--muted);pointer-events:none">DC</text>`;
 }
 function renderDonorMap() {
@@ -1231,11 +1232,11 @@ function renderDonorMap() {
       <ol>${picked.rows.sort((a, b) => b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(money(x.v))}</span></li>`).join("")}</ol>`
       : `<p class="meta">No giving households here for this year.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Donors by state">` +
-    g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
+    g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" tabindex="0" role="button" aria-label="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
     tdDcMarker(g, st, val, cS, fmt, sel) + `</svg>`;
   const miSvg = `<svg viewBox="${g.mi.viewBox}" role="img" aria-label="Michigan donors by county">` +
     g.mi.counties.map(c => { const k = countyKey(c.name), o = co[k];
-      return `<path class="area${sel && sel.type === "co" && sel.key === k ? " on" : ""}" d="${c.d}" fill="${cC(val(o))}" data-area="co|${esc(k)}|${esc(c.name)} County" data-tip="${esc(c.name)} County: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
+      return `<path class="area${sel && sel.type === "co" && sel.key === k ? " on" : ""}" d="${c.d}" fill="${cC(val(o))}" data-area="co|${esc(k)}|${esc(c.name)} County" tabindex="0" role="button" aria-label="${esc(c.name)} County: ${esc(fmt(o))}" data-tip="${esc(c.name)} County: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
   const pctOf = (a, b) => b ? Math.round(a / b * 100) + "%" : "—";
   const known = { n: all.n - unknown.n, amt: all.amt - unknown.amt };
   box.innerHTML = head + `
@@ -1253,10 +1254,13 @@ function renderDonorMap() {
     <p class="bs-note">Gifts under $1k aren't on the map because they're rolled into one line without addresses.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file (${esc(ovMoney(unknown.amt))}) and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(); });
   // Click a state or county to list its households; click it again (or ×) to close the list
-  box.querySelectorAll("[data-area]").forEach(pth => pth.onclick = () => {
-    const [type, k, label] = pth.dataset.area.split("|");
-    PF.tdSel = PF.tdSel && PF.tdSel.type === type && PF.tdSel.key === k ? null : { type, key: k, label };
-    renderDonorMap();
+  box.querySelectorAll("[data-area]").forEach(pth => {
+    pth.onclick = () => {
+      const [type, k, label] = pth.dataset.area.split("|");
+      PF.tdSel = PF.tdSel && PF.tdSel.type === type && PF.tdSel.key === k ? null : { type, key: k, label };
+      renderDonorMap();
+    };
+    pth.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pth.onclick(); } };
   });
   if ($("td-clear")) $("td-clear").onclick = () => { PF.tdSel = null; renderDonorMap(); };
   if (picked) box.querySelectorAll("[data-tdr]").forEach(b => b.onclick = () => openDrawer(picked.rows[+b.dataset.tdr].r));
