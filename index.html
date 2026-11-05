@@ -1175,7 +1175,8 @@ function loadGeo() {
 const US_NAMES = { AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming" };
 const US_BY_NAME = Object.fromEntries(Object.entries(US_NAMES).map(([a, n]) => [n.toLowerCase(), a]));
 function stateAbbr(v) {
-  const t = String(v ?? "").trim(); if (!t) return "";
+  let t = String(v ?? "").trim().replace(/\./g, ""); if (!t) return "";
+  if (/^(washington\s*)?dc$/i.test(t)) return "DC";
   if (US_NAMES[t.toUpperCase()]) return t.toUpperCase();
   return US_BY_NAME[t.toLowerCase()] || "";
 }
@@ -1185,6 +1186,18 @@ function tdBuckets(values) {
   const v = values.filter(x => x > 0).sort((a, b) => a - b); if (!v.length) return () => TD_SCALE[0];
   const q = [0.2, 0.4, 0.6, 0.8, 0.95].map(p => v[Math.min(v.length - 1, Math.floor(p * v.length))]);
   return x => !(x > 0) ? "#F3F5F8" : TD_SCALE[q.findIndex(t => x <= t) === -1 ? 5 : q.findIndex(t => x <= t)];
+}
+// Washington, DC is only a few pixels wide, so it also gets a labeled dot just off the coast you can hover and click
+function tdDcMarker(g, st, val, cS, fmt, sel) {
+  const dc = g.us.states.find(s => s.abbr === "DC"); if (!dc) return "";
+  const n = (dc.d.match(/-?\d+(\.\d+)?/g) || []).map(Number), xs = n.filter((_, i) => i % 2 === 0), ys = n.filter((_, i) => i % 2 === 1);
+  if (!xs.length) return "";
+  const x = xs.reduce((a, b) => a + b, 0) / xs.length, y = ys.reduce((a, b) => a + b, 0) / ys.length, mx = x + 34, my = y + 14;
+  const on = sel && sel.type === "st" && sel.key === "DC";
+  return `<line x1="${x}" y1="${y}" x2="${mx}" y2="${my}" stroke="#8A94A6" stroke-width=".8"/>
+    <circle class="area${on ? " on" : ""}" cx="${mx}" cy="${my}" r="8" fill="${cS(val(st.DC))}" stroke="${on ? "var(--gold)" : "#8A94A6"}" stroke-width="${on ? 2.2 : 1}" style="cursor:pointer"
+      data-area="st|DC|Washington, DC" data-tip="Washington, DC: ${esc(fmt(st.DC))}"/>
+    <text x="${mx + 12}" y="${my + 4}" style="font-size:11px;fill:var(--muted);pointer-events:none">DC</text>`;
 }
 function renderDonorMap() {
   const box = $("td-map"); if (!box) return;
@@ -1218,7 +1231,8 @@ function renderDonorMap() {
       <ol>${picked.rows.sort((a, b) => b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(money(x.v))}</span></li>`).join("")}</ol>`
       : `<p class="meta">No giving households here for this year.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Donors by state">` +
-    g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") + `</svg>`;
+    g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
+    tdDcMarker(g, st, val, cS, fmt, sel) + `</svg>`;
   const miSvg = `<svg viewBox="${g.mi.viewBox}" role="img" aria-label="Michigan donors by county">` +
     g.mi.counties.map(c => { const k = countyKey(c.name), o = co[k];
       return `<path class="area${sel && sel.type === "co" && sel.key === k ? " on" : ""}" d="${c.d}" fill="${cC(val(o))}" data-area="co|${esc(k)}|${esc(c.name)} County" data-tip="${esc(c.name)} County: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
@@ -1239,7 +1253,7 @@ function renderDonorMap() {
     <p class="bs-note">Gifts under $1k aren't on the map because they're rolled into one line without addresses.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file (${esc(ovMoney(unknown.amt))}) and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(); });
   // Click a state or county to list its households; click it again (or ×) to close the list
-  box.querySelectorAll("path[data-area]").forEach(pth => pth.onclick = () => {
+  box.querySelectorAll("[data-area]").forEach(pth => pth.onclick = () => {
     const [type, k, label] = pth.dataset.area.split("|");
     PF.tdSel = PF.tdSel && PF.tdSel.type === type && PF.tdSel.key === k ? null : { type, key: k, label };
     renderDonorMap();
