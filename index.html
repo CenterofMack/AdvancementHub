@@ -8,9 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <script src="https://sky.blackbaudcdn.net/static/sky-addin-client/1/sky-addin-client.global.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- The PDF and Excel libraries live in this repo's lib folder and load only when someone downloads a file (see loadExportLibs). -->
 <style>
   :root{
     --navy:#006C85; --navy-deep:#004B5D; --sky:#8FB3E0; --gold:#C9A33F;
@@ -1259,14 +1257,33 @@ function fullXlsx() {
 }
 const xlsxBlob = wb => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 
+/* Export libraries: kept in this repo (lib/), not loaded from an outside site, and only fetched
+   the first time someone downloads a PDF or Excel file. Pinned versions: jsPDF 2.5.1,
+   jsPDF-AutoTable 3.8.2, SheetJS 0.18.5. */
+const EXPORT_LIBS = { pdf: ["lib/jspdf.umd.min.js", "lib/jspdf.plugin.autotable.min.js"], xlsx: ["lib/xlsx.full.min.js"] };
+const LIB_LOADS = {};
+function loadScript(src) {
+  if (!LIB_LOADS[src]) LIB_LOADS[src] = new Promise((resolve, reject) => {
+    const el = document.createElement("script");
+    el.src = src; el.onload = resolve;
+    el.onerror = () => { delete LIB_LOADS[src]; reject(new Error("Couldn't load " + src)); };
+    document.head.appendChild(el);
+  });
+  return LIB_LOADS[src];
+}
+// Loads in order (the table plugin needs jsPDF first)
+function loadExportLibs(kind) { return EXPORT_LIBS[kind].reduce((p, src) => p.then(() => loadScript(src)), Promise.resolve()); }
+
 function wire(btnId, make, name, fbId, kind) {
-  $(btnId).onclick = () => {
+  $(btnId).onclick = async () => {
     const btn = $(btnId), label = btn.textContent; btn.disabled = true; btn.textContent = "Building…";
-    setTimeout(() => {
-      try { const out = make(); deliver(kind === "pdf" ? out.output("blob") : xlsxBlob(out), name(), fbId); }
-      catch (e) { console.error(e); $(fbId).textContent = "That file couldn't be created. Try again."; }
-      finally { btn.disabled = false; btn.textContent = label; }
-    }, 30);
+    try {
+      await loadExportLibs(kind);
+      await new Promise(r => setTimeout(r, 30));
+      const out = make(); deliver(kind === "pdf" ? out.output("blob") : xlsxBlob(out), name(), fbId);
+    }
+    catch (e) { console.error(e); $(fbId).textContent = "That file couldn't be created. Try again."; }
+    finally { btn.disabled = false; btn.textContent = label; }
   };
 }
 wire("ov-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "ov-fb", "pdf");
