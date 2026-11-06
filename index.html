@@ -69,6 +69,8 @@
   .pyr .t-n{font-size:22px;fill:#fff;font-weight:600;font-variant-numeric:tabular-nums}
   .pyr .t-tot{font-size:16px;font-weight:700;fill:var(--navy-deep)}
   /* Donor map */
+  .td-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0 14px}
+  .td-controls .segbtn button:disabled{opacity:.45;cursor:default}
   .td-split{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 16px}
   .td-split .st{flex:1 1 200px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;background:#fff}
   .td-split .st b{display:block;font-family:var(--serif);font-size:24px;color:var(--navy-deep)}
@@ -1136,9 +1138,9 @@ function tdAvgLabel() {
 function tdPool() { return ROWS.filter(r => String(r.Name ?? "").trim() !== "" && (!PF.fr || r.Solicitor === PF.fr)); }
 function tdYearOptions() {
   const cy = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
-  return [...(KEYS.total ? [{ key: KEYS.total, label: cy + " if it ends as projected" }] : []),
-    ...KEYS.years.filter(k => k !== KEYS.curYear).map(k => ({ key: k, label: k.replace("Money In ", "") })),
-    ...(tdAvgKeys().length >= 2 ? [{ key: TD_AVG, label: tdAvgLabel() }] : [])];
+  return [...(tdAvgKeys().length >= 2 ? [{ key: TD_AVG, label: tdAvgLabel() }] : []),
+    ...(KEYS.total ? [{ key: KEYS.total, label: cy + " if it ends as projected" }] : []),
+    ...KEYS.years.filter(k => k !== KEYS.curYear).map(k => ({ key: k, label: k.replace("Money In ", "") }))];
 }
 function tdYearSwitch(id) {
   const opts = tdYearOptions(); if (!PF.tdKey || !opts.some(o => o.key === PF.tdKey)) PF.tdKey = opts[0] && opts[0].key;
@@ -1230,22 +1232,27 @@ function renderDonorMap() {
   // Who's on the map: "On Projections" = households with money in the chosen year (the original view);
   // "All Households" = everyone on the Projections list; "Assigned – No Gift" = assigned households with no giving on file
   const pop = PF.tdPop || "proj", noGift = pop === "nogift";
-  const yearSw = noGift ? "" : tdYearSwitch(), yearLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
+  let yearSw = tdYearSwitch(); const yearLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
+  if (noGift) yearSw = yearSw.replace(/<button /g, '<button disabled ').replace(/aria-pressed="true"/g, 'aria-pressed="false"');
   const popBtn = (k, t) => `<button type="button" data-tdp="${k}" aria-pressed="${pop === k}">${t}</button>`;
+  const yrs = tdAvgKeys().map(k => +(k === KEYS.total ? (KEYS.curYear || "") : k).replace(/\D/g, "")).filter(Boolean).sort();
+  const yrText = yrs.length ? yrs.slice(0, -1).join(", ") + (yrs.length > 1 ? " or " : "") + yrs[yrs.length - 1] : "the last three years";
   const head = `<div class="card-head"><div><h2>Where our donors are${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
-    <div class="sub">${noGift ? "Assigned households with no giving on file" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-      <div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}${popBtn("nogift", "Assigned – No Gift")}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${yearSw}<div class="segbtn" role="group" aria-label="Measure">
+    <div class="sub">${noGift ? "Assigned households with no giving in the past three years" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div></div>
+    <div class="td-controls">
+      <div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}${popBtn("nogift", "Assigned – No Gift (3 yrs)")}</div>
+      ${yearSw}
+      <div class="segbtn" role="group" aria-label="Measure">
         <button type="button" data-tdm="dollars" aria-pressed="${!noGift && PF.tdMetric !== "households"}" ${noGift ? "disabled" : ""}>By Dollars</button>
-        <button type="button" data-tdm="households" aria-pressed="${noGift || PF.tdMetric === "households"}">By Household</button></div></div>
-    </div></div>`;
+        <button type="button" data-tdm="households" aria-pressed="${noGift || PF.tdMetric === "households"}">By Household</button></div>
+    </div>
+    ${noGift ? `<div class="mp-flag" style="margin-top:-4px">Households with an assigned fundraiser and no gifts or projections in ${esc(yrText)} (projected). Some may have given before ${yrs[0] || "then"}; open a household to see its full history in Raiser's Edge.</div>` : ""}`;
   if (!stKey) { box.innerHTML = head + `<div class="notice"><p>The Projections data doesn't include a Preferred State column yet, so the map can't be drawn.</p></div>`; return; }
   if (!GEO.data) { box.innerHTML = head + `<div class="loading">Loading the map…</div>`;
     loadGeo().then(renderDonorMap).catch(() => { box.innerHTML = head + `<div class="notice err"><p>The map file (lib/geo.json) couldn't be loaded.</p></div>`; }); return; }
   const key = PF.tdKey || KEYS.total, byHH = noGift || PF.tdMetric === "households";
   const isAssigned = r => { const f = String(r.Solicitor ?? "").trim(); return f !== "" && !/no assigned/i.test(f); };
-  const everGave = r => [KEYS.total, ...KEYS.years].filter(Boolean).some(k => num(r[k]) > 0);
+  const everGave = r => tdAvgKeys().some(k => num(r[k]) > 0);
   const st = {}, co = {}; let mi = { n: 0, amt: 0 }, all = { n: 0, amt: 0 }, unknown = { n: 0, amt: 0 };
   const add = (bag, k, r, v) => { (bag[k] = bag[k] || { n: 0, amt: 0, rows: [] }); bag[k].n++; bag[k].amt += v; bag[k].rows.push({ r, v }); };
   tdPool().forEach(r => {
@@ -1280,7 +1287,7 @@ function renderDonorMap() {
   box.innerHTML = head + `
     <div class="td-split">
       <div class="st"><b>${pctOf(mi.n, known.n)}</b><span>of households are in Michigan (${pctOf(known.n - mi.n, known.n)} elsewhere)</span></div>
-      ${noGift ? `<div class="st"><b>${all.n.toLocaleString("en-US")}</b><span>assigned households with no giving on file</span></div>`
+      ${noGift ? `<div class="st"><b>${all.n.toLocaleString("en-US")}</b><span>assigned households with no giving in the past three years</span></div>`
         : `<div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>`}
       <div class="st"><b>${Object.keys(st).length}</b><span>states and DC with at least one ${noGift ? "of these households" : pop === "all" ? "household" : "giving household"}</span></div>
     </div>
@@ -1290,7 +1297,7 @@ function renderDonorMap() {
       ${list}
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
-    <p class="bs-note">Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address.${noGift ? " “No giving on file” means nothing in or projected for any year in the Projections data." : ""}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
+    <p class="bs-note">Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(); });
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(); });
   tdWireYear(box);
