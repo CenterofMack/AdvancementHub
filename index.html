@@ -1240,6 +1240,7 @@ function renderDonorMap() {
   const head = `<div class="card-head"><div><h2>Where our donors are${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
     <div class="sub">${noGift ? "Assigned households with no giving in the past three years" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div></div>
     <div class="td-controls">
+      <label class="bs-through">Fundraiser <select id="td-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
       <div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}${popBtn("nogift", "Assigned – No Gift (3 yrs)")}</div>
       ${yearSw}
       <div class="segbtn" role="group" aria-label="Measure">
@@ -1300,6 +1301,8 @@ function renderDonorMap() {
     <p class="bs-note">Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address.${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(); });
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(); });
+  // Changing it here changes the whole scorecard, the same as the filter at the top of the page
+  if ($("td-fr")) $("td-fr").onchange = e => { PF.fr = e.target.value; $("pf-fr").value = PF.fr; PF.tdSel = null; renderPortfolios(); };
   tdWireYear(box);
   // Click a state or county to list its households; click it again (or ×) to close the list
   box.querySelectorAll("[data-area]").forEach(pth => {
