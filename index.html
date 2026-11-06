@@ -1005,7 +1005,18 @@ function load() {
   client.getUserIdentityToken()
     .then(token => fetch(FLOW_URL + "&tab=Projections", { method: "POST", body: token }))
     .then(async res => {
-      if (res.status === 403) { showNotice("You don't have access to Projections", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      if (res.status === 403) {
+        // No Projections access. If the flow sent back the person's access row, open the hub on the tabs they do have
+        // (EWMC, Mailing Program, etc.); otherwise show the no-access message.
+        let d = null; try { d = await res.json(); } catch (_) {}
+        const acc = d && d.access && typeof d.access === "object" ? d.access : null;
+        if (acc) {
+          applyAccess(acc);
+          const first = [...document.querySelectorAll("[data-tab]")].find(t => !t.hidden);
+          if (first) { $("who").textContent = d.user || ""; $("loading").hidden = true; selectTab(first.dataset.tab); return; }
+        }
+        showNotice("You don't have access to the Advancement Hub", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return;
+      }
       if (!res.ok) { showNotice("Projections didn't load", `The data service returned an error (status ${res.status}).`, true, true); return; }
       let data;
       try { data = await res.json(); } catch (_) { showNotice("Projections didn't load", "The data service sent back something unreadable. Try again in a minute.", true, true); return; }
