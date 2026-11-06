@@ -309,6 +309,9 @@
   .pf-list h3{margin:0 0 6px;font-size:14px;color:var(--navy-deep)}
   .pf-list h3 small{color:var(--muted);font-weight:500}
   .pf-list .bs-tablewrap{max-height:360px;overflow:auto}
+  .pf-list table.bs tfoot td,.pf-list table.bs tfoot td.txt{position:sticky;bottom:0;background:#F7F9FB;font-weight:700;border-top:2px solid var(--navy-deep);color:var(--navy-deep)}
+  .pf-list table.bs tfoot td.up{color:#1F6B3A} .pf-list table.bs tfoot td.down{color:var(--red)}
+  .td-proj{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
   .pf-list td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;text-align:left;white-space:normal}
   td.up{color:#1F6B3A} td.down{color:var(--red)}
   .tag{display:inline-block;font-size:11px;color:#2E6B47;background:#EAF5EE;border-radius:4px;padding:1px 6px;margin-left:4px;white-space:nowrap}
@@ -1127,10 +1130,15 @@ const isUnderLine = r => /gifts under \$?1k/i.test(String(r.Name ?? ""));
 // "avg3" = average of the current year (money in + projected) and the two years before it
 const TD_AVG = "avg3";
 function tdAvgKeys() { return [KEYS.total, ...KEYS.years.filter(k => k !== KEYS.curYear).slice(0, 2)].filter(Boolean); }
+// The current year counts money in + open projections, or money in only when "Include open projections" is off
+const tdRaw = (r, k) => Math.max(0, num(r[k === KEYS.total && !PF.incProj ? KEYS.curYear : k]));
 function tdVal(r, key) {
-  if (key !== TD_AVG) return Math.max(0, num(r[key]));
-  const ks = tdAvgKeys(); return ks.length ? ks.reduce((t, k) => t + Math.max(0, num(r[k])), 0) / ks.length : 0;
+  if (key !== TD_AVG) return tdRaw(r, key);
+  const ks = tdAvgKeys(); return ks.length ? ks.reduce((t, k) => t + tdRaw(r, k), 0) / ks.length : 0;
 }
+const tdCurLabel = () => (KEYS.curYear || "").replace("Money In ", "") + (PF.incProj ? " if it ends as projected" : " so far");
+function tdProjToggle() { return `<label class="td-proj"><input type="checkbox" class="td-incproj"${PF.incProj ? " checked" : ""}> Include open projections</label>`; }
+function tdWireProj(box) { box.querySelectorAll(".td-incproj").forEach(c => c.onchange = e => { PF.incProj = e.target.checked; renderPortfolios(); }); }
 function tdAvgLabel() {
   const ys = tdAvgKeys().map(k => k === KEYS.total ? (KEYS.curYear || "").replace("Money In ", "") : k.replace("Money In ", "")).map(Number).filter(Boolean);
   return ys.length ? `3-year average (${Math.min(...ys)}–${Math.max(...ys)})` : "3-year average";
@@ -1139,7 +1147,7 @@ function tdPool() { return ROWS.filter(r => String(r.Name ?? "").trim() !== "" &
 function tdYearOptions() {
   const cy = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   return [...(tdAvgKeys().length >= 2 ? [{ key: TD_AVG, label: tdAvgLabel() }] : []),
-    ...(KEYS.total ? [{ key: KEYS.total, label: cy + " if it ends as projected" }] : []),
+    ...(KEYS.total ? [{ key: KEYS.total, label: tdCurLabel() }] : []),
     ...KEYS.years.filter(k => k !== KEYS.curYear).map(k => ({ key: k, label: k.replace("Money In ", "") }))];
 }
 function tdYearSwitch(id) {
@@ -1183,11 +1191,12 @@ function renderPyramid() {
   g += `<text class="t-tot" x="24" y="${ty}">Total</text>
     <text class="t-tot" x="${cx}" y="${ty}" text-anchor="middle">${listed.toLocaleString("en-US")} households${rolled ? " + gifts under $1K" : ""}</text>
     <text class="t-tot" x="${W - 24}" y="${ty}" text-anchor="end">${esc(ovMoney(total))}</text>`;
-  box.innerHTML = `<div class="card-head"><div><h2>${key === TD_AVG ? "Donor Pyramid, " + esc(yearLbl) : esc(yearLbl.replace(" if it ends as projected", "")) + " Donor Pyramid" + (/projected/.test(yearLbl) ? " (as projected)" : "")}${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
-      <div class="sub">Households by giving level for the year. Hover a level for exact figures.</div></div>${sw}</div>
+  box.innerHTML = `<div class="card-head"><div><h2>${key === TD_AVG ? "Donor Pyramid, " + esc(yearLbl) : esc(yearLbl.replace(/ if it ends as projected| so far/, "")) + " Donor Pyramid" + (/projected/.test(yearLbl) ? " (as projected)" : / so far/.test(yearLbl) ? " (so far)" : "")}${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
+      <div class="sub">Households by giving level for the year. Hover a level for exact figures.</div></div><div class="card-tools">${sw}${tdProjToggle()}</div></div>
     <div class="pyr chart">${svgOpen(W, H, yearLbl + " donor pyramid")}${g}</svg></div>
+    ${!PF.incProj ? `<p class="bs-note">Open projections are left out, so ${esc((KEYS.curYear || "").replace("Money In ", ""))} counts money received so far only${key === TD_AVG ? ", and the 3-year average uses that partial year" : ""}.</p>` : ""}
     ${rolled ? `<p class="bs-note">The $1 – $999 level includes the Gifts Under $1k line (${esc(money(rolled))}). Those donors are rolled into one line in the Projections workbook, so the household count for that level only covers the small donors listed by name, hence the “+”.</p>` : ""}`;
-  tdWireYear(box);
+  tdWireYear(box); tdWireProj(box);
 }
 
 /* --- Donor map: by state, plus Michigan by county --- */
@@ -1231,7 +1240,8 @@ function renderDonorMap() {
   const coKey = ks.find(k => /preferred county/i.test(k)) || ks.find(k => /^county$/i.test(k));
   // Who's on the map: "On Projections" = households with money in the chosen year (the original view);
   // "All Households" = everyone on the Projections list; "Assigned – No Gift" = assigned households with no giving on file
-  const pop = PF.tdPop || "proj", noGift = pop === "nogift";
+  if (PF.tdPop === "nogift") PF.tdPop = "proj";
+  const pop = PF.tdPop || "proj", noGift = false;
   let yearSw = tdYearSwitch(); const yearLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
   if (noGift) yearSw = yearSw.replace(/<button /g, '<button disabled ').replace(/aria-pressed="true"/g, 'aria-pressed="false"');
   const popBtn = (k, t) => `<button type="button" data-tdp="${k}" aria-pressed="${pop === k}">${t}</button>`;
@@ -1241,11 +1251,12 @@ function renderDonorMap() {
     <div class="sub">${noGift ? "Assigned households with no giving in the past three years" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div></div>
     <div class="td-controls">
       <label class="bs-through">Fundraiser <select id="td-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
-      <div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}${popBtn("nogift", "Assigned – No Gift (3 yrs)")}</div>
+      <div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}</div>
       ${yearSw}
       <div class="segbtn" role="group" aria-label="Measure">
         <button type="button" data-tdm="dollars" aria-pressed="${!noGift && PF.tdMetric !== "households"}" ${noGift ? "disabled" : ""}>By Dollars</button>
         <button type="button" data-tdm="households" aria-pressed="${noGift || PF.tdMetric === "households"}">By Household</button></div>
+      ${tdProjToggle()}
     </div>
     ${noGift ? `<div class="mp-flag" style="margin-top:-4px">Households with an assigned fundraiser and no gifts or projections in ${esc(yrText)} (projected). Some may have given before ${yrs[0] || "then"}; open a household to see its full history in Raiser's Edge.</div>` : ""}`;
   if (!stKey) { box.innerHTML = head + `<div class="notice"><p>The Projections data doesn't include a Preferred State column yet, so the map can't be drawn.</p></div>`; return; }
@@ -1303,7 +1314,7 @@ function renderDonorMap() {
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(); });
   // Changing it here changes the whole scorecard, the same as the filter at the top of the page
   if ($("td-fr")) $("td-fr").onchange = e => { PF.fr = e.target.value; $("pf-fr").value = PF.fr; PF.tdSel = null; renderPortfolios(); };
-  tdWireYear(box);
+  tdWireYear(box); tdWireProj(box);
   // Click a state or county to list its households; click it again (or ×) to close the list
   box.querySelectorAll("[data-area]").forEach(pth => {
     pth.onclick = () => {
@@ -1321,7 +1332,7 @@ function renderConcentration() {
   const box = $("conc"); if (!box) return;
   const curYear = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   const rows = [];
-  if (KEYS.total) rows.push({ label: curYear + " if it ends as projected", key: KEYS.total, cur: true });
+  if (KEYS.total) rows.push({ label: tdCurLabel(), key: KEYS.total, cur: true });
   KEYS.years.filter(k => k !== KEYS.curYear).forEach(k => rows.push({ label: k.replace("Money In ", ""), key: k }));
   if (tdAvgKeys().length >= 2) rows.push({ label: tdAvgLabel(), key: TD_AVG });
   const pool = ROWS.filter(r => String(r.Name ?? "").trim() !== "" && (!PF.fr || r.Solicitor === PF.fr));
@@ -1329,8 +1340,9 @@ function renderConcentration() {
   if (!data.length) { box.innerHTML = `<h2>Top Donors${PF.fr ? " — " + esc(PF.fr) : ""}</h2><p class="sub">No giving to show for this portfolio.</p>`; return; }
   const lead = data[0].c, n = 25;
   const bar = v => `<span class="share">${pct(v)}<i style="width:${Math.round(v * 60)}px"></i></span>`;
-  box.innerHTML = `<h2>Where the money comes from${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
-    <p class="lead">${data[0].cur ? `If ${esc(curYear)} ends as projected, the` : "The"} top <b>${n}</b> households${PF.fr ? " in this portfolio" : ""} will give <b>${pct(lead.shareTop(n))}</b> of the money.
+  box.innerHTML = `<div class="card-head"><div><h2>Where the money comes from${PF.fr ? " — " + esc(PF.fr) : ""}</h2></div><div class="card-tools">${tdProjToggle()}</div></div>
+    <p class="lead">${data[0].cur && PF.incProj ? `If ${esc(curYear)} ends as projected, the top <b>${n}</b> households${PF.fr ? " in this portfolio" : ""} will give`
+      : `${data[0].cur ? `So far in ${esc(curYear)}, the` : "The"} top <b>${n}</b> households${PF.fr ? " in this portfolio" : ""} ${data[0].cur ? "have given" : "gave"}`} <b>${pct(lead.shareTop(n))}</b> of the money.
       ${lead.halfFrom ? `Half of it comes from just the top <b>${lead.halfFrom}</b>.` : ""}</p>
     <div class="tablewrap2"><table>
       <thead><tr><th>Year</th><th>Households giving</th>${CONC_TOPS.map(t => `<th>Top ${t}</th>`).join("")}<th>Half the money from</th><th>Total</th></tr></thead>
@@ -1339,6 +1351,7 @@ function renderConcentration() {
         <td>${r.c.halfFrom ? "top " + r.c.halfFrom : "—"}</td><td>${ovMoney(r.c.total)}</td></tr>`).join("")}</tbody>
     </table></div>
     <p class="bs-note">Households are grouped the way the Projections workbook groups them, so couples count once. Gifts under $1k count toward the total but aren't ranked, since those donors aren't listed individually. For comparison, the familiar fundraising rules of thumb are 80/20, 95/5 and 97/3.</p>`;
+  tdWireProj(box);
 }
 
 function buildTable(rows) {
@@ -2032,7 +2045,8 @@ function renderPortfolios() {
       const back = gp.k === "New or renewed" ? [...KEYS.years].map(k => +k.replace("Money In ", "")).filter(y => y < +m.priorL && num(x.r["Money In " + y]) > 0).sort((p, q) => q - p)[0] : null;
       return `<tr><td class="txt name"><button data-pi="${POOL.length - 1}">${esc(x.r.Name)}</button>${back ? ` <span class="tag">gave in ${back}</span>` : ""}</td><td>${x.a ? short(x.a) : "–"}</td><td>${x.b ? short(x.b) : "–"}</td><td class="${ch > 0 ? "up" : "down"}">${(ch > 0 ? "+" : "−") + short(Math.abs(ch))}</td></tr>`; }).join("")
       : `<tr><td class="txt" colspan="4" style="color:var(--muted)">None</td></tr>`}
-    </tbody></table></div></div>`;
+    </tbody>${gp.rows.length ? (() => { const ta = gp.rows.reduce((t, x) => t + x.a, 0), tb = gp.rows.reduce((t, x) => t + x.b, 0), tc = tb - ta;
+      return `<tfoot><tr><td class="txt">Total (${gp.rows.length.toLocaleString()})</td><td>${ta ? short(ta) : "–"}</td><td>${tb ? short(tb) : "–"}</td><td class="${tc > 0 ? "up" : "down"}">${(tc > 0 ? "+" : tc < 0 ? "−" : "") + short(Math.abs(tc))}</td></tr></tfoot>`; })() : ""}</table></div></div>`;
   $("pf-changes").innerHTML = `<div class="card-head"><div><h2>Donor changes${PF.fr ? " — " + esc(PF.fr) : ""}</h2><div class="sub">Click a name for the quick look.</div></div>
       <div class="card-tools">${modes.last ? `<div class="segbtn" role="group" aria-label="Compare">
         <button type="button" data-pm="proj" aria-pressed="${PF.mode === "proj"}">${Y} vs ${Y - 1}</button>
