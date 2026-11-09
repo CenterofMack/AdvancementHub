@@ -300,6 +300,9 @@
   table.bs.aligned th:not(.txt),table.bs.aligned td:not(.txt){text-align:center}
   table.bs.aligned th.txt,table.bs.aligned td.txt{min-width:0;white-space:normal}
   table.bs.aligned .sp{padding:0}
+  table.bs.aligned.compact th,table.bs.aligned.compact td{padding:7px 2px;font-size:11.5px}
+  table.bs.aligned.compact th:not(.txt){font-size:10.5px}
+  table.bs.aligned.compact th.txt,table.bs.aligned.compact td.txt{padding-left:10px;padding-right:6px}
   .bs-tip{position:fixed;z-index:30;pointer-events:none;background:var(--navy-deep);color:#fff;font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:6px;box-shadow:0 4px 12px rgba(23,42,73,.25);white-space:nowrap}
   .chart [data-tip]{cursor:default}
   .pf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:8px 0 14px}
@@ -1867,15 +1870,17 @@ function chartQuarters(groups, label) {
   return svgOpen(W, H, label) + g + "</svg>";
 }
 
-/* Lining a table up under its chart. When a chart has few enough columns, it gets a wider left margin
-   the same width as the table's label column, and the table's columns are sized to match the chart's,
-   so each figure sits right under its point or bar. With many columns (the Annual views) the table
-   would be too cramped, so it keeps its own widths and scrolls. */
-const ALIGN_W = 960, ALIGN_L = 190, ALIGN_MAX = 12;
-const canAlign = n => n <= ALIGN_MAX;
+/* Lining a table up under its chart. The chart gets a left margin the same width as the table's
+   label column, and the table's columns are sized to match the chart's, so each figure sits right
+   under its point or bar. With many columns (the Annual views) the label column is narrower and the
+   table uses smaller text and tighter spacing ("compact") so every year still fits. */
+const ALIGN_W = 960, ALIGN_COMPACT = 12;
+const canAlign = n => n > 0;
+const isCompact = n => n > ALIGN_COMPACT;
+const alignL = n => isCompact(n) ? 130 : 190;
 function alignColgroup(n, R) {
-  const step = (ALIGN_W - ALIGN_L - R) / n, p = v => (v / ALIGN_W * 100).toFixed(3) + "%";
-  return `<colgroup><col style="width:${p(ALIGN_L)}">${Array(n).fill(`<col style="width:${p(step)}">`).join("")}<col style="width:${p(R)}"></colgroup>`;
+  const L = alignL(n), step = (ALIGN_W - L - R) / n, p = v => (v / ALIGN_W * 100).toFixed(3) + "%";
+  return `<colgroup><col style="width:${p(L)}">${Array(n).fill(`<col style="width:${p(step)}">`).join("")}<col style="width:${p(R)}"></colgroup>`;
 }
 const legendHtml = items => `<div class="bs-legend">${items.map(i => `<span><i class="sw" style="background:${i.color}"></i>${esc(i.label)}</span>`).join("")}</div>`;
 const segBtns = (id, mode, disabled) => `<div class="segbtn" role="group" aria-label="View">` +
@@ -1920,7 +1925,8 @@ function renderVolume(s) {
   const title = `Volume of Donors and Dollars through ${mon} ${Y}`;
   const fmtN = (c) => c.n === null ? "–" : Math.round(c.n).toLocaleString();
   const al = canAlign(cols.length), sp = tag => al ? `<${tag} class="sp"></${tag}>` : "";
-  const head = `<tr><th class="txt">Measure</th>${cols.map(c => `<th class="${c.current ? "hl" : ""}">${esc(catLabel(c).replace("\n", " "))}</th>`).join("")}${sp("th")}</tr>`;
+  const headTxt = c => isCompact(cols.length) ? esc(catLabel(c).replace("Projected", "Proj.")).replace(/\n/g, "<br>") : esc(catLabel(c).replace("\n", " "));
+  const head = `<tr><th class="txt">Measure</th>${cols.map(c => `<th class="${c.current ? "hl" : ""}">${headTxt(c)}</th>`).join("")}${sp("th")}</tr>`;
   const row = (name, f) => `<tr><td class="txt">${name}</td>${cols.map(c => `<td class="${c.current ? "hl" : ""}">${f(c)}</td>`).join("")}${sp("td")}</tr>`;
   // Year to date, last year vs. this year through the same month, printed on the chart itself
   const toDate = [
@@ -1934,10 +1940,10 @@ function renderVolume(s) {
       <div class="stat" title="${money(v.ytdPrior)} from ${v.donorsPrior.toLocaleString()} donors"><div class="k">${mon} ${Y - 1} YTD</div><div class="v">${shortM(v.ytdPrior)} · ${round100(v.donorsPrior).toLocaleString()} donors</div></div>
       <div class="stat" title="${money(v.ytdCurrent)} from ${v.donorsCurrent.toLocaleString()} donors"><div class="k">${mon} ${Y} YTD</div><div class="v">${shortM(v.ytdCurrent)} · ${round100(v.donorsCurrent).toLocaleString()} donors</div></div>
     </div>
-    <div class="chart">${chartVolume(cols, title, toDate, al ? ALIGN_L : 0)}</div>
+    <div class="chart">${chartVolume(cols, title, toDate, al ? alignL(cols.length) : 0)}</div>
     ${legendHtml([{ color: "#D9541E", label: "Total $ (left scale)" }, { color: "#213A63", label: "Number of donors (right scale)" }, { color: "#C9A33F", label: "Fundraising goal" }])}
     <p class="bs-note">Dotted lines run to ${Y} as projected; solid lines are actual giving.</p>
-    <div class="bs-tablewrap"><table class="bs${al ? " aligned" : ""}">${al ? alignColgroup(cols.length, 64) : ""}<thead>${head}</thead><tbody>
+    <div class="bs-tablewrap"><table class="bs${al ? " aligned" : ""}${isCompact(cols.length) ? " compact" : ""}">${al ? alignColgroup(cols.length, 64) : ""}<thead>${head}</thead><tbody>
       ${row("Total $", c => c.d === null ? "–" : short(c.d))}
       ${row("Fundraising Goal", c => c.goal ? short(c.goal) : "")}
       ${row("Number Donors", fmtN)}
@@ -1977,10 +1983,11 @@ function societyCols(s, mode, fr) {
     for (; y <= C; y++) if (ann[y]) cols.push({ label: String(y), vals: ann[y] });
   }
   const ytd = (field, legacy) => { const v = socCount(hh, h => g(h, field), fr, ex); v.legacy = fr ? null : legacy; return v; };
-  cols.push({ label: `${mon} ${Y - 1} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y - 1}\nYTD`, vals: ytd("ytdPrior", s.societies.legacyYtdPrior) });
-  cols.push({ label: `${mon} ${Y} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y}\nYTD`, vals: ytd("ytdCurrent", s.societies.legacyYtdCurrent), hl: true });
-  if (BS.ui.proj) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected"), fr, ex); v.legacy = fr ? null : s.societies.legacyYtdCurrent; cols.push({ label: `${Y} Projected Year-End`, chartLabel: `${Y}\nProjected`, vals: v, proj: true }); }
-  if (BS.ui.spec) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected") + g(h, "speculative"), fr, ex); v.legacy = fr ? null : s.societies.legacyYtdCurrent; cols.push({ label: `${Y} Projected + Speculative`, chartLabel: `${Y} Proj.\n+ Spec.`, vals: v, proj: true }); }
+  const yy = y => "\u2019" + String(y).slice(2);
+  cols.push({ label: `${mon} ${Y - 1} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y - 1}\nYTD`, shortLabel: `${mon.slice(0, 3)} ${yy(Y - 1)}\nYTD`, vals: ytd("ytdPrior", s.societies.legacyYtdPrior) });
+  cols.push({ label: `${mon} ${Y} YTD`, chartLabel: `${mon.slice(0, 3)} ${Y}\nYTD`, shortLabel: `${mon.slice(0, 3)} ${yy(Y)}\nYTD`, vals: ytd("ytdCurrent", s.societies.legacyYtdCurrent), hl: true });
+  if (BS.ui.proj) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected"), fr, ex); v.legacy = fr ? null : s.societies.legacyYtdCurrent; cols.push({ label: `${Y} Projected Year-End`, chartLabel: `${Y}\nProjected`, shortLabel: `${Y}\nProj.`, vals: v, proj: true }); }
+  if (BS.ui.spec) { const v = socCount(hh, h => g(h, "ytdCurrent") + g(h, "projected") + g(h, "speculative"), fr, ex); v.legacy = fr ? null : s.societies.legacyYtdCurrent; cols.push({ label: `${Y} Projected + Speculative`, chartLabel: `${Y} Proj.\n+ Spec.`, shortLabel: `Proj. +\nSpec.`, vals: v, proj: true }); }
   if (!fr) { const goals = s.societies.goals || {}, v = {}; SOCIETIES.forEach(sc => v[sc.k] = goals[sc.k] ?? null); cols.push({ label: `${Y} Goal`, chartLabel: `${Y}\nGoal`, vals: v }); }
   return cols;
 }
@@ -1989,8 +1996,11 @@ function renderSocieties(s, funds) {
   const cols = societyCols(s, mode, fr);
   const title = `Giving Societies Report through ${mon} ${Y}`;
   const series = fr ? SOCIETIES.filter(x => x.k !== "legacy") : SOCIETIES;
-  const al = canAlign(cols.length), sp = tag => al ? `<${tag} class="sp"></${tag}>` : "";
-  const head = `<tr><th class="txt">Giving Society</th>${cols.map(c => `<th class="${c.hl || c.proj ? "hl" : ""}">${esc(c.label)}</th>`).join("")}${sp("th")}</tr>`;
+  const al = canAlign(cols.length), sp = tag => al ? `<${tag} class="sp"></${tag}>` : "", tight = isCompact(cols.length);
+  // Crowded views (Annual) use short labels so they fit their columns, on the chart and in the table
+  if (tight) cols.forEach(c => { if (c.shortLabel) c.chartLabel = c.shortLabel; });
+  const headTxt = c => tight ? esc(c.shortLabel || c.chartLabel || c.label).replace(/\n/g, "<br>") : esc(c.label);
+  const head = `<tr><th class="txt">Giving Society</th>${cols.map(c => `<th class="${c.hl || c.proj ? "hl" : ""}">${headTxt(c)}</th>`).join("")}${sp("th")}</tr>`;
   const rows = [...series].map(sc => `<tr><td class="txt"><i class="sw" style="background:${sc.color}"></i>${esc(sc.label)}</td>` +
     cols.map(c => { const v = c.vals[sc.k]; return `<td class="${c.hl || c.proj ? "hl" : ""}${v === null || v === undefined ? " dim" : ""}">${intOrDash(v)}</td>`; }).join("") + sp("td") + `</tr>`).join("");
   $("bs-societies").innerHTML = `
@@ -2001,9 +2011,9 @@ function renderSocieties(s, funds) {
         <label><input type="checkbox" id="bs-proj"${ui.proj ? " checked" : ""}> Projected year-end</label>
         <label><input type="checkbox" id="bs-spec"${ui.spec ? " checked" : ""}> Projected + speculative</label>
       </div>
-    <div class="chart">${chartStack(cols, series, title + (fr ? " — " + fr : ""), al ? ALIGN_L : 0)}</div>
+    <div class="chart">${chartStack(cols, series, title + (fr ? " — " + fr : ""), al ? alignL(cols.length) : 0)}</div>
     ${legendHtml(series)}
-    <div class="bs-tablewrap"><table class="bs${al ? " aligned" : ""}">${al ? alignColgroup(cols.length, 16) : ""}<thead>${head}</thead><tbody>${rows}</tbody></table></div>
+    <div class="bs-tablewrap"><table class="bs${al ? " aligned" : ""}${isCompact(cols.length) ? " compact" : ""}">${al ? alignColgroup(cols.length, 16) : ""}<thead>${head}</thead><tbody>${rows}</tbody></table></div>
     ${fr ? `<p class="bs-note">Fundraiser view shows 2024 forward only. Earlier years are available as organization-wide totals. Prior-year figures reflect each household’s fundraiser assignment as of this snapshot.</p>` : ""}
     ${ui.proj || ui.spec ? `<p class="bs-note">Projected columns count each household at its ${mon} ${Y} year-to-date giving plus outstanding projections${ui.spec ? " (and, for the last column, speculative)" : ""} as recorded in this snapshot. Legacy isn’t projected, so those columns repeat the year-to-date Legacy count.</p>` : ""}`;
   $("bs-fr").onchange = e => { BS.ui.fr = e.target.value; renderBoard(); };
