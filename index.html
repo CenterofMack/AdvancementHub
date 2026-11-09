@@ -2030,7 +2030,7 @@ function renderQuarterly(s) {
     <div class="chart" style="max-width:640px">${chartQuarters(groups, title)}</div>
     ${legendHtml(qn.map((n, i) => ({ color: QCOLORS[i], label: n })))}
     <div class="bs-tablewrap" style="max-width:640px"><table class="bs"><thead><tr><th class="txt">Quarter</th>${groups.map(g => `<th>${g.label}</th><th>%</th>`).join("")}</tr></thead><tbody>
-      ${qn.map((n, i) => `<tr><td class="txt">${n}</td>${groups.map(g => `<td>${short(g.vals[i])}</td><td>${g.pcts[i]}%</td>`).join("")}</tr>`).join("")}
+      ${[3, 2, 1, 0].map(i => `<tr><td class="txt">${qn[i]}</td>${groups.map(g => `<td>${short(g.vals[i])}</td><td>${g.pcts[i]}%</td>`).join("")}</tr>`).join("")}
       <tr><td class="txt"><b>Total</b></td>${groups.map(g => `<td><b>${short(g.total)}</b></td><td></td>`).join("")}</tr>
     </tbody></table></div>`;
 }
