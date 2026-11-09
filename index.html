@@ -1730,7 +1730,7 @@ function catLabel(c) {
   return c.current ? `${c.label}\nProjected` : c.label;
 }
 
-function chartVolume(cols, label) {
+function chartVolume(cols, label, notes) {
   const W = 960, H = 360, L = 64, R = 64, T = 34, B = 52, n = cols.length, step = (W - L - R) / n, x = i => L + step * (i + 0.5);
   const maxD = niceMax(Math.max(...cols.map(c => Math.max(c.d || 0, c.goal || 0))) * 1.12);
   const maxN = niceMax(Math.max(...cols.map(c => c.n || 0)) * 1.12);
@@ -1744,11 +1744,21 @@ function chartVolume(cols, label) {
     g += `<text class="ax" x="${W - R + 8}" y="${y + 4}">${Math.round(maxN * (1 - k / 4)).toLocaleString()}</text>`;
   }
   cols.forEach((c, i) => { g += `<text class="ax" text-anchor="middle" x="${x(i)}" y="${H - B + 18}">${tspans(catLabel(c), x(i), 13)}</text>`; });
+  // The step into the current (projected) year is drawn dotted; everything before it is actual history and stays solid
+  const lastI = cols.length - 1, dotLast = !!(cols[lastI] && cols[lastI].current);
   const line = (key, yf, color, fmt, dy) => {
     const pts = cols.map((c, i) => c[key] === null || c[key] === undefined ? null : [x(i), yf(c[key]), c[key], catLabel(c).replace("\n", " ")]);
-    let d = "", started = false;
-    pts.forEach(p => { if (!p) { started = false; return; } d += (started ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1); started = true; });
+    let d = "", dots = "", started = false;
+    pts.forEach((p, i) => {
+      if (!p) { started = false; return; }
+      if (dotLast && i === lastI && started) {
+        const q = pts[i - 1];
+        dots = `M${q[0].toFixed(1)},${q[1].toFixed(1)}L${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+      } else d += (started ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1);
+      started = true;
+    });
     let out = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
+    if (dots) out += `<path d="${dots}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="0.1 8"/>`;
     pts.forEach(p => { if (!p) return; out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${color}"/><circle cx="${p[0]}" cy="${p[1]}" r="12" fill="transparent" data-tip="${esc(p[3])}: ${esc(fmt(p[2]))}"/>`;
       if (!showLabels) return;
       const side = key === "d" && p === pts[pts.length - 1] && gi >= 0;
@@ -1762,6 +1772,21 @@ function chartVolume(cols, label) {
     const gx = x(gi), gy = yD(cols[gi].goal);
     g += `<path d="M${gx - 7},${gy} L${gx},${gy - 7} L${gx + 7},${gy} L${gx},${gy + 7} Z" fill="#C9A33F" stroke="#fff" stroke-width="1.5"/>`;
     g += `<text class="lbl" x="${gx}" y="${gy + 24}" text-anchor="middle" style="fill:#8A6D1E">Goal ${shortM(cols[gi].goal)}</text>`;
+  }
+  // Where we are to date: last year and this year through the same month, in the empty lower-right corner of the chart
+  const nts = (notes || []).filter(nt => nt && (nt.d !== null && nt.d !== undefined));
+  if (nts.length) {
+    const bw = 172, gapX = 14, bh = 58, totalW = nts.length * bw + (nts.length - 1) * gapX;
+    const x0 = W - R - 14 - totalW, y0 = H - B - 16 - bh;
+    g += `<rect x="${x0 - 8}" y="${y0 - 8}" width="${totalW + 16}" height="${bh + 14}" rx="6" fill="#fff" fill-opacity=".94" stroke="#D9DFE8"/>`;
+    nts.forEach((nt, i) => {
+      const cx = x0 + i * (bw + gapX) + bw / 2;
+      if (i) g += `<line x1="${cx - bw / 2 - gapX / 2}" x2="${cx - bw / 2 - gapX / 2}" y1="${y0}" y2="${y0 + bh - 2}" stroke="#E3E7ED"/>`;
+      g += `<text text-anchor="middle" x="${cx}" y="${y0 + 13}" style="font-size:12.5px;font-weight:700;fill:var(--navy-deep)">${esc(nt.label)}</text>`;
+      g += `<text text-anchor="middle" x="${cx}" y="${y0 + 32}" style="font-size:15px;font-weight:700;fill:#D9541E">${esc(shortM(nt.d))}</text>`;
+      if (nt.n !== null && nt.n !== undefined)
+        g += `<text text-anchor="middle" x="${cx}" y="${y0 + 50}" style="font-size:12.5px;font-weight:600;fill:#213A63">${esc(round100(nt.n).toLocaleString())} donors</text>`;
+    });
   }
   return svgOpen(W, H, label) + g + "</svg>";
 }
@@ -1849,6 +1874,11 @@ function renderVolume(s) {
   const fmtN = (c) => c.n === null ? "–" : Math.round(c.n).toLocaleString();
   const head = `<tr><th class="txt">Measure</th>${cols.map(c => `<th class="${c.current ? "hl" : ""}">${esc(catLabel(c).replace("\n", " "))}</th>`).join("")}</tr>`;
   const row = (name, f) => `<tr><td class="txt">${name}</td>${cols.map(c => `<td class="${c.current ? "hl" : ""}">${f(c)}</td>`).join("")}</tr>`;
+  // Year to date, last year vs. this year through the same month, printed on the chart itself
+  const toDate = [
+    { label: `${mon} ${Y - 1} to date`, d: v.ytdPrior, n: v.donorsPrior },
+    { label: `${mon} ${Y} to date`, d: v.ytdCurrent, n: v.donorsCurrent }
+  ];
   $("bs-volume").innerHTML = `
     <div class="card-head"><div><h2>${esc(title)}</h2><div class="sub">${mode === "avg" ? "Three-year averages, then the current year as projected." : "Every year, then the current year as projected."}</div></div>
       <div class="card-tools">${segBtns("vol", mode)}</div></div>
@@ -1856,8 +1886,9 @@ function renderVolume(s) {
       <div class="stat" title="${money(v.ytdPrior)} from ${v.donorsPrior.toLocaleString()} donors"><div class="k">${mon} ${Y - 1} YTD</div><div class="v">${shortM(v.ytdPrior)} · ${round100(v.donorsPrior).toLocaleString()} donors</div></div>
       <div class="stat" title="${money(v.ytdCurrent)} from ${v.donorsCurrent.toLocaleString()} donors"><div class="k">${mon} ${Y} YTD</div><div class="v">${shortM(v.ytdCurrent)} · ${round100(v.donorsCurrent).toLocaleString()} donors</div></div>
     </div>
-    <div class="chart">${chartVolume(cols, title)}</div>
+    <div class="chart">${chartVolume(cols, title, toDate)}</div>
     ${legendHtml([{ color: "#D9541E", label: "Total $ (left scale)" }, { color: "#213A63", label: "Number of donors (right scale)" }, { color: "#C9A33F", label: "Fundraising goal" }])}
+    <p class="bs-note">Dotted lines run to ${Y} as projected; solid lines are actual giving.</p>
     <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>
       ${row("Total $", c => c.d === null ? "–" : short(c.d))}
       ${row("Fundraising Goal", c => c.goal ? short(c.goal) : "")}
