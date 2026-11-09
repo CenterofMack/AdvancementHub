@@ -24,7 +24,7 @@
   .bar{background:var(--navy-deep);color:#fff;padding:0 28px;display:flex;align-items:flex-end;gap:32px;min-height:64px}
   .brand{font-family:var(--serif);font-weight:600;font-size:21px;padding:16px 0 14px;white-space:nowrap}
   .tabs{display:flex;gap:4px;flex:1;flex-wrap:wrap}
-  .tab{background:none;border:0;color:#C6DEE4;padding:12px 16px 13px;cursor:pointer;border-bottom:3px solid transparent;font-weight:500}
+  .tab{background:none;border:0;color:#C6DEE4;padding:12px 16px 13px;cursor:pointer;border-bottom:3px solid transparent;font-weight:500;text-decoration:none;display:inline-block}
   .tab:hover{color:#fff}
   .tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--gold)}
   .who{font-size:12px;color:#A8CAD3;padding-bottom:16px;white-space:nowrap}
@@ -36,7 +36,7 @@
   .tabmenu{position:relative;display:flex}
   .tab.has-menu::after{content:" ▾";font-size:11px}
   .tabpop{position:absolute;left:0;top:100%;z-index:30;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(23,42,73,.20);padding:6px}
-  .tabitem{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:9px 12px;border-radius:4px;cursor:pointer;color:var(--ink);font-weight:500}
+  .tabitem{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:9px 12px;border-radius:4px;cursor:pointer;color:var(--ink);font-weight:500;text-decoration:none}
   .tabitem:hover{background:#F0F3F8}
   .tabitem[aria-selected="true"]{color:var(--navy-deep);font-weight:600;border-left-color:var(--gold);background:#F7F9FC}
 
@@ -217,7 +217,7 @@
   .drawer .kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #EDF0F4}
   .drawer .kv span:last-child{font-variant-numeric:tabular-nums;text-align:right}
   .drawer .notes{white-space:pre-wrap;background:#F7F9FC;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
-  .drawer .dr-open{margin-top:12px;padding:6px 12px;font-size:13px}
+  .drawer .dr-open{margin-top:12px;padding:6px 12px;font-size:13px;display:inline-block;text-decoration:none}
   .edit{margin-top:6px;background:#F7F9FC;border:1px solid var(--line);border-radius:8px;padding:12px}
   .edit label{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 3px}
   .edit input,.edit textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:#fff;font-size:13px}
@@ -294,6 +294,12 @@
   table.bs th.hl{background:#DCE7F7}
   table.bs td.hl{background:#EEF4FC}
   table.bs tr:last-child td{border-bottom:0}
+  /* Tables lined up under their chart: same column widths as the chart's columns */
+  table.bs.aligned{table-layout:fixed;width:100%}
+  table.bs.aligned th,table.bs.aligned td{min-width:0}
+  table.bs.aligned th:not(.txt),table.bs.aligned td:not(.txt){text-align:center}
+  table.bs.aligned th.txt,table.bs.aligned td.txt{min-width:0;white-space:normal}
+  table.bs.aligned .sp{padding:0}
   .bs-tip{position:fixed;z-index:30;pointer-events:none;background:var(--navy-deep);color:#fff;font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:6px;box-shadow:0 4px 12px rgba(23,42,73,.25);white-space:nowrap}
   .chart [data-tip]{cursor:default}
   .pf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:8px 0 14px}
@@ -473,17 +479,17 @@
 <header class="bar">
   <div class="brand">Advancement Hub</div>
   <nav class="tabs" role="tablist" aria-label="Reports">
-    <button class="tab" role="tab" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</button>
-    <button class="tab" role="tab" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</button>
-    <button class="tab" role="tab" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</button>
-    <button class="tab" role="tab" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Scorecard</button>
-    <button class="tab" role="tab" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</button>
-    <button class="tab" role="tab" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</button>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Scorecard</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</a>
     <div class="tabmenu" id="other-menu" hidden>
       <button class="tab has-menu" type="button" id="other-btn" aria-haspopup="true" aria-controls="other-pop" aria-expanded="false" aria-selected="false">Other Reports</button>
       <div class="tabpop" id="other-pop" role="menu" hidden>
-        <button class="tabitem" type="button" role="menuitem" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</button>
-        <button class="tabitem" type="button" role="menuitem" data-tab="Mailing" data-access="Mailing Program" aria-selected="false" hidden>Mailing Program</button>
+        <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</a>
+        <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Mailing" data-access="Mailing Program" aria-selected="false" hidden>Mailing Program</a>
       </div>
     </div>
   </nav>
@@ -682,7 +688,7 @@
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-name" hidden>
   <header>
     <div><h2 id="dr-name"></h2><div class="sub" id="dr-sub"></div>
-      <button class="btn primary dr-open" id="dr-open">Open in Raiser's Edge</button></div>
+      <a class="btn primary dr-open" id="dr-open" href="#" target="_blank" rel="noopener">Open in Raiser's Edge</a></div>
     <button class="x" id="dr-close" aria-label="Close">×</button>
   </header>
   <div class="body" id="dr-body"></div>
@@ -749,7 +755,38 @@ function selectTab(name) {
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
 }
-document.querySelectorAll("[data-tab]").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+/* Tabs are real links to the Hub's page in Raiser's Edge, so right-click → "Open link in new tab"
+   and middle-click work. The Hub only runs inside RE, so the link opens the Hub page, and a short
+   note left in this browser tells the new copy which tab to open. The note expires after 30 seconds. */
+const HUB_PAGE_URL = "https://app.blackbaud.com/pages/applications/278a44ef-f976-4968-aa83-e53506ded569/pages/Advancement%20Hub?envid=p-6dq4GyJXXEarYflLLsQhUA&svcid=renxt";
+const OPEN_TAB_KEY = "hub-open-tab";
+function markTab(name) { try { localStorage.setItem(OPEN_TAB_KEY, JSON.stringify({ tab: name, t: Date.now() })); } catch (_) {} }
+function takeMarkedTab() {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPEN_TAB_KEY) || "null");
+    localStorage.removeItem(OPEN_TAB_KEY);
+    if (v && v.tab && Date.now() - v.t < 30000) return v.tab;
+  } catch (_) {}
+  return null;
+}
+const START_TAB = takeMarkedTab();
+// The tab to open first: the one asked for from another copy of the Hub, if this person can see it
+function startTab(fallback) {
+  const t = START_TAB && document.querySelector(`[data-tab="${START_TAB}"]`);
+  return t && !t.hidden ? START_TAB : fallback;
+}
+document.querySelectorAll("[data-tab]").forEach(t => {
+  t.href = HUB_PAGE_URL;
+  // Right-click, middle-click or Ctrl/Cmd/Shift-click: leave the note for the new tab
+  t.addEventListener("mousedown", e => { if (e.button === 1 || e.button === 2 || (e.button === 0 && (e.ctrlKey || e.metaKey || e.shiftKey))) markTab(t.dataset.tab); });
+  t.addEventListener("contextmenu", () => markTab(t.dataset.tab));
+  t.addEventListener("click", e => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey) return;   // the browser opens it in a new tab
+    e.preventDefault();
+    try { localStorage.removeItem(OPEN_TAB_KEY); } catch (_) {}
+    selectTab(t.dataset.tab);
+  });
+});
 function applyAccess(access) {
   ACCESS = access || {};
   document.querySelectorAll("[data-tab]").forEach(t => t.hidden = !allowed(t.dataset.access));
@@ -1013,7 +1050,7 @@ function load() {
         if (acc) {
           applyAccess(acc);
           const first = [...document.querySelectorAll("[data-tab]")].find(t => !t.hidden);
-          if (first) { $("who").textContent = d.user || ""; $("loading").hidden = true; selectTab(first.dataset.tab); return; }
+          if (first) { $("who").textContent = d.user || ""; $("loading").hidden = true; selectTab(startTab(first.dataset.tab)); return; }
         }
         showNotice("You don't have access to the Advancement Hub", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return;
       }
@@ -1026,7 +1063,7 @@ function load() {
       buildTable(data.projections || []);
       initPortfolios();
       $("loading").hidden = true;
-      selectTab("Overview");
+      selectTab(startTab("Overview"));
     })
     .catch(() => showNotice("Projections didn't load", "The data service couldn't be reached. Check your connection and try again.", true, true));
 }
@@ -1730,8 +1767,8 @@ function catLabel(c) {
   return c.current ? `${c.label}\nProjected` : c.label;
 }
 
-function chartVolume(cols, label, notes) {
-  const W = 960, H = 360, L = 64, R = 64, T = 34, B = 52, n = cols.length, step = (W - L - R) / n, x = i => L + step * (i + 0.5);
+function chartVolume(cols, label, notes, leftMargin) {
+  const W = 960, H = 360, L = leftMargin || 64, R = 64, T = 34, B = 52, n = cols.length, step = (W - L - R) / n, x = i => L + step * (i + 0.5);
   const maxD = niceMax(Math.max(...cols.map(c => Math.max(c.d || 0, c.goal || 0))) * 1.12);
   const maxN = niceMax(Math.max(...cols.map(c => c.n || 0)) * 1.12);
   const yD = v => T + (H - T - B) * (1 - v / maxD), yN = v => T + (H - T - B) * (1 - v / maxN);
@@ -1791,8 +1828,8 @@ function chartVolume(cols, label, notes) {
   return svgOpen(W, H, label) + g + "</svg>";
 }
 
-function chartStack(cols, series, label) {
-  const W = 960, H = 340, L = 48, R = 16, T = 24, B = 52, n = cols.length, step = (W - L - R) / n, bw = Math.min(64, step * 0.62);
+function chartStack(cols, series, label, leftMargin) {
+  const W = 960, H = 340, L = leftMargin || 48, R = 16, T = 24, B = 52, n = cols.length, step = (W - L - R) / n, bw = Math.min(64, step * 0.62);
   const tot = c => series.reduce((s, sr) => s + (c.vals[sr.k] || 0), 0);
   const max = Math.max(4, Math.ceil(niceMax(Math.max(...cols.map(tot)) * 1.1) / 4) * 4), y = v => T + (H - T - B) * (1 - v / max);
   let g = "";
@@ -1830,6 +1867,16 @@ function chartQuarters(groups, label) {
   return svgOpen(W, H, label) + g + "</svg>";
 }
 
+/* Lining a table up under its chart. When a chart has few enough columns, it gets a wider left margin
+   the same width as the table's label column, and the table's columns are sized to match the chart's,
+   so each figure sits right under its point or bar. With many columns (the Annual views) the table
+   would be too cramped, so it keeps its own widths and scrolls. */
+const ALIGN_W = 960, ALIGN_L = 190, ALIGN_MAX = 12;
+const canAlign = n => n <= ALIGN_MAX;
+function alignColgroup(n, R) {
+  const step = (ALIGN_W - ALIGN_L - R) / n, p = v => (v / ALIGN_W * 100).toFixed(3) + "%";
+  return `<colgroup><col style="width:${p(ALIGN_L)}">${Array(n).fill(`<col style="width:${p(step)}">`).join("")}<col style="width:${p(R)}"></colgroup>`;
+}
 const legendHtml = items => `<div class="bs-legend">${items.map(i => `<span><i class="sw" style="background:${i.color}"></i>${esc(i.label)}</span>`).join("")}</div>`;
 const segBtns = (id, mode, disabled) => `<div class="segbtn" role="group" aria-label="View">` +
   [["avg", "Averaged"], ["annual", "Annual"]].map(([v, t]) => `<button type="button" data-seg="${id}" data-v="${v}" aria-pressed="${mode === v}"${disabled ? " disabled" : ""}>${t}</button>`).join("") + `</div>`;
@@ -1872,8 +1919,9 @@ function renderVolume(s) {
   const cols = volumeCols(s, mode);
   const title = `Volume of Donors and Dollars through ${mon} ${Y}`;
   const fmtN = (c) => c.n === null ? "–" : Math.round(c.n).toLocaleString();
-  const head = `<tr><th class="txt">Measure</th>${cols.map(c => `<th class="${c.current ? "hl" : ""}">${esc(catLabel(c).replace("\n", " "))}</th>`).join("")}</tr>`;
-  const row = (name, f) => `<tr><td class="txt">${name}</td>${cols.map(c => `<td class="${c.current ? "hl" : ""}">${f(c)}</td>`).join("")}</tr>`;
+  const al = canAlign(cols.length), sp = tag => al ? `<${tag} class="sp"></${tag}>` : "";
+  const head = `<tr><th class="txt">Measure</th>${cols.map(c => `<th class="${c.current ? "hl" : ""}">${esc(catLabel(c).replace("\n", " "))}</th>`).join("")}${sp("th")}</tr>`;
+  const row = (name, f) => `<tr><td class="txt">${name}</td>${cols.map(c => `<td class="${c.current ? "hl" : ""}">${f(c)}</td>`).join("")}${sp("td")}</tr>`;
   // Year to date, last year vs. this year through the same month, printed on the chart itself
   const toDate = [
     { label: `${mon} ${Y - 1} to date`, d: v.ytdPrior, n: v.donorsPrior },
@@ -1886,10 +1934,10 @@ function renderVolume(s) {
       <div class="stat" title="${money(v.ytdPrior)} from ${v.donorsPrior.toLocaleString()} donors"><div class="k">${mon} ${Y - 1} YTD</div><div class="v">${shortM(v.ytdPrior)} · ${round100(v.donorsPrior).toLocaleString()} donors</div></div>
       <div class="stat" title="${money(v.ytdCurrent)} from ${v.donorsCurrent.toLocaleString()} donors"><div class="k">${mon} ${Y} YTD</div><div class="v">${shortM(v.ytdCurrent)} · ${round100(v.donorsCurrent).toLocaleString()} donors</div></div>
     </div>
-    <div class="chart">${chartVolume(cols, title, toDate)}</div>
+    <div class="chart">${chartVolume(cols, title, toDate, al ? ALIGN_L : 0)}</div>
     ${legendHtml([{ color: "#D9541E", label: "Total $ (left scale)" }, { color: "#213A63", label: "Number of donors (right scale)" }, { color: "#C9A33F", label: "Fundraising goal" }])}
     <p class="bs-note">Dotted lines run to ${Y} as projected; solid lines are actual giving.</p>
-    <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>
+    <div class="bs-tablewrap"><table class="bs${al ? " aligned" : ""}">${al ? alignColgroup(cols.length, 64) : ""}<thead>${head}</thead><tbody>
       ${row("Total $", c => c.d === null ? "–" : short(c.d))}
       ${row("Fundraising Goal", c => c.goal ? short(c.goal) : "")}
       ${row("Number Donors", fmtN)}
@@ -1941,9 +1989,10 @@ function renderSocieties(s, funds) {
   const cols = societyCols(s, mode, fr);
   const title = `Giving Societies Report through ${mon} ${Y}`;
   const series = fr ? SOCIETIES.filter(x => x.k !== "legacy") : SOCIETIES;
-  const head = `<tr><th class="txt">Giving Society</th>${cols.map(c => `<th class="${c.hl || c.proj ? "hl" : ""}">${esc(c.label)}</th>`).join("")}</tr>`;
+  const al = canAlign(cols.length), sp = tag => al ? `<${tag} class="sp"></${tag}>` : "";
+  const head = `<tr><th class="txt">Giving Society</th>${cols.map(c => `<th class="${c.hl || c.proj ? "hl" : ""}">${esc(c.label)}</th>`).join("")}${sp("th")}</tr>`;
   const rows = [...series].map(sc => `<tr><td class="txt"><i class="sw" style="background:${sc.color}"></i>${esc(sc.label)}</td>` +
-    cols.map(c => { const v = c.vals[sc.k]; return `<td class="${c.hl || c.proj ? "hl" : ""}${v === null || v === undefined ? " dim" : ""}">${intOrDash(v)}</td>`; }).join("") + `</tr>`).join("");
+    cols.map(c => { const v = c.vals[sc.k]; return `<td class="${c.hl || c.proj ? "hl" : ""}${v === null || v === undefined ? " dim" : ""}">${intOrDash(v)}</td>`; }).join("") + sp("td") + `</tr>`).join("");
   $("bs-societies").innerHTML = `
     <div class="card-head"><div><h2>${esc(title)}</h2><div class="sub">${fr ? `<b>${esc(fr)}</b> · ` : ""}Households by giving level. Gen Anonymous is not counted.</div></div></div>
       <div class="card-tools" style="margin-bottom:6px">
@@ -1952,9 +2001,9 @@ function renderSocieties(s, funds) {
         <label><input type="checkbox" id="bs-proj"${ui.proj ? " checked" : ""}> Projected year-end</label>
         <label><input type="checkbox" id="bs-spec"${ui.spec ? " checked" : ""}> Projected + speculative</label>
       </div>
-    <div class="chart">${chartStack(cols, series, title + (fr ? " — " + fr : ""))}</div>
+    <div class="chart">${chartStack(cols, series, title + (fr ? " — " + fr : ""), al ? ALIGN_L : 0)}</div>
     ${legendHtml(series)}
-    <div class="bs-tablewrap"><table class="bs"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+    <div class="bs-tablewrap"><table class="bs${al ? " aligned" : ""}">${al ? alignColgroup(cols.length, 16) : ""}<thead>${head}</thead><tbody>${rows}</tbody></table></div>
     ${fr ? `<p class="bs-note">Fundraiser view shows 2024 forward only. Earlier years are available as organization-wide totals. Prior-year figures reflect each household’s fundraiser assignment as of this snapshot.</p>` : ""}
     ${ui.proj || ui.spec ? `<p class="bs-note">Projected columns count each household at its ${mon} ${Y} year-to-date giving plus outstanding projections${ui.spec ? " (and, for the last column, speculative)" : ""} as recorded in this snapshot. Legacy isn’t projected, so those columns repeat the year-to-date Legacy count.</p>` : ""}`;
   $("bs-fr").onchange = e => { BS.ui.fr = e.target.value; renderBoard(); };
@@ -2531,7 +2580,10 @@ function openDrawer(r) {
   }
   $("dr-body").innerHTML = html;
   if (canEdit) $("ed-save").onclick = () => saveEdit(r);
-  $("dr-open").hidden = !String(r["System Record ID"] || "").trim();
+  // A real link, so right-click → "Open link in new tab" (and middle-click) work too
+  const sid = String(r["System Record ID"] || "").trim();
+  $("dr-open").hidden = !sid;
+  $("dr-open").href = sid ? RECORD_URL(sid) : "#";
   $("scrim").hidden = false;
   visibleArea().then(a => {
     const d = $("drawer");
@@ -2564,7 +2616,8 @@ function saveEdit(r) {
 function closeDrawer() { if ($("drawer").hidden && $("scrim").hidden) return; $("scrim").hidden = true; $("drawer").hidden = true; if (lastFocus) lastFocus.focus(); }
 $("dr-close").onclick = closeDrawer; $("scrim").onclick = closeDrawer;
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDrawer(); closeMenu(); } });
-$("dr-open").onclick = () => {
+$("dr-open").onclick = e => {
+  e.preventDefault();
   const url = RECORD_URL(String(current["System Record ID"]).trim());
   const w = window.open(url, "_blank");
   if (w) { try { w.opener = null; } catch (_) {} } else if (client && client.navigate) client.navigate({ url });
