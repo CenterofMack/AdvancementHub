@@ -1394,9 +1394,13 @@ const plOffProjections = r => String(r.Name ?? "").trim() !== "" && !isUnderLine
 const plTag = r => String(r["Prospect Classification"] ?? "") + " | " + String(r["Prospect Status"] ?? "");
 const plIsPPR = r => /personal\s*\/?\s*professional/i.test(plTag(r));
 const plIsPPL = r => /parking\s*lot/i.test(plTag(r));
+// Deceased (the Projections workbook's Deceased column). Left out of the Pipeline unless switched on;
+// kept in Donors (their gifts are real, e.g. estate gifts) but tagged so nobody plans a visit.
+const isDeceased = r => /^(yes|y|true|1)$/i.test(String(r.Deceased ?? "").trim());
+const decTag = r => isDeceased(r) ? ` <span class="tag off">deceased</span>` : "";
 const plQualifies = (r, ignoreToggles) => {
   if (!plOffProjections(r)) return false;
-  if (!ignoreToggles && ((!PF.plPPR && plIsPPR(r)) || (!PF.plPPL && plIsPPL(r)))) return false;
+  if (!ignoreToggles && ((!PF.plPPR && plIsPPR(r)) || (!PF.plPPL && plIsPPL(r)) || (!PF.plDec && isDeceased(r)))) return false;
   const lapsed = !!plLastGift(r);
   return PF.plMode === "both" ? true : PF.plMode === "lapsed" ? lapsed : !lapsed;
 };
@@ -1428,6 +1432,7 @@ function renderPipeline() {
   // How many households each switch adds (shown next to the switch while it's off)
   const base = tdPool().filter(r => plQualifies(r, true));
   const hidPPR = PF.plPPR ? 0 : base.filter(plIsPPR).length, hidPPL = PF.plPPL ? 0 : base.filter(r => plIsPPL(r) && (PF.plPPR || !plIsPPR(r))).length;
+  const hidDec = PF.plDec ? 0 : base.filter(r => isDeceased(r) && (PF.plPPR || !plIsPPR(r)) && (PF.plPPL || !plIsPPL(r))).length;
   const modeBtn = (k, t) => `<button type="button" data-plm="${k}" aria-pressed="${PF.plMode === k}">${t}</button>`;
   const who = PF.plMode === "lapsed" ? `Lapsed donors: gave in ${priorTxt}, nothing yet in ${cy}`
     : PF.plMode === "both" ? `Prospects and lapsed donors`
@@ -1453,7 +1458,7 @@ function renderPipeline() {
     return `<details${PF.plClass || shown.length === 1 ? " open" : ""}><summary><b>${esc(c)}</b><span>${t.n.toLocaleString("en-US")} household${t.n === 1 ? "" : "s"}${PL_LEVELS.filter(l => t.lv[l.k]).map(l => " · " + esc(l.t) + " " + esc(ovMoney(t.lv[l.k]))).join("")}</span></summary>
       <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th class="txt">Prospect status</th><th>Last action</th><th>Last gave</th>${PL_LEVELS.map(l => `<th>${esc(l.t)}</th>`).join("")}</tr></thead><tbody>
       ${rows.map(r => { POOL.push(r);
-        return `<tr><td class="txt name"><button type="button" data-pli="${POOL.length - 1}">${esc(r.Name)}</button></td>
+        return `<tr><td class="txt name"><button type="button" data-pli="${POOL.length - 1}">${esc(r.Name)}</button>${decTag(r)}</td>
           <td class="txt">${esc(r.Solicitor)}</td><td class="txt">${esc(r["Prospect Status"] || "–")}</td>
           <td>${esc(fmtDate(r["Last Action Date"]) || "–")}</td><td class="${plLastGift(r) ? "" : "dim"}">${plLastGift(r) ? esc(plLastGift(r).year + " · " + short(plLastGift(r).amt)) : "–"}</td>${PL_LEVELS.map(l => `<td class="${num(r[l.k]) ? "" : "dim"}">${num(r[l.k]) ? short(num(r[l.k])) : "–"}</td>`).join("")}</tr>`; }).join("")}
       </tbody></table></div></details>`;
@@ -1462,7 +1467,8 @@ function renderPipeline() {
       <div class="sub">Assigned households to get back into the projections: nothing given or projected for ${esc(cy)}, by prospect classification. Click a name for the quick look.</div></div>
       <div class="card-tools"><div class="segbtn" role="group" aria-label="Who">${modeBtn("both", "Both")}${modeBtn("never", "Prospects")}${modeBtn("lapsed", "Lapsed donors")}</div>
         <label><input type="checkbox" id="pl-ppr"${PF.plPPR ? " checked" : ""}> Personal / Professional Relationships${hidPPR ? ` <span class="tag off">${hidPPR.toLocaleString("en-US")}</span>` : ""}</label>
-        <label><input type="checkbox" id="pl-ppl"${PF.plPPL ? " checked" : ""}> Pipeline Parking Lot${hidPPL ? ` <span class="tag off">${hidPPL.toLocaleString("en-US")}</span>` : ""}</label></div></div>
+        <label><input type="checkbox" id="pl-ppl"${PF.plPPL ? " checked" : ""}> Pipeline Parking Lot${hidPPL ? ` <span class="tag off">${hidPPL.toLocaleString("en-US")}</span>` : ""}</label>
+        <label><input type="checkbox" id="pl-dec"${PF.plDec ? " checked" : ""}> Deceased${hidDec ? ` <span class="tag off">${hidDec.toLocaleString("en-US")}</span>` : ""}</label></div></div>
     <div class="mp-flag">This pipeline is based on current procedures, which are still being developed. The full process, and the reporting it needs, is under further review.</div>
     <div class="pf-stats">
       <div class="stat hl"><div class="k">${esc(who)}${PF.plClass ? " · " + esc(PF.plClass) : ""}</div><div class="v">${tot.n.toLocaleString("en-US")}</div><div class="d">${PF.plMode === "both" ? tot.lapsed.toLocaleString("en-US") + " lapsed · " + (tot.n - tot.lapsed).toLocaleString("en-US") + " prospects" : ""}</div></div>
@@ -1477,11 +1483,12 @@ function renderPipeline() {
     <label class="td-proj" style="margin-top:10px"><input type="checkbox" id="pl-bd"${PF.plShowBreakdown ? " checked" : ""}> Show breakdown (every household, by classification)</label>
     ${PF.plShowBreakdown ? `<div class="pl-groups">${shown.map(groupHtml).join("")}</div>` : ""}`
     : `<div class="notice"><p>No households here${PF.fr ? " in this portfolio" : ""}.</p></div>`}
-    ${!PF.plPPR || !PF.plPPL ? `<p class="bs-note">Left out unless switched on above: ${[!PF.plPPR ? "Personal / Professional Relationships" : "", !PF.plPPL ? "Pipeline Parking Lot" : ""].filter(Boolean).join(" and ")}. The number beside each switch is how many households it would add; the map follows these switches too.</p>` : ""}
+    ${!PF.plPPR || !PF.plPPL || !PF.plDec ? `<p class="bs-note">Left out unless switched on above: ${[!PF.plPPR ? "Personal / Professional Relationships" : "", !PF.plPPL ? "Pipeline Parking Lot" : "", !PF.plDec ? "deceased households" : ""].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1")}. The number beside each switch is how many households it would add; the map follows these switches too.</p>` : ""}
     <p class="bs-note">The Hub has giving from ${esc(yrs)} only, so a “prospect” here may have given before ${esc(String(prior[0] || ""))}; open one to see its full history in Raiser's Edge.</p>`;
   box.querySelectorAll("[data-plm]").forEach(b => b.onclick = () => { PF.plMode = b.dataset.plm; PF.plSel = null; renderPipeline(); });
   if ($("pl-bd")) $("pl-bd").onchange = e => { PF.plShowBreakdown = e.target.checked; renderPipeline(); };
   $("pl-ppr").onchange = e => { PF.plPPR = e.target.checked; PF.plSel = null; renderPipeline(); };
+  $("pl-dec").onchange = e => { PF.plDec = e.target.checked; PF.plSel = null; renderPipeline(); };
   $("pl-ppl").onchange = e => { PF.plPPL = e.target.checked; PF.plSel = null; renderPipeline(); };
   box.querySelectorAll("tr[data-plc]").forEach(tr => tr.onclick = () => { PF.plClass = tr.dataset.plc === PF.plClass ? "" : tr.dataset.plc; PF.plSel = null; renderPipeline(); });
   box.querySelectorAll("button[data-pli]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pli]));
@@ -1508,7 +1515,7 @@ function renderDonorMap(mode) {
     <div class="sub">Households on the ${esc((KEYS.curYear || "").replace("Money In ", ""))} projections (donors) and the pipeline not on them, by each household's preferred address. Hover a state or county for both counts; click one to list its households, each tagged Donor or Pipeline. Clicking a state also shows its counties.</div></div></div>
     <div class="td-controls">
       <label class="bs-through">Fundraiser <select id="cb-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
-      <span class="sub" style="font-size:12.5px">Pipeline here follows the Pipeline view's settings: ${esc(PF.plMode === "lapsed" ? "lapsed donors" : PF.plMode === "never" ? "prospects" : "prospects and lapsed donors")}${!PF.plPPR || !PF.plPPL ? ", without " + [!PF.plPPR ? "Personal / Professional Relationships" : "", !PF.plPPL ? "Pipeline Parking Lot" : ""].filter(Boolean).join(" or ") : ""}.</span>
+      <span class="sub" style="font-size:12.5px">Pipeline here follows the Pipeline view's settings: ${esc(PF.plMode === "lapsed" ? "lapsed donors" : PF.plMode === "never" ? "prospects" : "prospects and lapsed donors")}${!PF.plPPR || !PF.plPPL || !PF.plDec ? ", without " + [!PF.plPPR ? "Personal / Professional Relationships" : "", !PF.plPPL ? "Pipeline Parking Lot" : "", !PF.plDec ? "deceased households" : ""].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " or $1") : ""}.</span>
     </div>` : `<div class="card-head"><div><h2>${noGift ? "Where they are" : "Where our donors are"}${PF.fr ? " — " + esc(PF.fr) : ""}${noGift && PF.plClass ? " · " + esc(PF.plClass) : ""}</h2>
     <div class="sub">${noGift ? (PF.plMode === "lapsed" ? "Lapsed donors" : PF.plMode === "both" ? "Prospects and lapsed donors" : "Prospects") + " not on the projections" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households. Clicking a state also shows its counties.</div></div></div>
     <div class="td-controls">
@@ -1576,7 +1583,7 @@ function renderDonorMap(mode) {
   const picked = !sel ? null : sel.type === "st" ? st[sel.key] : (() => { const [s2, k2] = sel.key.split("~"); return (coBy[s2] || {})[k2]; })();
   const list = !sel ? "" : `<div class="td-list"><div class="hd"><b>${esc(sel.label)}</b><button type="button" id="${ID}-clear" aria-label="Close list">×</button></div>
     ${picked ? `<p class="meta">${cb ? esc(fmt(picked)) : picked.n.toLocaleString("en-US") + " household" + (picked.n === 1 ? "" : "s")}${cb ? "" : noGift ? (picked.amt ? " · " + esc(ovMoney(picked.amt)) + " " + esc(plAmtTxt) : "") : " · " + esc(ovMoney(picked.amt))} · click a name for details</p>
-      <ol>${picked.rows.sort((a, b) => cb ? (a.g > b.g ? 1 : a.g < b.g ? -1 : b.v - a.v) : noGift ? String(a.r.Name).localeCompare(String(b.r.Name)) : b.v - a.v).map((x, i) => `<li><div><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button>${cbTag(x)}</div><span>${esc(cb || noGift ? String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : "") : money(x.v))}</span></li>`).join("")}</ol>`
+      <ol>${picked.rows.sort((a, b) => cb ? (a.g > b.g ? 1 : a.g < b.g ? -1 : b.v - a.v) : noGift ? String(a.r.Name).localeCompare(String(b.r.Name)) : b.v - a.v).map((x, i) => `<li><div><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button>${cbTag(x)}${decTag(x.r)}</div><span>${esc(cb || noGift ? String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : "") : money(x.v))}</span></li>`).join("")}</ol>`
       : `<p class="meta">No households here for this view.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Households by state">` +
     g.us.states.map(s => `<path class="area${(sel && sel.type === "st" && sel.key === s.abbr) || s.abbr === coSt ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" tabindex="0" role="button" aria-label="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
@@ -1586,7 +1593,7 @@ function renderDonorMap(mode) {
   noAddr.sort((a, b) => String(a.r.Name).localeCompare(String(b.r.Name)));
   const coSvg = coSt === "NONE"
     ? `<div class="td-list td-noaddr"><p class="meta">${noAddr.length.toLocaleString("en-US")} household${noAddr.length === 1 ? " has" : "s have"} no state or address on file in Raiser's Edge${noGift || cb ? "" : " · " + esc(ovMoney(noAddr.reduce((t, x) => t + x.v, 0)))}. Click a name for details.</p>
-      <ol>${noAddr.map((x, i) => `<li><div><button type="button" data-nai="${i}">${esc(x.r.Name)}</button>${cbTag(x)}</div><span>${esc(String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : ""))}</span></li>`).join("")}</ol></div>`
+      <ol>${noAddr.map((x, i) => `<li><div><button type="button" data-nai="${i}">${esc(x.r.Name)}</button>${cbTag(x)}${decTag(x.r)}</div><span>${esc(String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : ""))}</span></li>`).join("")}</ol></div>`
     : !coKey ? `<p class="sub">No county column in the data.</p>`
     : !shapes ? (CTY.failed ? `<div class="notice err"><p>The county map file (lib/counties.json) couldn't be loaded, so only Michigan is available.</p></div>` : `<div class="loading">Loading ${esc(stName(coSt))}'s counties…</div>`)
     : `<svg viewBox="${shapes.viewBox}" role="img" aria-label="${esc(stName(coSt))} households by county">` +
@@ -1601,7 +1608,7 @@ function renderDonorMap(mode) {
   const reviewHtml = !review.length ? "" : `<details class="td-review"${PF[ID + "RevOpen"] ? " open" : ""}><summary>⚠ ${review.length.toLocaleString("en-US")} household${review.length === 1 ? " needs" : "s need"} an address review${CTY.data ? "" : " (Michigan only until the county file loads)"}</summary>
     <p class="bs-note" style="margin:6px 0 8px">State or county as they're entered in Raiser's Edge that don't match a real state or county. (Households with no address at all are under “No address on file” in the county map's state list.) These households are counted on the state map where possible but left off the county map. Click a name for the quick look and the RE link.</p>
     <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th class="txt">State in RE</th><th class="txt">County in RE</th><th class="txt">What's wrong</th></tr></thead><tbody>
-    ${review.map((x, i) => `<tr><td class="txt name"><button type="button" data-rvi="${i}">${esc(x.r.Name)}</button></td><td class="txt">${esc(x.r.Solicitor || "–")}</td><td class="txt">${esc(x.st || "–")}</td><td class="txt">${esc(x.co || "–")}</td><td class="txt">${esc(x.why)}</td></tr>`).join("")}
+    ${review.map((x, i) => `<tr><td class="txt name"><button type="button" data-rvi="${i}">${esc(x.r.Name)}</button>${decTag(x.r)}</td><td class="txt">${esc(x.r.Solicitor || "–")}</td><td class="txt">${esc(x.st || "–")}</td><td class="txt">${esc(x.co || "–")}</td><td class="txt">${esc(x.why)}</td></tr>`).join("")}
     </tbody></table></div></details>`;
   box.innerHTML = head + `
     <div class="td-split">
@@ -2326,7 +2333,7 @@ document.addEventListener("mousemove", e => {
 });
 
 /* ===== Portfolio Management ===== */
-const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both", plAmt: "all", plRange: "any", plPPR: false, plPPL: false, plCoSt: "MI", tdCoSt: "MI", plShowBreakdown: false, ppView: "Donors", cbCoSt: "MI" };
+const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both", plAmt: "all", plRange: "any", plPPR: false, plPPL: false, plDec: false, plCoSt: "MI", tdCoSt: "MI", plShowBreakdown: false, ppView: "Donors", cbCoSt: "MI" };
 function pfShowView() {
   document.querySelectorAll("[data-pfv]").forEach(el => {
     if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.pfv === PF.view);
