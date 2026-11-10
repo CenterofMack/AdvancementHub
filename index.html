@@ -498,7 +498,7 @@
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</a>
-    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Scorecard</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Management</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="StrategicPlan" data-access="Strategic Plan" aria-selected="false" hidden>Strategic Plan</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Retention" data-access="Retention" aria-selected="false" hidden>Donor Retention</a>
     <div class="tabmenu" id="other-menu" hidden>
@@ -584,7 +584,7 @@
   </section>
   <section class="panel" id="panel-Portfolios" hidden>
     <div class="head">
-      <div><h1>Portfolio Scorecard</h1><div class="asof" id="pf-asof"></div></div>
+      <div><h1>Portfolio Management</h1><div class="asof" id="pf-asof"></div></div>
       <div class="actions"><label class="bs-through" for="pf-fr">Fundraiser <select id="pf-fr"></select></label></div>
     </div>
     <!-- Sub-tabs. The Fundraiser filter above applies to every one of them.
@@ -1315,8 +1315,14 @@ const plPriorYears = () => KEYS.years.filter(k => k !== KEYS.curYear);
 const plLastGift = r => { const k = plPriorYears().filter(k => num(r[k]) > 0).sort().reverse()[0]; return k ? { year: k.replace("Money In ", ""), amt: num(r[k]) } : null; };
 const plOffProjections = r => String(r.Name ?? "").trim() !== "" && !isUnderLine(r) && plAssigned(r)
   && !(KEYS.curYear && num(r[KEYS.curYear]) > 0) && !(KEYS.total && num(r[KEYS.total]) > 0) && !(num(r["Outstanding Projected"]) > 0);
-const plQualifies = r => {
+// Two groups left out unless switched on: Personal / Professional Relationships and Pipeline Parking Lot
+// (matched on Prospect Classification or Prospect Status)
+const plTag = r => String(r["Prospect Classification"] ?? "") + " | " + String(r["Prospect Status"] ?? "");
+const plIsPPR = r => /personal\s*\/?\s*professional/i.test(plTag(r));
+const plIsPPL = r => /parking\s*lot/i.test(plTag(r));
+const plQualifies = (r, ignoreToggles) => {
   if (!plOffProjections(r)) return false;
+  if (!ignoreToggles && ((!PF.plPPR && plIsPPR(r)) || (!PF.plPPL && plIsPPL(r)))) return false;
   const lapsed = !!plLastGift(r);
   return PF.plMode === "both" ? true : PF.plMode === "lapsed" ? lapsed : !lapsed;
 };
@@ -1324,15 +1330,30 @@ const plClass = r => String(r["Prospect Classification"] ?? "").trim() || "No cl
 // Speculative, Qualified Active and Qualified Inactive, kept separate (RE's "Opportunities" are proposals, a different thing)
 const PL_LEVELS = [{ k: "Speculative", t: "Speculative" }, { k: "Qualified Active", t: "Qualified Active" }, { k: "Qualified Inactive", t: "Qualified Inactive" }];
 const plSpqTotal = r => PL_LEVELS.reduce((t, l) => t + num(r[l.k]), 0);
+// Map amount filter: which amount (Speculative, Qualified Active, Qualified Inactive, or all three together)
+// and which range, using the giving society levels
+const PL_AMTS = [{ k: "all", t: "Spec + QA + QIA combined" }, ...PL_LEVELS.map(l => ({ k: l.k, t: l.t }))];
+const plAmtOf = r => PF.plAmt === "all" || !PF.plAmt ? plSpqTotal(r) : num(r[PF.plAmt]);
+const PL_RANGES = () => [{ k: "any", t: "Any amount" }, { k: "none", t: "None ($0)" }, { k: "under", t: "Under $1K" },
+  ...SOCIETIES.filter(x => x.lo).map(x => ({ k: x.k, t: x.label, lo: x.lo, hi: x.hi }))];
+function plInRange(v) {
+  const k = PF.plRange || "any"; if (k === "any") return true;
+  if (k === "none") return !(v > 0);
+  if (k === "under") return v > 0 && v < 1000;
+  const rg = PL_RANGES().find(x => x.k === k); return rg ? v >= rg.lo && v < rg.hi : true;
+}
 const plClassesFor = rows => { const n = {}; rows.forEach(r => n[plClass(r)] = (n[plClass(r)] || 0) + 1);
   return Object.keys(n).sort((a, b) => (a === "No classification") - (b === "No classification") || n[b] - n[a] || a.localeCompare(b)); };
 const plYears = () => { const y = KEYS.years.map(k => +k.replace("Money In ", "")).sort(); return y.length ? (y.length > 1 ? y[0] + "–" + y[y.length - 1] : String(y[0])) : "recent years"; };
-function plPool() { return tdPool().filter(plQualifies); }
+function plPool() { return tdPool().filter(r => plQualifies(r)); }
 function renderPipeline() {
   const box = $("pl-list"); if (!box) return;
   const all = plPool(), yrs = plYears(), cy = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   const prior = plPriorYears().map(k => +k.replace("Money In ", "")).sort();
   const priorTxt = prior.length ? (prior.length > 1 ? prior[0] + "–" + prior[prior.length - 1] : String(prior[0])) : "earlier years";
+  // How many households each switch adds (shown next to the switch while it's off)
+  const base = tdPool().filter(r => plQualifies(r, true));
+  const hidPPR = PF.plPPR ? 0 : base.filter(plIsPPR).length, hidPPL = PF.plPPL ? 0 : base.filter(r => plIsPPL(r) && (PF.plPPR || !plIsPPR(r))).length;
   const modeBtn = (k, t) => `<button type="button" data-plm="${k}" aria-pressed="${PF.plMode === k}">${t}</button>`;
   const who = PF.plMode === "lapsed" ? `Lapsed donors: gave in ${priorTxt}, nothing yet in ${cy}`
     : PF.plMode === "both" ? `Prospects and lapsed donors`
@@ -1365,7 +1386,9 @@ function renderPipeline() {
   };
   box.innerHTML = `<div class="card-head"><div><h2>Pipeline: not on the ${esc(cy)} projections${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
       <div class="sub">Assigned households to get back into the projections: nothing given or projected for ${esc(cy)}, active and inactive, by prospect classification. Click a name for the quick look.</div></div>
-      <div class="card-tools"><div class="segbtn" role="group" aria-label="Who">${modeBtn("both", "Both")}${modeBtn("never", "Prospects")}${modeBtn("lapsed", "Lapsed donors")}</div></div></div>
+      <div class="card-tools"><div class="segbtn" role="group" aria-label="Who">${modeBtn("both", "Both")}${modeBtn("never", "Prospects")}${modeBtn("lapsed", "Lapsed donors")}</div>
+        <label><input type="checkbox" id="pl-ppr"${PF.plPPR ? " checked" : ""}> Personal / Professional Relationships${hidPPR ? ` <span class="tag off">${hidPPR.toLocaleString("en-US")}</span>` : ""}</label>
+        <label><input type="checkbox" id="pl-ppl"${PF.plPPL ? " checked" : ""}> Pipeline Parking Lot${hidPPL ? ` <span class="tag off">${hidPPL.toLocaleString("en-US")}</span>` : ""}</label></div></div>
     <div class="mp-flag">This pipeline is based on current procedures, which are still being developed. The full process, and the reporting it needs, is under further review.</div>
     <div class="pf-stats">
       <div class="stat hl"><div class="k">${esc(who)}${PF.plClass ? " · " + esc(PF.plClass) : ""}</div><div class="v">${tot.n.toLocaleString("en-US")}</div><div class="d">${PF.plMode === "both" ? tot.lapsed.toLocaleString("en-US") + " lapsed · " + (tot.n - tot.lapsed).toLocaleString("en-US") + " prospects · " : ""}${tot.inactive.toLocaleString("en-US")} inactive</div></div>
@@ -1379,8 +1402,11 @@ function renderPipeline() {
     <p class="bs-note">Click a classification to show just that one${PF.plClass ? ` (click <b>${esc(PF.plClass)}</b> again to show all)` : ""}. The map below follows the same choice.</p>
     <div class="pl-groups">${shown.map(groupHtml).join("")}</div>`
     : `<div class="notice"><p>No households here${PF.fr ? " in this portfolio" : ""}.</p></div>`}
+    ${!PF.plPPR || !PF.plPPL ? `<p class="bs-note">Left out unless switched on above: ${[!PF.plPPR ? "Personal / Professional Relationships" : "", !PF.plPPL ? "Pipeline Parking Lot" : ""].filter(Boolean).join(" and ")}. The number beside each switch is how many households it would add; the map follows these switches too.</p>` : ""}
     <p class="bs-note">The Hub has giving from ${esc(yrs)} only, so a “prospect” here may have given before ${esc(String(prior[0] || ""))}; open one to see its full history in Raiser's Edge.</p>`;
   box.querySelectorAll("[data-plm]").forEach(b => b.onclick = () => { PF.plMode = b.dataset.plm; PF.plSel = null; renderPipeline(); });
+  $("pl-ppr").onchange = e => { PF.plPPR = e.target.checked; PF.plSel = null; renderPipeline(); };
+  $("pl-ppl").onchange = e => { PF.plPPL = e.target.checked; PF.plSel = null; renderPipeline(); };
   box.querySelectorAll("tr[data-plc]").forEach(tr => tr.onclick = () => { PF.plClass = tr.dataset.plc === PF.plClass ? "" : tr.dataset.plc; PF.plSel = null; renderPipeline(); });
   box.querySelectorAll("button[data-pli]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pli]));
   renderDonorMap(true);
@@ -1406,7 +1432,9 @@ function renderDonorMap(pl) {
     <div class="sub">${noGift ? (PF.plMode === "lapsed" ? "Lapsed donors" : PF.plMode === "both" ? "Prospects and lapsed donors" : "Prospects") + " not on the projections" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div></div>
     <div class="td-controls">
       <label class="bs-through">Fundraiser <select id="${ID}-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
-      ${noGift ? `<label class="bs-through">Classification <select id="pl-cls"><option value="">All classifications</option>${plClassesFor(tdPool().filter(plQualifies)).map(c => `<option${c === PF.plClass ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
+      ${noGift ? `<label class="bs-through">Classification <select id="pl-cls"><option value="">All classifications</option>${plClassesFor(tdPool().filter(r => plQualifies(r))).map(c => `<option${c === PF.plClass ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+      <label class="bs-through">Amount <select id="pl-amt">${PL_AMTS.map(a => `<option value="${esc(a.k)}"${a.k === (PF.plAmt || "all") ? " selected" : ""}>${esc(a.t)}</option>`).join("")}</select></label>
+      <label class="bs-through">Range <select id="pl-rng">${PL_RANGES().map(x => `<option value="${esc(x.k)}"${x.k === (PF.plRange || "any") ? " selected" : ""}>${esc(x.t)}</option>`).join("")}</select></label>` : ""}
       ${noGift ? "" : `<div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}</div>
       ${yearSw}
       <div class="segbtn" role="group" aria-label="Measure">
@@ -1424,9 +1452,9 @@ function renderDonorMap(pl) {
   const add = (bag, k, r, v) => { (bag[k] = bag[k] || { n: 0, amt: 0, rows: [] }); bag[k].n++; bag[k].amt += v; bag[k].rows.push({ r, v }); };
   tdPool().forEach(r => {
     if (isUnderLine(r)) return;
-    const v = noGift ? 0 : tdVal(r, key);
+    const v = noGift ? plAmtOf(r) : tdVal(r, key);
     if (pop === "proj" && !v) return;
-    if (noGift && (!plQualifies(r) || (PF.plClass && plClass(r) !== PF.plClass))) return;
+    if (noGift && (!plQualifies(r) || (PF.plClass && plClass(r) !== PF.plClass) || !plInRange(v))) return;
     all.n++; all.amt += v;
     const a = stateAbbr(r[stKey]);
     if (!a) { unknown.n++; unknown.amt += v; return; }
@@ -1435,13 +1463,15 @@ function renderDonorMap(pl) {
       if (coKey) { const c = countyKey(r[coKey]); if (c) add(co, c, r, v); } }
   });
   const val = o => o ? (byHH ? o.n : o.amt) : 0,
-    fmt = o => o ? `${noGift ? "" : ovMoney(o.amt) + " · "}${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}` : "none";
+    plAmtTxt = (PL_AMTS.find(a => a.k === (PF.plAmt || "all")) || PL_AMTS[0]).t.replace(" combined", ""),
+    fmt = o => o ? (noGift ? `${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}${o.amt ? " · " + ovMoney(o.amt) + " " + plAmtTxt : ""}`
+      : `${ovMoney(o.amt)} · ${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}`) : "none";
   const g = GEO.data, cS = tdBuckets(Object.values(st).map(val)), cC = tdBuckets(Object.values(co).map(val));
   // The area picked on the map: its households, largest first, each opening the quick look (with the RE link)
   const sel = PF[SK], picked = sel ? (sel.type === "st" ? st : co)[sel.key] : null;
   const list = !sel ? "" : `<div class="td-list"><div class="hd"><b>${esc(sel.label)}</b><button type="button" id="${ID}-clear" aria-label="Close list">×</button></div>
-    ${picked ? `<p class="meta">${picked.n.toLocaleString("en-US")} household${picked.n === 1 ? "" : "s"}${noGift ? "" : " · " + esc(ovMoney(picked.amt))} · click a name for details</p>
-      <ol>${picked.rows.sort((a, b) => noGift ? String(a.r.Name).localeCompare(String(b.r.Name)) : b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(noGift ? String(x.r.Solicitor ?? "") : money(x.v))}</span></li>`).join("")}</ol>`
+    ${picked ? `<p class="meta">${picked.n.toLocaleString("en-US")} household${picked.n === 1 ? "" : "s"}${noGift ? (picked.amt ? " · " + esc(ovMoney(picked.amt)) + " " + esc(plAmtTxt) : "") : " · " + esc(ovMoney(picked.amt))} · click a name for details</p>
+      <ol>${picked.rows.sort((a, b) => noGift ? String(a.r.Name).localeCompare(String(b.r.Name)) : b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(noGift ? String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : "") : money(x.v))}</span></li>`).join("")}</ol>`
       : `<p class="meta">No giving households here for this year.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Donors by state">` +
     g.us.states.map(s => `<path class="area${sel && sel.type === "st" && sel.key === s.abbr ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" tabindex="0" role="button" aria-label="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
@@ -1464,7 +1494,7 @@ function renderDonorMap(pl) {
       ${list}
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
-    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year, active and inactive. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
+    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year, active and inactive. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(pl); });
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(pl); });
   // Changing it here changes the whole scorecard, the same as the filter at the top of the page
@@ -1472,6 +1502,9 @@ function renderDonorMap(pl) {
   if (!pl) { tdWireYear(box); tdWireProj(box); }
   // The classification picked here also filters the list above, the same as clicking it in the table
   if (pl && $("pl-cls")) $("pl-cls").onchange = e => { PF.plClass = e.target.value; PF.plSel = null; renderPipeline(); };
+  // Amount and range only change the map
+  if (pl && $("pl-amt")) $("pl-amt").onchange = e => { PF.plAmt = e.target.value; PF.plSel = null; renderDonorMap(true); };
+  if (pl && $("pl-rng")) $("pl-rng").onchange = e => { PF.plRange = e.target.value; PF.plSel = null; renderDonorMap(true); };
   // Click a state or county to list its households; click it again (or ×) to close the list
   box.querySelectorAll("[data-area]").forEach(pth => {
     pth.onclick = () => {
@@ -2160,8 +2193,8 @@ document.addEventListener("mousemove", e => {
   tip.style.left = x + "px"; tip.style.top = (e.clientY - 38) + "px";
 });
 
-/* ===== Portfolio Scorecard ===== */
-const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both" };
+/* ===== Portfolio Management ===== */
+const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both", plAmt: "all", plRange: "any", plPPR: false, plPPL: false };
 function pfShowView() {
   document.querySelectorAll("[data-pfv]").forEach(el => {
     if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.pfv === PF.view);
