@@ -305,6 +305,30 @@
   .pp-intro b{color:var(--navy-deep)}
   .pp-intro .warn{display:block;margin-top:6px;color:#7A5C14}
   .tag.dn{color:#1F4D33;background:#EAF5EE} .tag.pp{color:#7A5C14;background:#FBF0D8}
+  /* Donor Retention */
+  .rt-switch{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+  .rt-switch .segbtn button small{display:block;font-size:11px;font-weight:500;opacity:.8}
+  .rt-why{background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;margin:0 0 18px}
+  .rt-why summary{cursor:pointer;padding:10px 14px;font-weight:600;color:var(--navy-deep)}
+  .rt-why > div{padding:0 16px 8px;font-size:13.5px;max-width:95ch}
+  .rt-why ul{margin:4px 0 10px;padding-left:20px} .rt-why li{margin:3px 0}
+  table.bs.rt td.txt{white-space:nowrap}
+  .rt-rng{color:var(--muted);font-size:11.5px;margin-left:4px}
+  .rt-na{color:#B6BDC8;font-size:11.5px}
+  table.bs tfoot td{font-weight:700;background:#F7F9FB;border-top:2px solid var(--navy-deep);color:var(--navy-deep)}
+  .rt-lv{margin:14px 0 6px}
+  .rt-lv h3{margin:0 0 8px;font-family:var(--serif);font-size:17px;color:var(--navy-deep);border-bottom:2px solid var(--navy);padding-bottom:4px}
+  .rt-lv h3 span{font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:500}
+  .rt-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .rt-col h4{margin:0 0 6px;font-size:13px;color:var(--navy-deep)} .rt-col h4 small{color:var(--muted);font-weight:500;margin-left:4px}
+  .rt-col.lap h4{color:var(--red)} .rt-col.inc h4{color:#1F6B3A}
+  .rt-col ul{list-style:none;margin:0;padding:0}
+  .rt-col li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #F0F2F5;font-size:13px}
+  .rt-col li a{color:var(--navy-deep);font-weight:500;text-decoration:none} .rt-col li a:hover{text-decoration:underline}
+  .rt-col li small{display:block;color:var(--muted);font-size:11.5px}
+  .rt-amt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .rt-none{color:#A7AFBD;font-style:italic;font-size:12.5px;margin:4px 0}
+  @media (max-width:900px){ .rt-cols{grid-template-columns:1fr} }
   /* County map state picker and the address review list */
   .td-coh{display:flex;align-items:center;gap:8px}
   /* Tall states (Illinois, Alabama, Indiana…) shrink to the height of the U.S. map instead of running long */
@@ -737,7 +761,46 @@
     <div class="head"><div><h1>Strategic Plan</h1></div></div>
     <div class="notice"><h2>Strategic Plan is coming</h2><p>Progress on the Advancement Strategic Plan will appear here in a future update.</p></div>
   </section>
-  <section class="panel" id="panel-Retention" hidden><p class="soon">Donor Retention is coming next.</p></section>
+  <section class="panel" id="panel-Retention" hidden>
+    <div class="head">
+      <div><h1>Donor Retention</h1><div class="asof">By household, every giving level · live from the Projections workbook</div></div>
+      <div class="actions"><label class="bs-through" for="rt-fr">Fundraiser <select id="rt-fr"><option value="">All fundraisers</option></select></label></div>
+    </div>
+    <div id="rt-msg"></div>
+    <div id="rt-body" hidden>
+      <div class="rt-switch">
+        <div class="segbtn" role="group" aria-label="Which year">
+          <button type="button" data-rtc="2025" aria-pressed="true">2025 retention <small>2024 → 2025</small></button>
+          <button type="button" data-rtc="2026" aria-pressed="false">2026 retention <small>2025 → 2026</small></button>
+        </div>
+        <div class="segbtn" role="group" aria-label="How to count 2026" id="rt-modes" hidden>
+          <button type="button" data-rtm="proj" aria-pressed="true">As projected</button>
+          <button type="button" data-rtm="sofar" aria-pressed="false">Money in so far</button>
+          <button type="button" data-rtm="ytd" aria-pressed="false">Same point last year</button>
+        </div>
+      </div>
+      <details class="rt-why">
+        <summary>Why don't these match the published 2025 retention report?</summary>
+        <div>
+          <p>The published report counted each Raiser's Edge record on its own. The Hub counts by <b>household</b>: spouses together, and gifts follow their soft credits to the person they belong to. That fixes a few things the record-by-record count got wrong:</p>
+          <ul>
+            <li>A spouse could show as lapsed while the household kept giving under the other spouse's name.</li>
+            <li>A gift could be counted twice, once at the foundation or company that paid it and again at the person it was soft-credited to.</li>
+            <li>A gift could be counted at the payer (a foundation, trust or business) instead of at the household it belongs to.</li>
+          </ul>
+          <p>Also:</p>
+          <ul>
+            <li>These numbers are live. A gift entered late, or moved between 2025 and 2026, changes them.</li>
+            <li>General Anonymous isn't a household, so it's left out. Legacy isn't a giving level here.</li>
+          </ul>
+          <p>The differences are small: the top levels match the report, and the totals are within about 1%.</p>
+        </div>
+      </details>
+      <div class="card" id="rt-table"></div>
+      <div class="card" id="rt-counts"></div>
+      <div class="card" id="rt-named"></div>
+    </div>
+  </section>
 </main>
 
 <div class="bs-tip" id="bs-tip" hidden></div>
@@ -811,6 +874,7 @@ function selectTab(name) {
   if (name === "BoardSlides" && !BS.month && !BS.loading) loadBoard();
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
+  if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
 }
 /* Tabs are real links to the Hub's page in Raiser's Edge, so right-click → "Open link in new tab"
    and middle-click work. The Hub only runs inside RE, so the link opens the Hub page, and a short
@@ -1067,6 +1131,143 @@ function mpLineChartYears(cats, series, fmt, label) {
   });
   return svgOpen(W, H, label) + g + "</svg>";
 }
+
+/* ===== Donor Retention =====
+   Data comes from the "Hub – Retention" flow, which runs the "Hub Retention Export" Office Script
+   in 2026 Projections - Live.xlsx and sends back the Staging table: every household, small donors
+   included, with its giving by year. Access is the Retention column in HubAccess.
+   Retention is counted by household (spouses together, soft credits followed), using the giving
+   levels from the annual retention report. It loads the first time the tab is opened. */
+const RETENTION_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/dedd4f9d14234c1a990d815cb7de46e0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=l2oc-_PQU86JXmbwWaflVf4s9IOKLUttXtwJHIZwwXA";
+const RT = { rows: [], loaded: false, loading: false, cmp: "2025", mode: "proj", fr: "", openWhy: false };
+// Giving levels, largest first (the same ones as the annual retention report)
+const RT_LEVELS = [
+  { label: "Lifetime", range: "$1M+", min: 1e6 },
+  { label: "Patriot", range: "$100K – $999,999", min: 1e5 },
+  { label: "Liberty", range: "$50K – $99,999", min: 5e4 },
+  { label: "1851", range: "$10K – $49,999", min: 1e4 },
+  { label: "President's", range: "$1K – $9,999", min: 1e3 },
+  { label: "Jefferson", range: "$500 – $999", min: 500 },
+  { label: "Member", range: "$100 – $499", min: 100 },
+  { label: "Donor", range: "under $100", min: 0.005 }
+];
+const RT_NAMED = 4;   // named lists for the top four levels (1851 and above)
+const rtLevel = v => v > 0 ? RT_LEVELS.findIndex(l => v >= l.min) : -1;
+
+function rtMessage(title, text, retry) {
+  $("rt-body").hidden = true;
+  $("rt-msg").innerHTML = text === undefined
+    ? `<div class="loading">${esc(title)}</div>`
+    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="rt-retry">Try again</button>' : ""}</div>`;
+  if (retry) $("rt-retry").onclick = rtLoad;
+}
+function rtLoad() {
+  RT.loading = true;
+  rtMessage("Loading retention…");
+  client.getUserIdentityToken()
+    .then(token => fetch(RETENTION_URL, { method: "POST", body: token }))
+    .then(async res => {
+      if (res.status === 403) { rtMessage("You don't have access to Donor Retention", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      if (!res.ok) { rtMessage("Donor Retention didn't load", `The data service returned an error (status ${res.status}).`, true); return; }
+      const d = await res.json(), r = d && d.retention;
+      if (!r || !Array.isArray(r.columns) || !Array.isArray(r.rows)) { rtMessage("Donor Retention didn't load", "The data service sent back something unexpected.", true); return; }
+      const at = name => r.columns.indexOf(name);
+      const c = { id: at("ID"), name: at("Name"), fr: at("Solicitor"), m24: at("Money In 2024"), m25: at("Money In 2025"), m26: at("Money In 2026"),
+        proj: at("Total Projected 2026"), y25: at("YTD 2025"), y26: at("YTD 2026"), thru: at("YTD Through"), dec: at("Deceased"), cls: at("Prospect Classification"), sid: at("System Record ID") };
+      const g = (row, i) => i < 0 ? "" : row[i];
+      RT.rows = r.rows.map(row => ({
+        id: String(g(row, c.id)), name: String(g(row, c.name) || ""), fr: String(g(row, c.fr) || "").trim() || "No Assigned Fundraiser",
+        m24: num(g(row, c.m24)), m25: num(g(row, c.m25)), m26: num(g(row, c.m26)), proj: num(g(row, c.proj)),
+        y25: num(g(row, c.y25)), y26: num(g(row, c.y26)), thru: g(row, c.thru), dec: /^(yes|y|true|1)$/i.test(String(g(row, c.dec)).trim()),
+        sid: String(g(row, c.sid) || "").trim()
+      // General Anonymous isn't a real household, so it's left out (the same as Board Slides)
+      })).filter(x => x.name && !/general anonymous/i.test(x.name));
+      RT.loaded = true;
+      const funds = [...new Set(RT.rows.map(x => x.fr))].sort((a, b) => (a === "No Assigned Fundraiser") - (b === "No Assigned Fundraiser") || a.localeCompare(b));
+      $("rt-fr").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
+      $("rt-msg").innerHTML = ""; $("rt-body").hidden = false;
+      rtRender();
+    })
+    .catch(() => rtMessage("Donor Retention didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
+    .finally(() => { RT.loading = false; });
+}
+
+// The two amounts being compared for a household, and their labels
+function rtPair() {
+  const thru = RT.rows.map(x => toDate(x.thru)).find(Boolean);
+  const thruTxt = thru ? `${MONTH_NAMES[thru.getUTCMonth()].slice(0, 3)} ${thru.getUTCDate()}` : "the same date";
+  if (RT.cmp === "2025") return { a: x => x.m24, b: x => x.m25, A: "2024", B: "2025", title: "2025 retention: 2024 donors in 2025", complete: true };
+  if (RT.mode === "ytd") return { a: x => x.y25, b: x => x.y26, A: `2025 through ${thruTxt}`, B: `2026 through ${thruTxt}`, title: `2026 retention so far, same point last year (through ${thruTxt})` };
+  if (RT.mode === "sofar") return { a: x => x.m25, b: x => x.m26, A: "2025", B: "2026 so far", title: "2026 retention: 2025 donors in 2026, money in so far" };
+  return { a: x => x.m25, b: x => x.m26 + x.proj, A: "2025", B: "2026 as projected", title: "2026 retention: 2025 donors in 2026, if projections come in" };
+}
+
+function rtRender() {
+  document.querySelectorAll("[data-rtc]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rtc === RT.cmp));
+  document.querySelectorAll("[data-rtm]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rtm === RT.mode));
+  $("rt-modes").hidden = RT.cmp !== "2026";
+  const P = rtPair(), pool = RT.rows.filter(x => !RT.fr || x.fr === RT.fr);
+  const n = RT_LEVELS.length, Z = () => Array(n).fill(0);
+  const t = { up: Z(), rep: Z(), dec: Z(), lap: Z(), tot: Z(), cA: Z(), cB: Z() };
+  const named = RT_LEVELS.slice(0, RT_NAMED).map(() => ({ lap: [], dec: [], up: [] }));
+  let comeback = 0, comebackKnown = 0, newOrBack = 0;
+  pool.forEach(x => {
+    const a = P.a(x), b = P.b(x), la = rtLevel(a), lb = rtLevel(b);
+    if (la >= 0) t.cA[la]++;
+    if (lb >= 0) t.cB[lb]++;
+    if (la < 0) {
+      if (lb >= 0) { newOrBack++; if (RT.cmp === "2026" && RT.mode !== "ytd" && x.m24 > 0) comebackKnown++; }
+      return;
+    }
+    t.tot[la]++;
+    const kind = lb < 0 ? "lap" : lb === la ? "rep" : lb < la ? "up" : "dec";
+    t[kind][la]++;
+    if (la < RT_NAMED && kind !== "rep") named[la][kind].push({ x, a, b });
+  });
+  const sum = arr => arr.reduce((s, v) => s + v, 0);
+  const pc = (v, d) => d ? Math.round(v / d * 100) + "%" : "–";
+  const I = v => v ? v.toLocaleString("en-US") : "–";
+  // Retention by level
+  const rows = RT_LEVELS.map((l, i) => `<tr><td class="txt"><b>${esc(l.label)}</b> <span class="rt-rng">${esc(l.range)}</span></td>
+    <td>${I(t.tot[i])}</td><td>${I(t.up[i])}</td><td>${I(t.rep[i])}</td><td>${i === n - 1 ? "<span class='rt-na'>n/a</span>" : I(t.dec[i])}</td><td>${I(t.lap[i])}</td>
+    <td class="hl">${pc(t.up[i] + t.rep[i], t.tot[i])}</td><td class="hl"><b>${pc(t.tot[i] - t.lap[i], t.tot[i])}</b></td></tr>`).join("");
+  const T = { tot: sum(t.tot), up: sum(t.up), rep: sum(t.rep), dec: sum(t.dec), lap: sum(t.lap) };
+  $("rt-table").innerHTML = `<div class="card-head"><div><h2>${esc(P.title)}${RT.fr ? " — " + esc(RT.fr) : ""}</h2>
+      <div class="sub">Each ${esc(P.A)} donor household, by its ${esc(P.A)} giving level, and what it did in ${esc(P.B)}. Upgrade or decrease means moving to a higher or lower level.</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Overall retention</div><div class="v">${pc(T.tot - T.lap, T.tot)}</div></div>
+      <div class="stat"><div class="k">Repeat or upgrade</div><div class="v">${pc(T.up + T.rep, T.tot)}</div></div>
+      <div class="stat"><div class="k">${esc(P.A)} donors</div><div class="v">${T.tot.toLocaleString("en-US")}</div></div>
+      <div class="stat"><div class="k">Lapsed</div><div class="v">${T.lap.toLocaleString("en-US")}</div></div>
+      <div class="stat"><div class="k">New or returning in ${esc(P.B)}</div><div class="v">${newOrBack.toLocaleString("en-US")}</div></div>
+    </div>
+    ${P.complete ? "" : `<div class="mp-flag">${esc(P.B)} isn't over yet, so households whose ${RT.mode === "proj" ? "gifts aren't in or projected yet" : "gifts haven't come in yet"} show as lapsed or decreased for now.</div>`}
+    <div class="bs-tablewrap"><table class="bs rt"><thead><tr><th class="txt">${esc(P.A)} level</th><th>${esc(P.A)} donors</th><th>Upgrade</th><th>Repeat</th><th>Decrease</th><th>Lapsed</th><th class="hl">Repeat / upgrade retention</th><th class="hl">Retention</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td class="txt">Total donor retention</td><td>${I(T.tot)}</td><td>${I(T.up)}</td><td>${I(T.rep)}</td><td>${I(T.dec)}</td><td>${I(T.lap)}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td></tr></tfoot></table></div>
+    <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level.</p>`;
+  // Donors by level, both years
+  $("rt-counts").innerHTML = `<div class="card-head"><div><h2>Donors by level, ${esc(P.A)} and ${esc(P.B)}</h2>
+      <div class="sub">Every donor household at each level in each year, including new and returning donors.</div></div></div>
+    <div class="bs-tablewrap" style="max-width:720px"><table class="bs"><thead><tr><th class="txt">Level</th><th>${esc(P.A)}</th><th>${esc(P.B)}</th><th>Change</th></tr></thead><tbody>
+      ${RT_LEVELS.map((l, i) => { const ch = t.cB[i] - t.cA[i]; return `<tr><td class="txt"><b>${esc(l.label)}</b> <span class="rt-rng">${esc(l.range)}</span></td><td>${I(t.cA[i])}</td><td>${I(t.cB[i])}</td><td class="${ch > 0 ? "up" : ch < 0 ? "down" : ""}">${ch > 0 ? "+" : ""}${ch ? ch.toLocaleString("en-US") : "–"}</td></tr>`; }).join("")}
+    </tbody><tfoot><tr><td class="txt">Total</td><td>${I(sum(t.cA))}</td><td>${I(sum(t.cB))}</td><td>${(sum(t.cB) - sum(t.cA) > 0 ? "+" : "") + (sum(t.cB) - sum(t.cA)).toLocaleString("en-US")}</td></tr></tfoot></table></div>
+    <p class="bs-note"><b>${newOrBack.toLocaleString("en-US")}</b> household${newOrBack === 1 ? "" : "s"} gave in ${esc(P.B)} but not in ${esc(P.A)}${comebackKnown ? `; <b>${comebackKnown.toLocaleString("en-US")}</b> of them gave in 2024, so they're returning donors` : ""}. Splitting the rest into brand-new donors and donors returning after a longer gap needs each household's first gift date, which isn't in the Hub's data yet.</p>`;
+  // Named lists, 1851 and above
+  const showB = RT.cmp === "2025";
+  const item = o => `<li><span>${o.x.sid ? `<a href="${esc(RECORD_URL(o.x.sid))}" target="_blank" rel="noopener">${esc(o.x.name)}</a>` : esc(o.x.name)}${o.x.dec ? ` <span class="tag off">deceased</span>` : ""}
+      <small>${esc(o.x.fr)}</small></span><span class="rt-amt">${short(o.a)} → ${o.b ? short(o.b) : "$0"}${showB && o.x.m26 + o.x.proj > 0 ? `<small>2026: ${[o.x.m26 ? short(o.x.m26) + " in" : "", o.x.proj ? short(o.x.proj) + " projected" : ""].filter(Boolean).join(" + ")}</small>` : ""}</span></li>`;
+  const block = (title, list, cls) => `<div class="rt-col ${cls}"><h4>${title} <small>${list.length}</small></h4>${list.length
+    ? `<ul>${list.sort((p, q) => Math.abs(q.b - q.a) - Math.abs(p.b - p.a)).map(item).join("")}</ul>` : `<p class="rt-none">None</p>`}</div>`;
+  $("rt-named").innerHTML = `<div class="card-head"><div><h2>Named households, 1851 and above</h2>
+      <div class="sub">${esc(P.A)} donors at $10K+ who lapsed, decreased or increased in ${esc(P.B)}. Names open the record in Raiser's Edge.${showB ? " The grey line shows what they've given or have projected so far in 2026." : ""}</div></div></div>
+    ${RT_LEVELS.slice(0, RT_NAMED).map((l, i) => `<div class="rt-lv"><h3>${esc(l.label)} <span>${esc(l.range)}</span></h3>
+      <div class="rt-cols">${block("Lapsed", named[i].lap, "lap")}${block("Decreased", named[i].dec, "dec")}${block("Increased", named[i].up, "inc")}</div></div>`).join("")}`;
+}
+
+document.querySelectorAll("[data-rtc]").forEach(b => b.addEventListener("click", () => { RT.cmp = b.dataset.rtc; rtRender(); }));
+document.querySelectorAll("[data-rtm]").forEach(b => b.addEventListener("click", () => { RT.mode = b.dataset.rtm; rtRender(); }));
+$("rt-fr").addEventListener("change", e => { RT.fr = e.target.value; rtRender(); });
 
 /* ===== Where the user is looking =====
    Inside Raiser's Edge the hub grows to its full height and RE does the scrolling,
