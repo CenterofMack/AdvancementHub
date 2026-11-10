@@ -301,6 +301,9 @@
   .pp-tabs button small{display:block;font-family:var(--sans);font-size:11.5px;font-weight:500;color:#8A94A6}
   .pp-tabs button:hover{color:var(--navy-deep)}
   .pp-tabs button[aria-selected="true"]{color:var(--navy-deep);border-bottom-color:var(--gold)}
+  .pp-intro{margin:-6px 0 16px;color:var(--ink);font-size:13.5px;max-width:95ch}
+  .pp-intro b{color:var(--navy-deep)}
+  .pp-intro .warn{display:block;margin-top:6px;color:#7A5C14}
   .tag.dn{color:#1F4D33;background:#EAF5EE} .tag.pp{color:#7A5C14;background:#FBF0D8}
   /* County map state picker and the address review list */
   .td-coh{display:flex;align-items:center;gap:8px}
@@ -626,10 +629,11 @@
     <div class="pfv" data-pfv="ProjPipe" hidden>
       <!-- Projection Pipeline: who's on the projections (Donors), who should be (Pipeline), and both on one map (Combined) -->
       <div class="pp-tabs" role="tablist" aria-label="Projection Pipeline view">
-        <button type="button" role="tab" data-ppv="Donors" aria-selected="true">Donors <small>on the projections</small></button>
-        <button type="button" role="tab" data-ppv="Pipeline" aria-selected="false">Pipeline <small>not on the projections</small></button>
+        <button type="button" role="tab" data-ppv="Donors" aria-selected="true">Donors <small>projected gifts</small></button>
+        <button type="button" role="tab" data-ppv="Pipeline" aria-selected="false">Pipeline <small>no projected gifts</small></button>
         <button type="button" role="tab" data-ppv="Combined" aria-selected="false">Combined <small>both on one map</small></button>
       </div>
+      <p class="pp-intro" id="pp-intro"></p>
       <div class="ppv" data-ppv="Donors">
         <div class="card" id="td-pyr"></div>
         <div class="card conc" id="conc"></div>
@@ -1252,14 +1256,15 @@ function tdYearOptions() {
     ...KEYS.years.filter(k => k !== KEYS.curYear).map(k => ({ key: k, label: k.replace("Money In ", "") }))];
 }
 function tdYearSwitch(id) {
-  const opts = tdYearOptions(); if (!PF.tdKey || !opts.some(o => o.key === PF.tdKey)) PF.tdKey = opts[0] && opts[0].key;
+  // Default: this year as projected (money in + open projections), so Donors = households with projected gifts
+  const opts = tdYearOptions(); if (!PF.tdKey || !opts.some(o => o.key === PF.tdKey)) PF.tdKey = (opts.find(o => o.key === KEYS.total) || opts[0] || {}).key;
   return `<div class="segbtn" role="group" aria-label="Year">` + opts.map(o =>
     `<button type="button" data-tdk="${esc(o.key)}" aria-pressed="${o.key === PF.tdKey}">${esc(o.key === TD_AVG ? "3-yr avg" : o.label.replace(" if it ends as projected", " projected"))}</button>`).join("") + `</div>`;
 }
 function tdWireYear(box) {
   box.querySelectorAll("[data-tdk]").forEach(b => b.onclick = () => { PF.tdKey = b.dataset.tdk; renderTopDonors(); });
 }
-function renderTopDonors() { renderPyramid(); renderConcentration(); renderDonorMap(false); }
+function renderTopDonors() { renderPyramid(); renderConcentration(); renderDonorMap(false); ppIntro(); }
 
 function renderPyramid() {
   const box = $("td-pyr"); if (!box) return;
@@ -2329,7 +2334,21 @@ function pfShowView() {
   });
 }
 document.querySelectorAll("button[data-pfv]").forEach(b => b.addEventListener("click", () => { PF.view = b.dataset.pfv; pfShowView(); }));
+// One or two sentences under the tabs saying who's in the view
+function ppIntro() {
+  const el = $("pp-intro"); if (!el) return;
+  const cy = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "this year";
+  const yrLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
+  const txt = {
+    Donors: `<b>Projected gifts:</b> households with money in or projected for ${esc(cy)}, the ones on the projections.` +
+      (PF.tdKey && PF.tdKey !== KEYS.total ? `<span class="warn">Now showing ${esc(yrLbl)} instead, so this includes households with nothing projected for ${esc(cy)}; some of them are also in the Pipeline. Pick “${esc(cy)} projected” to go back.</span>` : ` The year buttons below let you look back at earlier years.`),
+    Pipeline: `<b>No projected gifts:</b> assigned households with nothing given or projected for ${esc(cy)}, the ones to get onto the projections. <b>Prospects</b> haven't given in the years the Hub has; <b>lapsed donors</b> gave in an earlier year but not yet in ${esc(cy)}.`,
+    Combined: `<b>Both on one map:</b> households with projected gifts (Donors) and with no projected gifts (Pipeline), each tagged. No household is in both.`
+  };
+  el.innerHTML = txt[PF.ppView] || "";
+}
 function ppShowView() {
+  ppIntro();
   document.querySelectorAll("[data-ppv]").forEach(el => {
     if (el.tagName === "BUTTON") el.setAttribute("aria-selected", el.dataset.ppv === PF.ppView);
     else el.hidden = el.dataset.ppv !== PF.ppView;
