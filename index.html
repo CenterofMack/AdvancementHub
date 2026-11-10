@@ -1341,8 +1341,10 @@ function rtTrend() {
   const pctF = v => Math.round(v * 100) + "%";
   let series;
   if (RT.region === "bet") {
-    const se = rtMonthly(rtPool("mi").filter(rtIsSE), 2026), rest = rtMonthly(rtPool("mi").filter(x => !rtIsSE(x)), 2026);
-    series = k => [{ name: "SE Michigan, 2026", color: "#C0504D", width: 3, values: se[k] }, { name: "Rest of Michigan, 2026", color: "var(--navy-deep)", width: 3, values: rest[k] }];
+    // The bet follows the year switch: 2025 retention runs Jan–Dec; 2026 runs through the latest month with gifts
+    const yr = RT.cmp === "2025" ? 2025 : 2026;
+    const se = rtMonthly(rtPool("mi").filter(rtIsSE), yr), rest = rtMonthly(rtPool("mi").filter(x => !rtIsSE(x)), yr);
+    series = k => [{ name: `SE Michigan, ${yr}`, color: "#C0504D", width: 3, values: se[k] }, { name: `Rest of Michigan, ${yr}`, color: "var(--navy-deep)", width: 3, values: rest[k] }];
   } else {
     const pool = rtPool(), last = rtMonthly(pool, 2025), cur = rtMonthly(pool, 2026);
     series = k => [{ name: "Last year (2025)", color: "#D9A23A", width: 2, values: last[k] }, { name: "This year (2026)", color: "var(--navy-deep)", width: 3, values: cur[k] }];
