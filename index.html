@@ -592,7 +592,7 @@
     <div class="segbtn pf-views" role="group" aria-label="Report">
       <button type="button" data-pfv="Portfolios" aria-pressed="true">Portfolios</button>
       <button type="button" data-pfv="Changes" aria-pressed="false">Donor Changes</button>
-      <button type="button" data-pfv="TopDonors" aria-pressed="false">Top Donors</button>
+      <button type="button" data-pfv="TopDonors" aria-pressed="false">Projection Donors</button>
       <button type="button" data-pfv="Pipeline" aria-pressed="false">Pipeline</button>
     </div>
     <div class="pfv" data-pfv="Portfolios">
@@ -1191,7 +1191,7 @@ function concFor(key, pool) {
   const halfFrom = cum.findIndex(c => c >= total / 2) + 1;   // 0 means even every listed household together is under half
   return { total, count: ranked.length, shareTop, halfFrom };
 }
-/* ===== Top Donors: donor pyramid and donor map ===== */
+/* ===== Projection Donors (formerly Top Donors): donor pyramid and donor map ===== */
 const TD_TIERS = [
   { label: "Over $1.0M", min: 1e6 }, { label: "$100K – $999K", min: 1e5 }, { label: "$10K – $99K", min: 1e4 },
   { label: "$1K – $9K", min: 1e3 }, { label: "$1 – $999", min: 0 }];
@@ -1366,6 +1366,7 @@ function renderPipeline() {
   box.innerHTML = `<div class="card-head"><div><h2>Pipeline: not on the ${esc(cy)} projections${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
       <div class="sub">Assigned households to get back into the projections: nothing given or projected for ${esc(cy)}, active and inactive, by prospect classification. Click a name for the quick look.</div></div>
       <div class="card-tools"><div class="segbtn" role="group" aria-label="Who">${modeBtn("both", "Both")}${modeBtn("never", "Prospects")}${modeBtn("lapsed", "Lapsed donors")}</div></div></div>
+    <div class="mp-flag">This pipeline is based on current procedures, which are still being developed. The full process, and the reporting it needs, is under further review.</div>
     <div class="pf-stats">
       <div class="stat hl"><div class="k">${esc(who)}${PF.plClass ? " · " + esc(PF.plClass) : ""}</div><div class="v">${tot.n.toLocaleString("en-US")}</div><div class="d">${PF.plMode === "both" ? tot.lapsed.toLocaleString("en-US") + " lapsed · " + (tot.n - tot.lapsed).toLocaleString("en-US") + " prospects · " : ""}${tot.inactive.toLocaleString("en-US")} inactive</div></div>
       <div class="stat"><div class="k">Action in the past 12 months</div><div class="v">${tot.recent.toLocaleString("en-US")}</div><div class="d">${tot.n ? Math.round(tot.recent / tot.n * 100) : 0}% of these households</div></div>
@@ -1493,7 +1494,7 @@ function renderConcentration() {
   if (tdAvgKeys().length >= 2) rows.push({ label: tdAvgLabel(), key: TD_AVG });
   const pool = ROWS.filter(r => String(r.Name ?? "").trim() !== "" && (!PF.fr || r.Solicitor === PF.fr));
   const data = rows.map(r => ({ ...r, c: concFor(r.key, pool) })).filter(r => r.c);
-  if (!data.length) { box.innerHTML = `<h2>Top Donors${PF.fr ? " — " + esc(PF.fr) : ""}</h2><p class="sub">No giving to show for this portfolio.</p>`; return; }
+  if (!data.length) { box.innerHTML = `<h2>Where the money comes from${PF.fr ? " — " + esc(PF.fr) : ""}</h2><p class="sub">No giving to show for this portfolio.</p>`; return; }
   const lead = data[0].c, n = 25;
   const bar = v => `<span class="share">${pct(v)}<i style="width:${Math.round(v * 60)}px"></i></span>`;
   box.innerHTML = `<div class="card-head"><div><h2>Where the money comes from${PF.fr ? " — " + esc(PF.fr) : ""}</h2></div><div class="card-tools">${tdProjToggle()}</div></div>
