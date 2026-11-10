@@ -306,6 +306,14 @@
   .pp-intro .warn{display:block;margin-top:6px;color:#7A5C14}
   .tag.dn{color:#1F4D33;background:#EAF5EE} .tag.pp{color:#7A5C14;background:#FBF0D8}
   /* Donor Retention */
+  .rt-bet{border-top:5px solid var(--gold)}
+  .rt-vs{display:flex;align-items:stretch;gap:16px;flex-wrap:wrap}
+  .rt-side{flex:1 1 240px;border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:#F7F9FC}
+  .rt-side.win{background:#FFF8E1;border-color:#E8C76A}
+  .rt-side .k{font-weight:600;color:var(--navy-deep)} .rt-side .v{font-family:var(--serif);font-size:40px;font-weight:700;color:var(--navy-deep);line-height:1.1}
+  .rt-side .d{font-size:12.5px;color:var(--muted)}
+  .rt-vs-x{align-self:center;font-family:var(--serif);font-size:22px;color:var(--muted)}
+  .rt-verdict{font-size:15px;margin:12px 0 0}
   .rt-switch{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
   .rt-switch .segbtn button small{display:block;font-size:11px;font-weight:500;opacity:.8}
   .rt-why{background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;margin:0 0 18px}
@@ -764,16 +772,24 @@
   <section class="panel" id="panel-Retention" hidden>
     <div class="head">
       <div><h1>Donor Retention</h1><div class="asof">By household, every giving level · live from the Projections workbook</div></div>
-      <div class="actions"><label class="bs-through" for="rt-fr">Fundraiser <select id="rt-fr"><option value="">All fundraisers</option></select></label></div>
+      <div class="actions">
+        <label class="bs-through" for="rt-rg">Where <select id="rt-rg">
+          <option value="all">Overall</option>
+          <option value="mi">Michigan</option>
+          <option value="us">Outside Michigan</option>
+          <option value="bet">SE Michigan vs. the rest of Michigan</option>
+        </select></label>
+        <label class="bs-through" for="rt-fr">Fundraiser <select id="rt-fr"><option value="">All fundraisers</option></select></label>
+      </div>
     </div>
     <div id="rt-msg"></div>
     <div id="rt-body" hidden>
       <div class="rt-switch">
         <div class="segbtn" role="group" aria-label="Which year">
-          <button type="button" data-rtc="2025" aria-pressed="true">2025 retention <small>2024 → 2025</small></button>
-          <button type="button" data-rtc="2026" aria-pressed="false">2026 retention <small>2025 → 2026</small></button>
+          <button type="button" data-rtc="2026" aria-pressed="true">2026 retention <small>2025 → 2026</small></button>
+          <button type="button" data-rtc="2025" aria-pressed="false">2025 retention <small>2024 → 2025</small></button>
         </div>
-        <div class="segbtn" role="group" aria-label="How to count 2026" id="rt-modes" hidden>
+        <div class="segbtn" role="group" aria-label="How to count 2026" id="rt-modes">
           <button type="button" data-rtm="proj" aria-pressed="true">As projected</button>
           <button type="button" data-rtm="sofar" aria-pressed="false">Money in so far</button>
           <button type="button" data-rtm="ytd" aria-pressed="false">Same point last year</button>
@@ -796,7 +812,9 @@
           <p>The differences are small: the top levels match the report, and the totals are within about 1%.</p>
         </div>
       </details>
+      <div class="card rt-bet" id="rt-bet" hidden></div>
       <div class="card" id="rt-table"></div>
+      <div class="card" id="rt-trend"></div>
       <div class="card" id="rt-counts"></div>
       <div class="card" id="rt-named"></div>
     </div>
@@ -1139,7 +1157,17 @@ function mpLineChartYears(cats, series, fmt, label) {
    Retention is counted by household (spouses together, soft credits followed), using the giving
    levels from the annual retention report. It loads the first time the tab is opened. */
 const RETENTION_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/dedd4f9d14234c1a990d815cb7de46e0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=l2oc-_PQU86JXmbwWaflVf4s9IOKLUttXtwJHIZwwXA";
-const RT = { rows: [], loaded: false, loading: false, cmp: "2025", mode: "proj", fr: "", openWhy: false };
+const RT = { rows: [], monthly: {}, lastMonth26: 12, loaded: false, loading: false, cmp: "2026", mode: "proj", fr: "", region: "all" };
+// Southeast Michigan: the seven SEMCOG counties
+const RT_SE = ["Livingston", "Macomb", "Monroe", "Oakland", "St. Clair", "Washtenaw", "Wayne"];
+let RT_SE_KEYS = null;   // filled the first time it's needed (countyKey is defined further down the page)
+const rtIsMI = x => stateAbbr(x.state) === "MI";
+const rtIsSE = x => { if (!RT_SE_KEYS) RT_SE_KEYS = new Set(RT_SE.map(c => countyKey(c))); return rtIsMI(x) && RT_SE_KEYS.has(countyKey(x.county)); };
+function rtPool(region) {
+  const rg = region || RT.region;
+  return RT.rows.filter(x => (!RT.fr || x.fr === RT.fr) &&
+    (rg === "all" ? true : rg === "us" ? !!stateAbbr(x.state) && !rtIsMI(x) : rtIsMI(x)));
+}
 // Giving levels, largest first (the same ones as the annual retention report)
 const RT_LEVELS = [
   { label: "Lifetime", range: "$1M+", min: 1e6 },
@@ -1173,15 +1201,26 @@ function rtLoad() {
       if (!r || !Array.isArray(r.columns) || !Array.isArray(r.rows)) { rtMessage("Donor Retention didn't load", "The data service sent back something unexpected.", true); return; }
       const at = name => r.columns.indexOf(name);
       const c = { id: at("ID"), name: at("Name"), fr: at("Solicitor"), m24: at("Money In 2024"), m25: at("Money In 2025"), m26: at("Money In 2026"),
-        proj: at("Total Projected 2026"), y25: at("YTD 2025"), y26: at("YTD 2026"), thru: at("YTD Through"), dec: at("Deceased"), cls: at("Prospect Classification"), sid: at("System Record ID") };
+        proj: at("Total Projected 2026"), y25: at("YTD 2025"), y26: at("YTD 2026"), thru: at("YTD Through"), dec: at("Deceased"), cls: at("Prospect Classification"), sid: at("System Record ID"),
+        county: at("Preferred County"), state: at("Preferred State") };
       const g = (row, i) => i < 0 ? "" : row[i];
       RT.rows = r.rows.map(row => ({
         id: String(g(row, c.id)), name: String(g(row, c.name) || ""), fr: String(g(row, c.fr) || "").trim() || "No Assigned Fundraiser",
         m24: num(g(row, c.m24)), m25: num(g(row, c.m25)), m26: num(g(row, c.m26)), proj: num(g(row, c.proj)),
         y25: num(g(row, c.y25)), y26: num(g(row, c.y26)), thru: g(row, c.thru), dec: /^(yes|y|true|1)$/i.test(String(g(row, c.dec)).trim()),
-        sid: String(g(row, c.sid) || "").trim()
+        sid: String(g(row, c.sid) || "").trim(), county: String(g(row, c.county) || ""), state: String(g(row, c.state) || "")
       // General Anonymous isn't a real household, so it's left out (the same as Board Slides)
       })).filter(x => x.name && !/general anonymous/i.test(x.name));
+      // Giving by household and month (version 2 of the script), for the month-by-month charts
+      RT.monthly = {}; RT.lastMonth26 = 0;
+      (Array.isArray(r.gifts) ? r.gifts : []).forEach(gf => {
+        const id = String(gf[0]), y = +gf[1], m = +gf[2], amt = num(gf[3]);
+        if (!(m >= 1 && m <= 12) || !amt) return;
+        const h = RT.monthly[id] = RT.monthly[id] || {};
+        (h[y] = h[y] || Array(12).fill(0))[m - 1] += amt;
+        if (y === 2026 && amt > 0) RT.lastMonth26 = Math.max(RT.lastMonth26, m);
+      });
+      RT.hasMonthly = Array.isArray(r.gifts);
       RT.loaded = true;
       const funds = [...new Set(RT.rows.map(x => x.fr))].sort((a, b) => (a === "No Assigned Fundraiser") - (b === "No Assigned Fundraiser") || a.localeCompare(b));
       $("rt-fr").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
@@ -1206,7 +1245,8 @@ function rtRender() {
   document.querySelectorAll("[data-rtc]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rtc === RT.cmp));
   document.querySelectorAll("[data-rtm]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rtm === RT.mode));
   $("rt-modes").hidden = RT.cmp !== "2026";
-  const P = rtPair(), pool = RT.rows.filter(x => !RT.fr || x.fr === RT.fr);
+  const P = rtPair(), pool = rtPool(RT.region === "bet" ? "mi" : RT.region);
+  const where = { all: "", mi: " · Michigan", us: " · outside Michigan", bet: " · Michigan" }[RT.region];
   const n = RT_LEVELS.length, Z = () => Array(n).fill(0);
   const t = { up: Z(), rep: Z(), dec: Z(), lap: Z(), tot: Z(), cA: Z(), cB: Z() };
   const named = RT_LEVELS.slice(0, RT_NAMED).map(() => ({ lap: [], dec: [], up: [] }));
@@ -1232,7 +1272,7 @@ function rtRender() {
     <td>${I(t.tot[i])}</td><td>${I(t.up[i])}</td><td>${I(t.rep[i])}</td><td>${i === n - 1 ? "<span class='rt-na'>n/a</span>" : I(t.dec[i])}</td><td>${I(t.lap[i])}</td>
     <td class="hl">${pc(t.up[i] + t.rep[i], t.tot[i])}</td><td class="hl"><b>${pc(t.tot[i] - t.lap[i], t.tot[i])}</b></td></tr>`).join("");
   const T = { tot: sum(t.tot), up: sum(t.up), rep: sum(t.rep), dec: sum(t.dec), lap: sum(t.lap) };
-  $("rt-table").innerHTML = `<div class="card-head"><div><h2>${esc(P.title)}${RT.fr ? " — " + esc(RT.fr) : ""}</h2>
+  $("rt-table").innerHTML = `<div class="card-head"><div><h2>${esc(P.title)}${RT.fr ? " — " + esc(RT.fr) : ""}${esc(where)}</h2>
       <div class="sub">Each ${esc(P.A)} donor household, by its ${esc(P.A)} giving level, and what it did in ${esc(P.B)}. Upgrade or decrease means moving to a higher or lower level.</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Overall retention</div><div class="v">${pc(T.tot - T.lap, T.tot)}</div></div>
@@ -1246,6 +1286,7 @@ function rtRender() {
       <tbody>${rows}</tbody>
       <tfoot><tr><td class="txt">Total donor retention</td><td>${I(T.tot)}</td><td>${I(T.up)}</td><td>${I(T.rep)}</td><td>${I(T.dec)}</td><td>${I(T.lap)}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td></tr></tfoot></table></div>
     <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level.</p>`;
+  rtTrend(); rtBet(P);
   // Donors by level, both years
   $("rt-counts").innerHTML = `<div class="card-head"><div><h2>Donors by level, ${esc(P.A)} and ${esc(P.B)}</h2>
       <div class="sub">Every donor household at each level in each year, including new and returning donors.</div></div></div>
@@ -1268,6 +1309,65 @@ function rtRender() {
 document.querySelectorAll("[data-rtc]").forEach(b => b.addEventListener("click", () => { RT.cmp = b.dataset.rtc; rtRender(); }));
 document.querySelectorAll("[data-rtm]").forEach(b => b.addEventListener("click", () => { RT.mode = b.dataset.rtm; rtRender(); }));
 $("rt-fr").addEventListener("change", e => { RT.fr = e.target.value; rtRender(); });
+$("rt-rg").addEventListener("change", e => { RT.region = e.target.value; rtRender(); });
+
+// Overall retention for a group of households under the current comparison
+function rtSummary(P, pool) {
+  let tot = 0, lap = 0, ur = 0;
+  pool.forEach(x => { const la = rtLevel(P.a(x)), lb = rtLevel(P.b(x)); if (la < 0) return; tot++; if (lb < 0) lap++; else if (lb <= la) ur++; });
+  return { tot, lap, ur, ret: tot ? (tot - lap) / tot : 0, urRet: tot ? ur / tot : 0 };
+}
+// Month-by-month: of last year's donors, the share who have given again by each month (donor retention),
+// and this year's giving from them as a share of what they gave last year (revenue retention)
+function rtMonthly(pool, y) {
+  const prev = y === 2026 ? (x => x.m25) : (x => x.m24);
+  const base = pool.filter(x => prev(x) > 0), donors = Array(12).fill(0), rev = Array(12).fill(0);
+  let prevRev = 0;
+  base.forEach(x => {
+    prevRev += prev(x);
+    const m = (RT.monthly[x.id] || {})[y]; if (!m) return;
+    const first = m.findIndex(v => v > 0); if (first >= 0) donors[first]++;
+    m.forEach((v, i) => rev[i] += v);
+  });
+  const stop = y === 2026 ? (RT.lastMonth26 || 12) : 12;
+  let cd = 0, cr = 0;
+  return { n: base.length,
+    donors: donors.map((v, i) => { cd += v; return i < stop && base.length ? cd / base.length : null; }),
+    revenue: rev.map((v, i) => { cr += v; return i < stop && prevRev ? cr / prevRev : null; }) };
+}
+function rtTrend() {
+  const box = $("rt-trend");
+  if (!RT.hasMonthly) { box.innerHTML = `<h2>Retention by month</h2><p class="bs-note">The month-by-month charts need version 2 of the Hub Retention Export script in the Projections workbook.</p>`; return; }
+  const pctF = v => Math.round(v * 100) + "%";
+  let series;
+  if (RT.region === "bet") {
+    const se = rtMonthly(rtPool("mi").filter(rtIsSE), 2026), rest = rtMonthly(rtPool("mi").filter(x => !rtIsSE(x)), 2026);
+    series = k => [{ name: "SE Michigan, 2026", color: "#C0504D", width: 3, values: se[k] }, { name: "Rest of Michigan, 2026", color: "var(--navy-deep)", width: 3, values: rest[k] }];
+  } else {
+    const pool = rtPool(), last = rtMonthly(pool, 2025), cur = rtMonthly(pool, 2026);
+    series = k => [{ name: "Last year (2025)", color: "#D9A23A", width: 2, values: last[k] }, { name: "This year (2026)", color: "var(--navy-deep)", width: 3, values: cur[k] }];
+  }
+  const d = series("donors"), r = series("revenue");
+  box.innerHTML = `<div class="card-head"><div><h2>Retention by month${RT.fr ? " — " + esc(RT.fr) : ""}${esc({ all: "", mi: " · Michigan", us: " · outside Michigan", bet: "" }[RT.region])}</h2>
+      <div class="sub">Running totals through each month. Gifts only; projections aren't counted here.</div></div></div>
+    <div class="mp-grid">
+      <div class="mp-chart chart"><h4>Year-over-year donor retention</h4><p class="sub" style="margin:0 0 6px">Share of last year's donor households that have given again</p>${mpLineChart(d, pctF, "Donor retention by month")}</div>
+      <div class="mp-chart chart"><h4>Year-over-year revenue retention</h4><p class="sub" style="margin:0 0 6px">This year's giving from last year's donors, as a share of what they gave last year</p>${mpLineChart(r, pctF, "Revenue retention by month")}</div>
+    </div>${mpLegend(d)}
+    <p class="bs-note">Like the charts in Raiser's Edge, but by household and using the Projections workbook's giving. There's no “two years ago” line yet, since the Hub's giving starts in 2024; it will appear in 2027.</p>`;
+}
+// Just for fun: the long-running bet, SE Michigan vs. the rest of the state
+function rtBet(P) {
+  const box = $("rt-bet"); box.hidden = RT.region !== "bet"; if (box.hidden) return;
+  const mi = rtPool("mi"), se = rtSummary(P, mi.filter(rtIsSE)), rest = rtSummary(P, mi.filter(x => !rtIsSE(x)));
+  const diff = Math.round((se.ret - rest.ret) * 1000) / 10;
+  const side = (name, o, win) => `<div class="rt-side${win ? " win" : ""}"><div class="k">${win ? "🏆 " : ""}${esc(name)}</div><div class="v">${Math.round(o.ret * 100)}%</div>
+    <div class="d">retention · ${Math.round(o.urRet * 100)}% repeat or upgrade<br>${o.tot.toLocaleString("en-US")} donors · ${o.lap.toLocaleString("en-US")} lapsed</div></div>`;
+  box.innerHTML = `<div class="card-head"><div><h2>The Great Michigan Retention Bet</h2>
+      <div class="sub">${esc(P.title)}. Southeast Michigan (${esc(RT_SE.join(", "))} counties) against the rest of the state.</div></div></div>
+    <div class="rt-vs">${side("SE Michigan", se, se.ret > rest.ret)}<div class="rt-vs-x">vs.</div>${side("Rest of Michigan", rest, rest.ret > se.ret)}</div>
+    <p class="rt-verdict">${diff === 0 ? "Dead even. Nobody pays up." : `${diff > 0 ? "SE Michigan" : "The rest of Michigan"} leads by <b>${Math.abs(diff)} points</b>.`}</p>`;
+}
 
 /* ===== Where the user is looking =====
    Inside Raiser's Edge the hub grows to its full height and RE does the scrolling,
