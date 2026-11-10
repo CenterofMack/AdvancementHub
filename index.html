@@ -1321,7 +1321,11 @@ const plQualifies = r => {
   return PF.plMode === "both" ? true : PF.plMode === "lapsed" ? lapsed : !lapsed;
 };
 const plClass = r => String(r["Prospect Classification"] ?? "").trim() || "No classification";
-const plOpp = r => num(r.Speculative) + num(r["Qualified Active"]);
+// Speculative, Qualified Active and Qualified Inactive, kept separate (RE's "Opportunities" are proposals, a different thing)
+const PL_LEVELS = [{ k: "Speculative", t: "Speculative" }, { k: "Qualified Active", t: "Qualified Active" }, { k: "Qualified Inactive", t: "Qualified Inactive" }];
+const plSpqTotal = r => PL_LEVELS.reduce((t, l) => t + num(r[l.k]), 0);
+const plClassesFor = rows => { const n = {}; rows.forEach(r => n[plClass(r)] = (n[plClass(r)] || 0) + 1);
+  return Object.keys(n).sort((a, b) => (a === "No classification") - (b === "No classification") || n[b] - n[a] || a.localeCompare(b)); };
 const plYears = () => { const y = KEYS.years.map(k => +k.replace("Money In ", "")).sort(); return y.length ? (y.length > 1 ? y[0] + "–" + y[y.length - 1] : String(y[0])) : "recent years"; };
 function plPool() { return tdPool().filter(plQualifies); }
 function renderPipeline() {
@@ -1342,33 +1346,34 @@ function renderPipeline() {
   const yearAgo = Date.now() - 365 * 86400000;
   const recent = r => { const d = toDate(r["Last Action Date"]); return d && d.getTime() >= yearAgo; };
   const isActiveRow = r => String(r.Active ?? "").trim().toLowerCase() !== "no";
-  const sum = rows => ({ n: rows.length, lapsed: rows.filter(r => plLastGift(r)).length, opp: rows.reduce((t, r) => t + plOpp(r), 0),
+  const sum = rows => ({ n: rows.length, lapsed: rows.filter(r => plLastGift(r)).length,
+    lv: Object.fromEntries(PL_LEVELS.map(l => [l.k, rows.reduce((t, r) => t + num(r[l.k]), 0)])),
     recent: rows.filter(recent).length, inactive: rows.filter(r => !isActiveRow(r)).length });
   const tot = sum(PF.plClass ? byClass[PF.plClass] : all);
   const POOL = [];
   const groupHtml = c => {
     const lg = r => (plLastGift(r) || { amt: 0 }).amt;
-    const rows = [...byClass[c]].sort((a, b) => plOpp(b) - plOpp(a) || lg(b) - lg(a) || ((toDate(b["Last Action Date"]) || 0) - (toDate(a["Last Action Date"]) || 0)) || String(a.Name).localeCompare(String(b.Name)));
+    const rows = [...byClass[c]].sort((a, b) => num(b["Qualified Active"]) - num(a["Qualified Active"]) || num(b.Speculative) - num(a.Speculative) || num(b["Qualified Inactive"]) - num(a["Qualified Inactive"]) || lg(b) - lg(a) || ((toDate(b["Last Action Date"]) || 0) - (toDate(a["Last Action Date"]) || 0)) || String(a.Name).localeCompare(String(b.Name)));
     const t = sum(rows);
-    return `<details${PF.plClass || shown.length === 1 ? " open" : ""}><summary><b>${esc(c)}</b><span>${t.n.toLocaleString("en-US")} household${t.n === 1 ? "" : "s"}${t.opp ? " · " + esc(ovMoney(t.opp)) + " in opportunities" : ""}</span></summary>
-      <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th class="txt">Prospect status</th><th>Last action</th><th>Last gave</th><th>Opportunities</th></tr></thead><tbody>
+    return `<details${PF.plClass || shown.length === 1 ? " open" : ""}><summary><b>${esc(c)}</b><span>${t.n.toLocaleString("en-US")} household${t.n === 1 ? "" : "s"}${PL_LEVELS.filter(l => t.lv[l.k]).map(l => " · " + esc(l.t) + " " + esc(ovMoney(t.lv[l.k]))).join("")}</span></summary>
+      <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th class="txt">Prospect status</th><th>Last action</th><th>Last gave</th>${PL_LEVELS.map(l => `<th>${esc(l.t)}</th>`).join("")}</tr></thead><tbody>
       ${rows.map(r => { POOL.push(r);
         return `<tr><td class="txt name"><button type="button" data-pli="${POOL.length - 1}">${esc(r.Name)}</button>${isActiveRow(r) ? "" : ` <span class="tag off">inactive</span>`}</td>
           <td class="txt">${esc(r.Solicitor)}</td><td class="txt">${esc(r["Prospect Status"] || "–")}</td>
-          <td>${esc(fmtDate(r["Last Action Date"]) || "–")}</td><td class="${plLastGift(r) ? "" : "dim"}">${plLastGift(r) ? esc(plLastGift(r).year + " · " + short(plLastGift(r).amt)) : "–"}</td><td class="${plOpp(r) ? "" : "dim"}">${plOpp(r) ? short(plOpp(r)) : "–"}</td></tr>`; }).join("")}
+          <td>${esc(fmtDate(r["Last Action Date"]) || "–")}</td><td class="${plLastGift(r) ? "" : "dim"}">${plLastGift(r) ? esc(plLastGift(r).year + " · " + short(plLastGift(r).amt)) : "–"}</td>${PL_LEVELS.map(l => `<td class="${num(r[l.k]) ? "" : "dim"}">${num(r[l.k]) ? short(num(r[l.k])) : "–"}</td>`).join("")}</tr>`; }).join("")}
       </tbody></table></div></details>`;
   };
   box.innerHTML = `<div class="card-head"><div><h2>Pipeline: not on the ${esc(cy)} projections${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
       <div class="sub">Assigned households to get back into the projections: nothing given or projected for ${esc(cy)}, active and inactive, by prospect classification. Click a name for the quick look.</div></div>
-      <div class="card-tools"><div class="segbtn" role="group" aria-label="Who">${modeBtn("never", "Prospects")}${modeBtn("lapsed", "Lapsed donors")}${modeBtn("both", "Both")}</div></div></div>
+      <div class="card-tools"><div class="segbtn" role="group" aria-label="Who">${modeBtn("both", "Both")}${modeBtn("never", "Prospects")}${modeBtn("lapsed", "Lapsed donors")}</div></div></div>
     <div class="pf-stats">
       <div class="stat hl"><div class="k">${esc(who)}${PF.plClass ? " · " + esc(PF.plClass) : ""}</div><div class="v">${tot.n.toLocaleString("en-US")}</div><div class="d">${PF.plMode === "both" ? tot.lapsed.toLocaleString("en-US") + " lapsed · " + (tot.n - tot.lapsed).toLocaleString("en-US") + " prospects · " : ""}${tot.inactive.toLocaleString("en-US")} inactive</div></div>
       <div class="stat"><div class="k">Action in the past 12 months</div><div class="v">${tot.recent.toLocaleString("en-US")}</div><div class="d">${tot.n ? Math.round(tot.recent / tot.n * 100) : 0}% of these households</div></div>
-      <div class="stat"><div class="k">Open opportunities</div><div class="v">${short(tot.opp)}</div><div class="d">speculative + qualified active</div></div>
+      ${PL_LEVELS.map(l => `<div class="stat"><div class="k">${esc(l.t)}</div><div class="v">${short(tot.lv[l.k])}</div></div>`).join("")}
     </div>
-    ${all.length ? `<div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">Prospect classification</th><th>Households</th><th>Action in 12 months</th><th>Opportunities</th><th>Inactive</th></tr></thead><tbody>
+    ${all.length ? `<div class="bs-tablewrap" style="max-width:980px"><table class="bs"><thead><tr><th class="txt">Prospect classification</th><th>Households</th><th>Action in 12 months</th>${PL_LEVELS.map(l => `<th>${esc(l.t)}</th>`).join("")}<th>Inactive</th></tr></thead><tbody>
       ${classes.map(c => { const t = sum(byClass[c]);
-        return `<tr class="pick${c === PF.plClass ? " sel" : ""}" data-plc="${esc(c)}"><td class="txt">${esc(c)}</td><td>${t.n.toLocaleString("en-US")}</td><td>${t.recent.toLocaleString("en-US")}</td><td>${t.opp ? short(t.opp) : "–"}</td><td>${t.inactive ? t.inactive.toLocaleString("en-US") : "–"}</td></tr>`; }).join("")}
+        return `<tr class="pick${c === PF.plClass ? " sel" : ""}" data-plc="${esc(c)}"><td class="txt">${esc(c)}</td><td>${t.n.toLocaleString("en-US")}</td><td>${t.recent.toLocaleString("en-US")}</td>${PL_LEVELS.map(l => `<td>${t.lv[l.k] ? short(t.lv[l.k]) : "–"}</td>`).join("")}<td>${t.inactive ? t.inactive.toLocaleString("en-US") : "–"}</td></tr>`; }).join("")}
     </tbody></table></div>
     <p class="bs-note">Click a classification to show just that one${PF.plClass ? ` (click <b>${esc(PF.plClass)}</b> again to show all)` : ""}. The map below follows the same choice.</p>
     <div class="pl-groups">${shown.map(groupHtml).join("")}</div>`
@@ -1400,6 +1405,7 @@ function renderDonorMap(pl) {
     <div class="sub">${noGift ? (PF.plMode === "lapsed" ? "Lapsed donors" : PF.plMode === "both" ? "Prospects and lapsed donors" : "Prospects") + " not on the projections" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households.</div></div></div>
     <div class="td-controls">
       <label class="bs-through">Fundraiser <select id="${ID}-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
+      ${noGift ? `<label class="bs-through">Classification <select id="pl-cls"><option value="">All classifications</option>${plClassesFor(tdPool().filter(plQualifies)).map(c => `<option${c === PF.plClass ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>` : ""}
       ${noGift ? "" : `<div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}</div>
       ${yearSw}
       <div class="segbtn" role="group" aria-label="Measure">
@@ -1457,12 +1463,14 @@ function renderDonorMap(pl) {
       ${list}
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
-    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year, active and inactive. Follows the Prospects / Lapsed donors choice and the classification picked above." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
+    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year, active and inactive. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(pl); });
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(pl); });
   // Changing it here changes the whole scorecard, the same as the filter at the top of the page
   if ($(ID + "-fr")) $(ID + "-fr").onchange = e => { PF.fr = e.target.value; $("pf-fr").value = PF.fr; PF.tdSel = null; PF.plSel = null; renderPortfolios(); };
   if (!pl) { tdWireYear(box); tdWireProj(box); }
+  // The classification picked here also filters the list above, the same as clicking it in the table
+  if (pl && $("pl-cls")) $("pl-cls").onchange = e => { PF.plClass = e.target.value; PF.plSel = null; renderPipeline(); };
   // Click a state or county to list its households; click it again (or ×) to close the list
   box.querySelectorAll("[data-area]").forEach(pth => {
     pth.onclick = () => {
@@ -2152,7 +2160,7 @@ document.addEventListener("mousemove", e => {
 });
 
 /* ===== Portfolio Scorecard ===== */
-const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "never" };
+const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both" };
 function pfShowView() {
   document.querySelectorAll("[data-pfv]").forEach(el => {
     if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.pfv === PF.view);
