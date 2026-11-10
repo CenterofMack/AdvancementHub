@@ -296,6 +296,8 @@
   table.bs tr:last-child td{border-bottom:0}
   /* County map state picker and the address review list */
   .td-coh{display:flex;align-items:center;gap:8px}
+  /* Tall states (Illinois, Alabama, Indiana…) shrink to the height of the U.S. map instead of running long */
+  .td-maps .td-cochart svg{max-height:480px}
   .td-coh select{border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:#fff;font-weight:600;color:var(--navy-deep)}
   .td-review{margin:14px 0 4px;border:1px solid #F0DDB0;border-radius:8px;background:#FFFBF0}
   .td-review summary{cursor:pointer;padding:10px 14px;font-weight:600;color:#7A5C14}
@@ -1321,6 +1323,16 @@ function countyShapesFor(a) {
   return out;
 }
 // The set of county names for a state, or null when they can't be checked yet
+// Keep the county map no taller than the U.S. map beside it (centered if it's narrower)
+function tdFitCounty(box) {
+  requestAnimationFrame(() => {
+    const us = box.querySelector(".td-maps .chart:not(.td-cochart) svg"), cty = box.querySelector(".td-cochart svg");
+    if (!us || !cty) return;
+    const h = us.getBoundingClientRect().height;
+    if (h > 200) cty.style.maxHeight = Math.round(h) + "px";
+  });
+}
+window.addEventListener("resize", () => ["td-map", "pl-map"].forEach(id => { const b = $(id); if (b && b.offsetParent) tdFitCounty(b); }));
 const countyKeysFor = a => { const s = countyShapesFor(a); return s ? s.keys : null; };
 const TD_SCALE = ["#E3EEF1", "#B5D3DB", "#7FB2C0", "#3F8CA0", "#006C85", "#004B5D"];
 function tdBuckets(values) {
@@ -1551,12 +1563,13 @@ function renderDonorMap(pl) {
     </div>
     <div class="td-maps${sel ? " sel" : ""}">
       <div class="chart"><h4>By state</h4>${usSvg}</div>
-      <div class="chart"><h4 class="td-coh">${coPick} by county</h4>${coSvg}</div>
+      <div class="chart td-cochart"><h4 class="td-coh">${coPick} by county</h4>${coSvg}</div>
       ${list}
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
     ${reviewHtml}
     <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no usable state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
+  tdFitCounty(box);
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(pl); });
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(pl); });
   // Changing it here changes the whole page, the same as the filter at the top
