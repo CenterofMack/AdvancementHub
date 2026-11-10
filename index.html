@@ -298,6 +298,7 @@
   .td-coh{display:flex;align-items:center;gap:8px}
   /* Tall states (Illinois, Alabama, Indiana…) shrink to the height of the U.S. map instead of running long */
   .td-maps .td-cochart svg{max-height:480px}
+  .td-noaddr{max-height:480px}
   .td-coh select{border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:#fff;font-weight:600;color:var(--navy-deep)}
   .td-review{margin:14px 0 4px;border:1px solid #F0DDB0;border-radius:8px;background:#FFFBF0}
   .td-review summary{cursor:pointer;padding:10px 14px;font-weight:600;color:#7A5C14}
@@ -1497,8 +1498,8 @@ function renderDonorMap(pl) {
   // County shapes for every state load in the background the first time a map is drawn (lib/counties.json)
   if (!CTY.data && !CTY.failed && !CTY.loading) loadCounties().then(() => { renderDonorMap(false); renderDonorMap(true); }, () => { renderDonorMap(false); renderDonorMap(true); });
   const g = GEO.data, key = PF.tdKey || KEYS.total, byHH = noGift || PF.tdMetric === "households";
-  const coSt = PF[CK] || "MI", stName = a => US_NAMES[a] || a;
-  const st = {}, coBy = {}, review = []; let mi = { n: 0, amt: 0 }, all = { n: 0, amt: 0 }, unknown = { n: 0, amt: 0 };
+  let coSt = PF[CK] || "MI"; const stName = a => US_NAMES[a] || a;
+  const st = {}, coBy = {}, review = [], noAddr = []; let mi = { n: 0, amt: 0 }, all = { n: 0, amt: 0 }, unknown = { n: 0, amt: 0 };
   const add = (bag, k, r, v) => { (bag[k] = bag[k] || { n: 0, amt: 0, rows: [] }); bag[k].n++; bag[k].amt += v; bag[k].rows.push({ r, v }); };
   tdPool().forEach(r => {
     if (isUnderLine(r)) return;
@@ -1509,7 +1510,9 @@ function renderDonorMap(pl) {
     const rawSt = String(r[stKey] ?? "").trim(), rawCo = coKey ? String(r[coKey] ?? "").trim() : "";
     const a = stateAbbr(rawSt);
     if (!a) { unknown.n++; unknown.amt += v;
-      review.push({ r, st: rawSt, co: rawCo, why: rawSt ? `State “${rawSt}” isn't a US state` : "No state on file" }); return; }
+      // No state at all = no address on file (picked from the county map's state list); a state that isn't real goes to the review
+      if (rawSt) review.push({ r, st: rawSt, co: rawCo, why: `State “${rawSt}” isn't a US state` }); else noAddr.push({ r, v });
+      return; }
     add(st, a, r, v);
     if (a === "MI") { mi.n++; mi.amt += v; }
     if (!coKey) return;
@@ -1520,6 +1523,7 @@ function renderDonorMap(pl) {
     if (known && !known.has(ck)) { review.push({ r, st: a, co: rawCo, why: `“${rawCo}” isn't a county in ${stName(a)}` }); return; }
     add(coBy[a] = coBy[a] || {}, ck, r, v);
   });
+  if (coSt === "NONE" && !noAddr.length) coSt = PF[CK] = "MI";
   const co = coBy[coSt] || {};
   const val = o => o ? (byHH ? o.n : o.amt) : 0,
     plAmtTxt = (PL_AMTS.find(a => a.k === (PF.plAmt || "all")) || PL_AMTS[0]).t.replace(" combined", ""),
@@ -1537,20 +1541,24 @@ function renderDonorMap(pl) {
     g.us.states.map(s => `<path class="area${(sel && sel.type === "st" && sel.key === s.abbr) || s.abbr === coSt ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" tabindex="0" role="button" aria-label="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
     tdDcMarker(g, st, val, cS, fmt, sel) + `</svg>`;
   // County map for the chosen state: Michigan uses the Hub's own Michigan map; other states use lib/counties.json
-  const shapes = countyShapesFor(coSt);
-  const coSvg = !coKey ? `<p class="sub">No county column in the data.</p>`
+  const shapes = coSt === "NONE" ? null : countyShapesFor(coSt);
+  noAddr.sort((a, b) => String(a.r.Name).localeCompare(String(b.r.Name)));
+  const coSvg = coSt === "NONE"
+    ? `<div class="td-list td-noaddr"><p class="meta">${noAddr.length.toLocaleString("en-US")} household${noAddr.length === 1 ? " has" : "s have"} no state or address on file in Raiser's Edge${noGift ? "" : " · " + esc(ovMoney(noAddr.reduce((t, x) => t + x.v, 0)))}. Click a name for details.</p>
+      <ol>${noAddr.map((x, i) => `<li><button type="button" data-nai="${i}">${esc(x.r.Name)}</button><span>${esc(String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : ""))}</span></li>`).join("")}</ol></div>`
+    : !coKey ? `<p class="sub">No county column in the data.</p>`
     : !shapes ? (CTY.failed ? `<div class="notice err"><p>The county map file (lib/counties.json) couldn't be loaded, so only Michigan is available.</p></div>` : `<div class="loading">Loading ${esc(stName(coSt))}'s counties…</div>`)
     : `<svg viewBox="${shapes.viewBox}" role="img" aria-label="${esc(stName(coSt))} households by county">` +
       shapes.list.map(c => { const o = co[c.key], sk = coSt + "~" + c.key;
         return `<path class="area${sel && sel.type === "co" && sel.key === sk ? " on" : ""}" d="${c.d}" fill="${cC(val(o))}" data-area="co|${esc(sk)}|${esc(c.label)}" tabindex="0" role="button" aria-label="${esc(c.label)}: ${esc(fmt(o))}" data-tip="${esc(c.label)}: ${esc(fmt(o))}"/>`; }).join("") + `</svg>`;
   const stOpts = g.us.states.filter(s => s.abbr !== "DC").map(s => s.abbr).sort((a, b) => stName(a).localeCompare(stName(b)));
-  const coPick = `<select id="${ID}-cost" aria-label="State for the county map">${stOpts.map(a => `<option value="${a}"${a === coSt ? " selected" : ""}>${esc(stName(a))}${st[a] ? " (" + st[a].n.toLocaleString("en-US") + ")" : ""}</option>`).join("")}</select>`;
+  const coPick = `<select id="${ID}-cost" aria-label="State for the county map">${stOpts.map(a => `<option value="${a}"${a === coSt ? " selected" : ""}>${esc(stName(a))}${st[a] ? " (" + st[a].n.toLocaleString("en-US") + ")" : ""}</option>`).join("")}${noAddr.length ? `<option value="NONE"${coSt === "NONE" ? " selected" : ""}>No address on file (${noAddr.length.toLocaleString("en-US")})</option>` : ""}</select>`;
   const pctOf = (a, b) => b ? Math.round(a / b * 100) + "%" : "—";
   const known = { n: all.n - unknown.n, amt: all.amt - unknown.amt };
   // Address review: households whose state or county doesn't line up with a real place (fix in RE later)
   review.sort((a, b) => a.why.localeCompare(b.why) || String(a.st).localeCompare(String(b.st)) || String(a.r.Name).localeCompare(String(b.r.Name)));
   const reviewHtml = !review.length ? "" : `<details class="td-review"${PF[ID + "RevOpen"] ? " open" : ""}><summary>⚠ ${review.length.toLocaleString("en-US")} household${review.length === 1 ? " needs" : "s need"} an address review${CTY.data ? "" : " (Michigan only until the county file loads)"}</summary>
-    <p class="bs-note" style="margin:6px 0 8px">State or county as they're entered in Raiser's Edge that don't match a real state or county. These households are counted on the state map where possible but left off the county map. Click a name for the quick look and the RE link.</p>
+    <p class="bs-note" style="margin:6px 0 8px">State or county as they're entered in Raiser's Edge that don't match a real state or county. (Households with no address at all are under “No address on file” in the county map's state list.) These households are counted on the state map where possible but left off the county map. Click a name for the quick look and the RE link.</p>
     <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th class="txt">State in RE</th><th class="txt">County in RE</th><th class="txt">What's wrong</th></tr></thead><tbody>
     ${review.map((x, i) => `<tr><td class="txt name"><button type="button" data-rvi="${i}">${esc(x.r.Name)}</button></td><td class="txt">${esc(x.r.Solicitor || "–")}</td><td class="txt">${esc(x.st || "–")}</td><td class="txt">${esc(x.co || "–")}</td><td class="txt">${esc(x.why)}</td></tr>`).join("")}
     </tbody></table></div></details>`;
@@ -1563,12 +1571,12 @@ function renderDonorMap(pl) {
     </div>
     <div class="td-maps${sel ? " sel" : ""}">
       <div class="chart"><h4>By state</h4>${usSvg}</div>
-      <div class="chart td-cochart"><h4 class="td-coh">${coPick} by county</h4>${coSvg}</div>
+      <div class="chart td-cochart"><h4 class="td-coh">${coPick}${coSt === "NONE" ? "" : " by county"}</h4>${coSvg}</div>
       ${list}
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
     ${reviewHtml}
-    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no usable state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages.` : ""} Boundaries: US Census Bureau.</p>`;
+    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no usable state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages${noAddr.length ? "; pick “No address on file” in the county map's state list to see the ones with no address" : ""}.` : ""} Boundaries: US Census Bureau.</p>`;
   tdFitCounty(box);
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(pl); });
   box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(pl); });
@@ -1584,6 +1592,7 @@ function renderDonorMap(pl) {
   $(ID + "-cost").onchange = e => { PF[CK] = e.target.value; if (PF[SK] && PF[SK].type === "co") PF[SK] = null; renderDonorMap(pl); };
   const rv = box.querySelector(".td-review"); if (rv) rv.ontoggle = () => { PF[ID + "RevOpen"] = rv.open; };
   box.querySelectorAll("button[data-rvi]").forEach(b => b.onclick = () => openDrawer(review[+b.dataset.rvi].r));
+  box.querySelectorAll("button[data-nai]").forEach(b => b.onclick = () => openDrawer(noAddr[+b.dataset.nai].r));
   // Click a state: list its households and show its counties. Click a county: list its households.
   // Click the same place again (or ×) to close the list.
   box.querySelectorAll("[data-area]").forEach(pth => {
