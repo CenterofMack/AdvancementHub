@@ -307,6 +307,11 @@
   .tag.dn{color:#1F4D33;background:#EAF5EE} .tag.pp{color:#7A5C14;background:#FBF0D8}
   /* Donor Retention */
   .rt-bet{border-top:5px solid var(--gold)}
+  .rt-sub{font-family:var(--serif);font-size:17px;color:var(--navy-deep);margin:20px 0 8px}
+  .rt-new table.bs td.txt{white-space:normal;min-width:0;position:static;box-shadow:none}
+  .rt-new td small{display:block;color:var(--muted);font-size:11.5px}
+  .rt-new tr.tot td{border-top:2px solid var(--navy-deep);background:#F7F9FB}
+  .rt-pending{color:#8A94A6;font-style:italic}
   .rt-vs{display:flex;align-items:stretch;gap:16px;flex-wrap:wrap}
   .rt-side{flex:1 1 240px;border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:#F7F9FC}
   .rt-side.win{background:#FFF8E1;border-color:#E8C76A}
@@ -1279,7 +1284,7 @@ function rtRender() {
       <div class="stat"><div class="k">Repeat or upgrade</div><div class="v">${pc(T.up + T.rep, T.tot)}</div></div>
       <div class="stat"><div class="k">${esc(P.A)} donors</div><div class="v">${T.tot.toLocaleString("en-US")}</div></div>
       <div class="stat"><div class="k">Lapsed</div><div class="v">${T.lap.toLocaleString("en-US")}</div></div>
-      <div class="stat"><div class="k">New or returning in ${esc(P.B)}</div><div class="v">${newOrBack.toLocaleString("en-US")}</div></div>
+      <div class="stat"><div class="k">New + renewed in ${esc(P.B)}</div><div class="v">${newOrBack.toLocaleString("en-US")}</div></div>
     </div>
     ${P.complete ? "" : `<div class="mp-flag">${esc(P.B)} isn't over yet, so households whose ${RT.mode === "proj" ? "gifts aren't in or projected yet" : "gifts haven't come in yet"} show as lapsed or decreased for now.</div>`}
     <div class="bs-tablewrap"><table class="bs rt"><thead><tr><th class="txt">${esc(P.A)} level</th><th>${esc(P.A)} donors</th><th>Upgrade</th><th>Repeat</th><th>Decrease</th><th>Lapsed</th><th class="hl">Repeat / upgrade retention</th><th class="hl">Retention</th></tr></thead>
@@ -1287,13 +1292,21 @@ function rtRender() {
       <tfoot><tr><td class="txt">Total donor retention</td><td>${I(T.tot)}</td><td>${I(T.up)}</td><td>${I(T.rep)}</td><td>${I(T.dec)}</td><td>${I(T.lap)}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td></tr></tfoot></table></div>
     <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level.</p>`;
   rtTrend(); rtBet(P);
-  // Donors by level, both years
+  // Donors by level, both years; then new and renewed in the annual report's wording
+  const yB = RT.cmp === "2025" ? 2025 : 2026, yA = yB - 1;
   $("rt-counts").innerHTML = `<div class="card-head"><div><h2>Donors by level, ${esc(P.A)} and ${esc(P.B)}</h2>
       <div class="sub">Every donor household at each level in each year, including new and returning donors.</div></div></div>
     <div class="bs-tablewrap" style="max-width:720px"><table class="bs"><thead><tr><th class="txt">Level</th><th>${esc(P.A)}</th><th>${esc(P.B)}</th><th>Change</th></tr></thead><tbody>
       ${RT_LEVELS.map((l, i) => { const ch = t.cB[i] - t.cA[i]; return `<tr><td class="txt"><b>${esc(l.label)}</b> <span class="rt-rng">${esc(l.range)}</span></td><td>${I(t.cA[i])}</td><td>${I(t.cB[i])}</td><td class="${ch > 0 ? "up" : ch < 0 ? "down" : ""}">${ch > 0 ? "+" : ""}${ch ? ch.toLocaleString("en-US") : "–"}</td></tr>`; }).join("")}
     </tbody><tfoot><tr><td class="txt">Total</td><td>${I(sum(t.cA))}</td><td>${I(sum(t.cB))}</td><td>${(sum(t.cB) - sum(t.cA) > 0 ? "+" : "") + (sum(t.cB) - sum(t.cA)).toLocaleString("en-US")}</td></tr></tfoot></table></div>
-    <p class="bs-note"><b>${newOrBack.toLocaleString("en-US")}</b> household${newOrBack === 1 ? "" : "s"} gave in ${esc(P.B)} but not in ${esc(P.A)}${comebackKnown ? `; <b>${comebackKnown.toLocaleString("en-US")}</b> of them gave in 2024, so they're returning donors` : ""}. Splitting the rest into brand-new donors and donors returning after a longer gap needs each household's first gift date, which isn't in the Hub's data yet.</p>`;
+    <h3 class="rt-sub">New and renewed donors</h3>
+    <div class="bs-tablewrap rt-new" style="max-width:720px"><table class="bs"><tbody>
+      <tr><td class="txt">Total new donors in ${yB}</td><td class="rt-pending">Not available yet</td></tr>
+      <tr><td class="txt">Total renewal of lapsed donors<small>Gave prior to ${yA}, and in ${yB} but not in ${yA}</small></td>
+        <td>${comebackKnown ? `at least ${comebackKnown.toLocaleString("en-US")}` : `<span class="rt-pending">Not available yet</span>`}</td></tr>
+      <tr class="tot"><td class="txt"><b><i>Total Sum</i></b></td><td><b>${newOrBack.toLocaleString("en-US")}</b></td></tr>
+    </tbody></table></div>
+    <p class="bs-note">The Total Sum is every household that gave in ${esc(P.B)} but not in ${esc(P.A)}. Splitting it into new and renewed needs each household's first gift date, which isn't in the Hub's data yet${comebackKnown ? `. For now, renewals show only the ${comebackKnown.toLocaleString("en-US")} who gave in 2024, skipped ${yA} and came back; the Hub's giving starts in 2024, so earlier donors can't be seen yet` : ""}.</p>`;
   // Named lists, 1851 and above
   const showB = RT.cmp === "2025";
   const item = o => `<li><span>${o.x.sid ? `<a href="${esc(RECORD_URL(o.x.sid))}" target="_blank" rel="noopener">${esc(o.x.name)}</a>` : esc(o.x.name)}${o.x.dec ? ` <span class="tag off">deceased</span>` : ""}
