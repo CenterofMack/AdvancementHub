@@ -294,6 +294,14 @@
   table.bs th.hl{background:#DCE7F7}
   table.bs td.hl{background:#EEF4FC}
   table.bs tr:last-child td{border-bottom:0}
+  /* Projection Pipeline: Donors / Pipeline / Combined, shown as tabs so they read as a level above the switches inside */
+  .pp-tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:0 0 18px;flex-wrap:wrap}
+  .pp-tabs button{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 18px 9px;cursor:pointer;
+    font-family:var(--serif);font-size:17px;font-weight:600;color:var(--muted);text-align:left;line-height:1.2}
+  .pp-tabs button small{display:block;font-family:var(--sans);font-size:11.5px;font-weight:500;color:#8A94A6}
+  .pp-tabs button:hover{color:var(--navy-deep)}
+  .pp-tabs button[aria-selected="true"]{color:var(--navy-deep);border-bottom-color:var(--gold)}
+  .tag.dn{color:#1F4D33;background:#EAF5EE} .tag.pp{color:#7A5C14;background:#FBF0D8}
   /* County map state picker and the address review list */
   .td-coh{display:flex;align-items:center;gap:8px}
   /* Tall states (Illinois, Alabama, Indiana…) shrink to the height of the U.S. map instead of running long */
@@ -606,8 +614,7 @@
     <div class="segbtn pf-views" role="group" aria-label="Report">
       <button type="button" data-pfv="Portfolios" aria-pressed="true">Portfolios</button>
       <button type="button" data-pfv="Changes" aria-pressed="false">Donor Changes</button>
-      <button type="button" data-pfv="TopDonors" aria-pressed="false">Projection Donors</button>
-      <button type="button" data-pfv="Pipeline" aria-pressed="false">Pipeline</button>
+      <button type="button" data-pfv="ProjPipe" aria-pressed="false">Projection Pipeline</button>
     </div>
     <div class="pfv" data-pfv="Portfolios">
       <div class="card" id="pf-summary"></div>
@@ -616,14 +623,25 @@
     <div class="pfv" data-pfv="Changes" hidden>
       <div class="card" id="pf-changes"></div>
     </div>
-    <div class="pfv" data-pfv="Pipeline" hidden>
-      <div class="card" id="pl-list"></div>
-      <div class="card" id="pl-map"></div>
-    </div>
-    <div class="pfv" data-pfv="TopDonors" hidden>
-      <div class="card" id="td-pyr"></div>
-      <div class="card conc" id="conc"></div>
-      <div class="card" id="td-map"></div>
+    <div class="pfv" data-pfv="ProjPipe" hidden>
+      <!-- Projection Pipeline: who's on the projections (Donors), who should be (Pipeline), and both on one map (Combined) -->
+      <div class="pp-tabs" role="tablist" aria-label="Projection Pipeline view">
+        <button type="button" role="tab" data-ppv="Donors" aria-selected="true">Donors <small>on the projections</small></button>
+        <button type="button" role="tab" data-ppv="Pipeline" aria-selected="false">Pipeline <small>not on the projections</small></button>
+        <button type="button" role="tab" data-ppv="Combined" aria-selected="false">Combined <small>both on one map</small></button>
+      </div>
+      <div class="ppv" data-ppv="Donors">
+        <div class="card" id="td-pyr"></div>
+        <div class="card conc" id="conc"></div>
+        <div class="card" id="td-map"></div>
+      </div>
+      <div class="ppv" data-ppv="Pipeline" hidden>
+        <div class="card" id="pl-list"></div>
+        <div class="card" id="pl-map"></div>
+      </div>
+      <div class="ppv" data-ppv="Combined" hidden>
+        <div class="card" id="cb-map"></div>
+      </div>
     </div>
   </section>
   <section class="panel" id="panel-EWMC" hidden>
@@ -1463,12 +1481,15 @@ function renderPipeline() {
   box.querySelectorAll("tr[data-plc]").forEach(tr => tr.onclick = () => { PF.plClass = tr.dataset.plc === PF.plClass ? "" : tr.dataset.plc; PF.plSel = null; renderPipeline(); });
   box.querySelectorAll("button[data-pli]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.pli]));
   renderDonorMap(true);
+  renderDonorMap("cb");
 }
 
-function renderDonorMap(pl) {
-  // pl = true draws the Pipeline tab's map: prospects and lapsed donors not on the projections
-  const box = $(pl ? "pl-map" : "td-map"); if (!box) return;
-  const ID = pl ? "pl" : "td", SK = pl ? "plSel" : "tdSel", CK = pl ? "plCoSt" : "tdCoSt";
+function renderDonorMap(mode) {
+  // mode false = Donors map; true = Pipeline map (prospects and lapsed donors not on the projections);
+  // "cb" = Combined map (donors on the projections and the pipeline together, each household tagged)
+  const cb = mode === "cb", pl = mode === true;
+  const box = $(cb ? "cb-map" : pl ? "pl-map" : "td-map"); if (!box) return;
+  const ID = cb ? "cb" : pl ? "pl" : "td", SK = ID + "Sel", CK = ID + "CoSt";
   const ks = ROWS.length ? Object.keys(ROWS[0]) : [];
   const stKey = ks.find(k => /preferred state/i.test(k)) || ks.find(k => /^state$/i.test(k));
   const coKey = ks.find(k => /preferred county/i.test(k)) || ks.find(k => /^county$/i.test(k));
@@ -1478,7 +1499,12 @@ function renderDonorMap(pl) {
   const pop = pl ? "nogift" : (PF.tdPop || "proj"), noGift = !!pl;
   let yearSw = tdYearSwitch(); const yearLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
   const popBtn = (k, t) => `<button type="button" data-tdp="${k}" aria-pressed="${pop === k}">${t}</button>`;
-  const head = `<div class="card-head"><div><h2>${noGift ? "Where they are" : "Where our donors are"}${PF.fr ? " — " + esc(PF.fr) : ""}${noGift && PF.plClass ? " · " + esc(PF.plClass) : ""}</h2>
+  const head = cb ? `<div class="card-head"><div><h2>Donors and pipeline together${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
+    <div class="sub">Households on the ${esc((KEYS.curYear || "").replace("Money In ", ""))} projections (donors) and the pipeline not on them, by each household's preferred address. Hover a state or county for both counts; click one to list its households, each tagged Donor or Pipeline. Clicking a state also shows its counties.</div></div></div>
+    <div class="td-controls">
+      <label class="bs-through">Fundraiser <select id="cb-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
+      <span class="sub" style="font-size:12.5px">Pipeline here follows the Pipeline view's settings: ${esc(PF.plMode === "lapsed" ? "lapsed donors" : PF.plMode === "never" ? "prospects" : "prospects and lapsed donors")}${!PF.plPPR || !PF.plPPL ? ", without " + [!PF.plPPR ? "Personal / Professional Relationships" : "", !PF.plPPL ? "Pipeline Parking Lot" : ""].filter(Boolean).join(" or ") : ""}.</span>
+    </div>` : `<div class="card-head"><div><h2>${noGift ? "Where they are" : "Where our donors are"}${PF.fr ? " — " + esc(PF.fr) : ""}${noGift && PF.plClass ? " · " + esc(PF.plClass) : ""}</h2>
     <div class="sub">${noGift ? (PF.plMode === "lapsed" ? "Lapsed donors" : PF.plMode === "both" ? "Prospects and lapsed donors" : "Prospects") + " not on the projections" : esc(yearLbl)}, by each household's preferred address. Hover a state or county for figures; click one to list its households. Clicking a state also shows its counties.</div></div></div>
     <div class="td-controls">
       <label class="bs-through">Fundraiser <select id="${ID}-fr">${[...$("pf-fr").options].map(o => `<option value="${esc(o.value)}"${o.value === PF.fr ? " selected" : ""}>${esc(o.textContent)}</option>`).join("")}</select></label>
@@ -1494,26 +1520,34 @@ function renderDonorMap(pl) {
     </div>`;
   if (!stKey) { box.innerHTML = head + `<div class="notice"><p>The Projections data doesn't include a Preferred State column yet, so the map can't be drawn.</p></div>`; return; }
   if (!GEO.data) { box.innerHTML = head + `<div class="loading">Loading the map…</div>`;
-    loadGeo().then(() => renderDonorMap(pl)).catch(() => { box.innerHTML = head + `<div class="notice err"><p>The map file (lib/geo.json) couldn't be loaded.</p></div>`; }); return; }
+    loadGeo().then(() => renderDonorMap(mode)).catch(() => { box.innerHTML = head + `<div class="notice err"><p>The map file (lib/geo.json) couldn't be loaded.</p></div>`; }); return; }
   // County shapes for every state load in the background the first time a map is drawn (lib/counties.json)
-  if (!CTY.data && !CTY.failed && !CTY.loading) loadCounties().then(() => { renderDonorMap(false); renderDonorMap(true); }, () => { renderDonorMap(false); renderDonorMap(true); });
-  const g = GEO.data, key = PF.tdKey || KEYS.total, byHH = noGift || PF.tdMetric === "households";
+  if (!CTY.data && !CTY.failed && !CTY.loading) loadCounties().then(() => ["cb", false, true].forEach(renderDonorMap), () => ["cb", false, true].forEach(renderDonorMap));
+  const g = GEO.data, key = PF.tdKey || KEYS.total, byHH = cb || noGift || PF.tdMetric === "households";
   let coSt = PF[CK] || "MI"; const stName = a => US_NAMES[a] || a;
   const st = {}, coBy = {}, review = [], noAddr = []; let mi = { n: 0, amt: 0 }, all = { n: 0, amt: 0 }, unknown = { n: 0, amt: 0 };
-  const add = (bag, k, r, v) => { (bag[k] = bag[k] || { n: 0, amt: 0, rows: [] }); bag[k].n++; bag[k].amt += v; bag[k].rows.push({ r, v }); };
+  // grp: "d" donor on the projections, "p" pipeline (Combined map only)
+  const add = (bag, k, r, v, grp) => { const o = (bag[k] = bag[k] || { n: 0, amt: 0, dn: 0, pn: 0, rows: [] }); o.n++; o.amt += v;
+    if (grp === "d") o.dn++; else if (grp === "p") o.pn++; o.rows.push({ r, v, g: grp }); };
+  let dAll = 0, pAll = 0;
   tdPool().forEach(r => {
     if (isUnderLine(r)) return;
-    const v = noGift ? plAmtOf(r) : tdVal(r, key);
-    if (pop === "proj" && !v) return;
+    let grp = "";
+    if (cb) {
+      if (KEYS.total && num(r[KEYS.total]) > 0) grp = "d"; else if (plQualifies(r)) grp = "p"; else return;
+      grp === "d" ? dAll++ : pAll++;
+    }
+    const v = cb ? (grp === "d" ? num(r[KEYS.total]) : plSpqTotal(r)) : noGift ? plAmtOf(r) : tdVal(r, key);
+    if (!cb && pop === "proj" && !v) return;
     if (noGift && (!plQualifies(r) || (PF.plClass && plClass(r) !== PF.plClass) || !plInRange(v))) return;
     all.n++; all.amt += v;
     const rawSt = String(r[stKey] ?? "").trim(), rawCo = coKey ? String(r[coKey] ?? "").trim() : "";
     const a = stateAbbr(rawSt);
     if (!a) { unknown.n++; unknown.amt += v;
       // No state at all = no address on file (picked from the county map's state list); a state that isn't real goes to the review
-      if (rawSt) review.push({ r, st: rawSt, co: rawCo, why: `State “${rawSt}” isn't a US state` }); else noAddr.push({ r, v });
+      if (rawSt) review.push({ r, st: rawSt, co: rawCo, why: `State “${rawSt}” isn't a US state` }); else noAddr.push({ r, v, g: grp });
       return; }
-    add(st, a, r, v);
+    add(st, a, r, v, grp);
     if (a === "MI") { mi.n++; mi.amt += v; }
     if (!coKey) return;
     if (!rawCo) { review.push({ r, st: a, co: "", why: "No county on file" }); return; }
@@ -1521,21 +1555,23 @@ function renderDonorMap(pl) {
     let ck = countyKey(rawCo); const known = countyKeysFor(a);
     if (known && !known.has(ck) && known.has(ck + "city")) ck += "city";
     if (known && !known.has(ck)) { review.push({ r, st: a, co: rawCo, why: `“${rawCo}” isn't a county in ${stName(a)}` }); return; }
-    add(coBy[a] = coBy[a] || {}, ck, r, v);
+    add(coBy[a] = coBy[a] || {}, ck, r, v, grp);
   });
   if (coSt === "NONE" && !noAddr.length) coSt = PF[CK] = "MI";
   const co = coBy[coSt] || {};
   const val = o => o ? (byHH ? o.n : o.amt) : 0,
     plAmtTxt = (PL_AMTS.find(a => a.k === (PF.plAmt || "all")) || PL_AMTS[0]).t.replace(" combined", ""),
-    fmt = o => o ? (noGift ? `${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}${o.amt ? " · " + ovMoney(o.amt) + " " + plAmtTxt : ""}`
-      : `${ovMoney(o.amt)} · ${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}`) : "none";
+    fmt = o => !o ? "none" : cb ? `${o.dn.toLocaleString("en-US")} donor${o.dn === 1 ? "" : "s"} · ${o.pn.toLocaleString("en-US")} pipeline` : (noGift ? `${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}${o.amt ? " · " + ovMoney(o.amt) + " " + plAmtTxt : ""}`
+      : `${ovMoney(o.amt)} · ${o.n.toLocaleString("en-US")} household${o.n === 1 ? "" : "s"}`);
+  // A household's line in a list: Combined tags each one and shows its projected (donor) or Spec + QA + QIA (pipeline) amount
+  const cbTag = x => x.g === "d" ? ` <span class="tag dn">Donor</span>` : x.g === "p" ? ` <span class="tag pp">Pipeline</span>` : "";
   const cS = tdBuckets(Object.values(st).map(val)), cC = tdBuckets(Object.values(co).map(val));
   // The area picked on the map: its households, largest first, each opening the quick look (with the RE link)
   const sel = PF[SK];
   const picked = !sel ? null : sel.type === "st" ? st[sel.key] : (() => { const [s2, k2] = sel.key.split("~"); return (coBy[s2] || {})[k2]; })();
   const list = !sel ? "" : `<div class="td-list"><div class="hd"><b>${esc(sel.label)}</b><button type="button" id="${ID}-clear" aria-label="Close list">×</button></div>
-    ${picked ? `<p class="meta">${picked.n.toLocaleString("en-US")} household${picked.n === 1 ? "" : "s"}${noGift ? (picked.amt ? " · " + esc(ovMoney(picked.amt)) + " " + esc(plAmtTxt) : "") : " · " + esc(ovMoney(picked.amt))} · click a name for details</p>
-      <ol>${picked.rows.sort((a, b) => noGift ? String(a.r.Name).localeCompare(String(b.r.Name)) : b.v - a.v).map((x, i) => `<li><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button><span>${esc(noGift ? String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : "") : money(x.v))}</span></li>`).join("")}</ol>`
+    ${picked ? `<p class="meta">${cb ? esc(fmt(picked)) : picked.n.toLocaleString("en-US") + " household" + (picked.n === 1 ? "" : "s")}${cb ? "" : noGift ? (picked.amt ? " · " + esc(ovMoney(picked.amt)) + " " + esc(plAmtTxt) : "") : " · " + esc(ovMoney(picked.amt))} · click a name for details</p>
+      <ol>${picked.rows.sort((a, b) => cb ? (a.g > b.g ? 1 : a.g < b.g ? -1 : b.v - a.v) : noGift ? String(a.r.Name).localeCompare(String(b.r.Name)) : b.v - a.v).map((x, i) => `<li><div><button type="button" data-tdr="${i}">${esc(x.r.Name)}</button>${cbTag(x)}</div><span>${esc(cb || noGift ? String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : "") : money(x.v))}</span></li>`).join("")}</ol>`
       : `<p class="meta">No households here for this view.</p>`}</div>`;
   const usSvg = `<svg viewBox="${g.us.viewBox}" role="img" aria-label="Households by state">` +
     g.us.states.map(s => `<path class="area${(sel && sel.type === "st" && sel.key === s.abbr) || s.abbr === coSt ? " on" : ""}" d="${s.d}" fill="${cS(val(st[s.abbr]))}" data-area="st|${s.abbr}|${esc(s.name)}" tabindex="0" role="button" aria-label="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}" data-tip="${esc(s.name)}: ${esc(fmt(st[s.abbr]))}"/>`).join("") +
@@ -1544,8 +1580,8 @@ function renderDonorMap(pl) {
   const shapes = coSt === "NONE" ? null : countyShapesFor(coSt);
   noAddr.sort((a, b) => String(a.r.Name).localeCompare(String(b.r.Name)));
   const coSvg = coSt === "NONE"
-    ? `<div class="td-list td-noaddr"><p class="meta">${noAddr.length.toLocaleString("en-US")} household${noAddr.length === 1 ? " has" : "s have"} no state or address on file in Raiser's Edge${noGift ? "" : " · " + esc(ovMoney(noAddr.reduce((t, x) => t + x.v, 0)))}. Click a name for details.</p>
-      <ol>${noAddr.map((x, i) => `<li><button type="button" data-nai="${i}">${esc(x.r.Name)}</button><span>${esc(String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : ""))}</span></li>`).join("")}</ol></div>`
+    ? `<div class="td-list td-noaddr"><p class="meta">${noAddr.length.toLocaleString("en-US")} household${noAddr.length === 1 ? " has" : "s have"} no state or address on file in Raiser's Edge${noGift || cb ? "" : " · " + esc(ovMoney(noAddr.reduce((t, x) => t + x.v, 0)))}. Click a name for details.</p>
+      <ol>${noAddr.map((x, i) => `<li><div><button type="button" data-nai="${i}">${esc(x.r.Name)}</button>${cbTag(x)}</div><span>${esc(String(x.r.Solicitor ?? "") + (x.v ? " · " + short(x.v) : ""))}</span></li>`).join("")}</ol></div>`
     : !coKey ? `<p class="sub">No county column in the data.</p>`
     : !shapes ? (CTY.failed ? `<div class="notice err"><p>The county map file (lib/counties.json) couldn't be loaded, so only Michigan is available.</p></div>` : `<div class="loading">Loading ${esc(stName(coSt))}'s counties…</div>`)
     : `<svg viewBox="${shapes.viewBox}" role="img" aria-label="${esc(stName(coSt))} households by county">` +
@@ -1565,9 +1601,10 @@ function renderDonorMap(pl) {
   box.innerHTML = head + `
     <div class="td-split">
       <div class="st"><b>${pctOf(mi.n, known.n)}</b><span>of households are in Michigan (${pctOf(known.n - mi.n, known.n)} elsewhere)</span></div>
-      ${noGift ? `<div class="st"><b>${all.n.toLocaleString("en-US")}</b><span>households on the map${PF.plClass ? " · " + esc(PF.plClass) : ""}</span></div>`
+      ${cb ? `<div class="st"><b>${dAll.toLocaleString("en-US")} · ${pAll.toLocaleString("en-US")}</b><span>donors on the projections · pipeline households</span></div>`
+        : noGift ? `<div class="st"><b>${all.n.toLocaleString("en-US")}</b><span>households on the map${PF.plClass ? " · " + esc(PF.plClass) : ""}</span></div>`
         : `<div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>`}
-      <div class="st"><b>${Object.keys(st).length}</b><span>states and DC with at least one ${noGift ? "of these households" : pop === "all" ? "household" : "giving household"}</span></div>
+      <div class="st"><b>${Object.keys(st).length}</b><span>states and DC with at least one ${noGift || cb ? "of these households" : pop === "all" ? "household" : "giving household"}</span></div>
     </div>
     <div class="td-maps${sel ? " sel" : ""}">
       <div class="chart"><h4>By state</h4>${usSvg}</div>
@@ -1576,20 +1613,20 @@ function renderDonorMap(pl) {
     </div>
     <div class="td-legend">Fewer ${TD_SCALE.map(c => `<i style="background:${c}"></i>`).join("")} More <span style="margin-left:12px">Grey = none</span></div>
     ${reviewHtml}
-    <p class="bs-note">${noGift ? "Assigned households with nothing given or projected this year. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no usable state on file${noGift ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages${noAddr.length ? "; pick “No address on file” in the county map's state list to see the ones with no address" : ""}.` : ""} Boundaries: US Census Bureau.</p>`;
+    <p class="bs-note">${cb ? "Donors are households with money in or projected for this year. Pipeline is assigned households with neither, as set in the Pipeline view. Shading counts households of both kinds." : noGift ? "Assigned households with nothing given or projected this year. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no usable state on file${noGift || cb ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages${noAddr.length ? "; pick “No address on file” in the county map's state list to see the ones with no address" : ""}.` : ""} Boundaries: US Census Bureau.</p>`;
   tdFitCounty(box);
-  box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(pl); });
-  box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(pl); });
+  box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(mode); });
+  box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(mode); });
   // Changing it here changes the whole page, the same as the filter at the top
-  if ($(ID + "-fr")) $(ID + "-fr").onchange = e => { PF.fr = e.target.value; $("pf-fr").value = PF.fr; PF.tdSel = null; PF.plSel = null; renderPortfolios(); };
-  if (!pl) { tdWireYear(box); tdWireProj(box); }
+  if ($(ID + "-fr")) $(ID + "-fr").onchange = e => { PF.fr = e.target.value; $("pf-fr").value = PF.fr; PF.tdSel = null; PF.plSel = null; PF.cbSel = null; renderPortfolios(); };
+  if (!pl && !cb) { tdWireYear(box); tdWireProj(box); }
   // The classification picked here also filters the list above, the same as clicking it in the table
   if (pl && $("pl-cls")) $("pl-cls").onchange = e => { PF.plClass = e.target.value; PF.plSel = null; renderPipeline(); };
   // Amount and range only change the map
   if (pl && $("pl-amt")) $("pl-amt").onchange = e => { PF.plAmt = e.target.value; PF.plSel = null; renderDonorMap(true); };
   if (pl && $("pl-rng")) $("pl-rng").onchange = e => { PF.plRange = e.target.value; PF.plSel = null; renderDonorMap(true); };
   // Pick a state for the county map
-  $(ID + "-cost").onchange = e => { PF[CK] = e.target.value; if (PF[SK] && PF[SK].type === "co") PF[SK] = null; renderDonorMap(pl); };
+  $(ID + "-cost").onchange = e => { PF[CK] = e.target.value; if (PF[SK] && PF[SK].type === "co") PF[SK] = null; renderDonorMap(mode); };
   const rv = box.querySelector(".td-review"); if (rv) rv.ontoggle = () => { PF[ID + "RevOpen"] = rv.open; };
   box.querySelectorAll("button[data-rvi]").forEach(b => b.onclick = () => openDrawer(review[+b.dataset.rvi].r));
   box.querySelectorAll("button[data-nai]").forEach(b => b.onclick = () => openDrawer(noAddr[+b.dataset.nai].r));
@@ -1600,11 +1637,11 @@ function renderDonorMap(pl) {
       const [type, k, label] = pth.dataset.area.split("|");
       PF[SK] = PF[SK] && PF[SK].type === type && PF[SK].key === k ? null : { type, key: k, label };
       if (type === "st" && k !== "DC") PF[CK] = k;
-      renderDonorMap(pl);
+      renderDonorMap(mode);
     };
     pth.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pth.onclick(); } };
   });
-  if ($(ID + "-clear")) $(ID + "-clear").onclick = () => { PF[SK] = null; renderDonorMap(pl); };
+  if ($(ID + "-clear")) $(ID + "-clear").onclick = () => { PF[SK] = null; renderDonorMap(mode); };
   if (picked) box.querySelectorAll("[data-tdr]").forEach(b => b.onclick = () => openDrawer(picked.rows[+b.dataset.tdr].r));
 }
 
@@ -2284,7 +2321,7 @@ document.addEventListener("mousemove", e => {
 });
 
 /* ===== Portfolio Management ===== */
-const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both", plAmt: "all", plRange: "any", plPPR: false, plPPL: false, plCoSt: "MI", tdCoSt: "MI", plShowBreakdown: false };
+const PF = { fr: "", mode: "proj", incProj: true, view: "Portfolios", plClass: "", plSel: null, plMode: "both", plAmt: "all", plRange: "any", plPPR: false, plPPL: false, plCoSt: "MI", tdCoSt: "MI", plShowBreakdown: false, ppView: "Donors", cbCoSt: "MI" };
 function pfShowView() {
   document.querySelectorAll("[data-pfv]").forEach(el => {
     if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.pfv === PF.view);
@@ -2292,6 +2329,13 @@ function pfShowView() {
   });
 }
 document.querySelectorAll("button[data-pfv]").forEach(b => b.addEventListener("click", () => { PF.view = b.dataset.pfv; pfShowView(); }));
+function ppShowView() {
+  document.querySelectorAll("[data-ppv]").forEach(el => {
+    if (el.tagName === "BUTTON") el.setAttribute("aria-selected", el.dataset.ppv === PF.ppView);
+    else el.hidden = el.dataset.ppv !== PF.ppView;
+  });
+}
+document.querySelectorAll("button[data-ppv]").forEach(b => b.addEventListener("click", () => { PF.ppView = b.dataset.ppv; ppShowView(); }));
 const pfReal = () => ROWS.filter(r => String(r.Name ?? "").trim() !== "");
 function pfYears() { return KEYS.years.map(k => +k.replace("Money In ", "")).sort((a, b) => a - b); }
 function pfTotals(rows) {
@@ -2321,7 +2365,7 @@ function chartPortfolio(items, label) {
   return svgOpen(W, H, label) + g + "</svg>";
 }
 function renderPortfolios() {
-  renderTopDonors(); renderPipeline(); pfShowView();
+  renderTopDonors(); renderPipeline(); pfShowView(); ppShowView();
   const Y = +KEYS.curYear.replace("Money In ", ""), yrs = pfYears(), all = pfReal();
   const mine = PF.fr ? all.filter(r => r.Solicitor === PF.fr) : all;
   const t = pfTotals(mine), cur = t.yr[KEYS.curYear], prev = t.yr["Money In " + (Y - 1)] || 0;
