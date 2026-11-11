@@ -308,6 +308,11 @@
   .op-tbl td.txt{min-width:120px}
   .op-tbl td.chk{min-width:140px;max-width:180px;text-align:left}
   .op-tbl .nl{color:#9B2C24;font-weight:600}
+  .op-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin:6px 0 4px}
+  .op-charts h3{font-size:14px;margin:0 0 2px;color:var(--navy-deep)}
+  .op-bar{height:10px;background:#EDF0F4;border-radius:5px;overflow:hidden;min-width:120px}
+  .op-bar i{display:block;height:100%;background:var(--teal,#0E7C86)}
+  .op-goal td.txt{white-space:normal;max-width:420px}
   .op-note{font-size:12.5px;color:var(--muted);margin:10px 0 0;max-width:900px}
   .pp-tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:0 0 18px;flex-wrap:wrap}
   .pp-tabs button{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 18px 9px;cursor:pointer;
@@ -703,6 +708,7 @@
     <div class="pfv" data-pfv="Opps" hidden>
       <div id="op-msg"></div>
       <div id="op-body" hidden>
+        <div class="card" id="op-goals"></div>
         <div class="card" id="op-sum"></div>
         <div class="card" id="op-mine"></div>
         <div class="card" id="op-extra"></div>
@@ -2681,7 +2687,40 @@ document.addEventListener("mousemove", e => {
    (Attribution). Access is the Projections column in HubAccess. Window: asked in 2024 or later, or added
    in 2024 or later with no ask date. Assignments are today's. */
 const OPPS_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/03/workflows/41fe442712a548dba0a3ed77aeb939a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XCuRNixloc6ww5lEvMPVtJIls3fBbHVKryp8cv70MhU";
-const OP = { rows: [], loaded: false, loading: false, updated: "", year: "all", status: "", check: false };
+const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, basis: "portfolio" };
+// Strategic Plan targets for proposals (Goal 2). Add a year's targets here when the plan is set.
+const OP_GOALS = {
+  "2026": [
+    { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M", target: 40e6, kind: "money", calc: l => l.filter(o => o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
+    { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => opType(o) === "inc").length },
+    { id: "2A-2", text: "High-impact: 7 more grants or proposals of $10M or more", target: 7, kind: "count", calc: l => l.filter(o => o.ask >= 1e7).length },
+    { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(o => opType(o) === "first").length },
+    { id: "2D", text: "Unrestricted funds for MCA: ask for $3M", target: 3e6, kind: "money", calc: l => l.filter(o => /^C4\s*-\s*MCA/i.test(o.purpose) || /^MCA/i.test(o.name)).reduce((t, o) => t + o.ask, 0) }
+  ]
+};
+// Kind of ask, matching RE's proposal charts: increased ask (gift type), first-time or reengaged, or other
+function opType(o) {
+  if (/increase/i.test(o.giftType || "")) return "inc";
+  if (/first|reengag/i.test(o.giftType || "") || o.firstTime === true) return "first";
+  return "other";
+}
+const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time or reengaged", color: "#F5B041" }, { k: "inc", label: "Increased asks", color: "#7DC24E" }];
+// Stacked bars by quarter plus a Total bar
+function opStack(cats, series, fmtV, label, whole) {
+  const W = 520, H = 230, L = 52, R = 10, T = 22, B = 30;
+  const tot = cats.map((_, i) => series.reduce((t, s) => t + s.vals[i], 0));
+  const max = whole ? Math.max(4, Math.ceil(Math.max(...tot) * 1.12 / 4) * 4) : Math.max(1, ...tot) * 1.12, step = (W - L - R) / cats.length, bw = Math.min(56, step * 0.6);
+  const y = v => T + (H - T - B) * (1 - v / max);
+  let g = "";
+  for (let k = 0; k <= 4; k++) { const yy = T + (H - T - B) * k / 4; g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 6}" y="${yy + 4}" text-anchor="end">${esc(fmtV(max * (1 - k / 4), true))}</text>`; }
+  cats.forEach((c, i) => {
+    const cx = L + step * (i + 0.5); let base = 0;
+    series.forEach(s => { const v = s.vals[i]; if (v <= 0) return;
+      g += `<rect x="${cx - bw / 2}" y="${y(base + v)}" width="${bw}" height="${y(base) - y(base + v)}" fill="${s.color}" data-tip="${esc(c)} · ${esc(s.name)}: ${esc(fmtV(v))}"/>`; base += v; });
+    g += `<text class="lbl" text-anchor="middle" x="${cx}" y="${y(tot[i]) - 6}">${esc(fmtV(tot[i], true))}</text><text class="ax" text-anchor="middle" x="${cx}" y="${H - B + 16}">${esc(c)}</text>`;
+  });
+  return svgOpen(W, H, label) + g + "</svg>";
+}
 // Same name clean-up as the script: "Dr. Jennifer C. Majorana" -> "Jennifer Majorana"
 function opNorm(s) {
   let t = String(s || "").trim(); if (!t) return "";
@@ -2744,6 +2783,48 @@ function opTable(list, opts) {
   }).join("");
   return `<div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr><th class="txt">Household</th><th class="txt">Opportunity (ask / proposal)</th><th>Status</th><th>Asked</th><th>Funded</th><th class="txt">Fundraisers on it</th><th>Household gave since the ask</th><th class="chk">Check</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
+function opGoals(me, years) {
+  const gy = OP.year === "all" ? (years[0] || String(new Date().getFullYear())) : OP.year;
+  const first = me ? me.split(" ")[0] : "";
+  const base = OP.rows.filter(o => !me || (OP.basis === "listed" ? o.fundraisers.includes(me) : o.assigned === me));
+  const asks = base.filter(o => o.askDate && o.askDate.slice(0, 4) === gy);
+  const fundedL = base.filter(o => o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === gy);
+  const q = d => Math.min(4, Math.floor((+d.slice(5, 7) - 1) / 3) + 1);
+  const cats = ["Q1", "Q2", "Q3", "Q4", "Total"];
+  const per = (list, f, pick) => { const v = [0, 0, 0, 0]; list.forEach(o => v[q(f(o)) - 1] += pick(o)); v.push(v.reduce((a, b) => a + b, 0)); return v; };
+  const askSeries = OP_TYPES.map(t => ({ name: t.label, color: t.color, vals: per(asks.filter(o => opType(o) === t.k), o => o.askDate, o => o.ask) }));
+  const cntSeries = OP_TYPES.map(t => ({ name: t.label, color: t.color, vals: per(asks.filter(o => opType(o) === t.k), o => o.askDate, () => 1) }));
+  const fundSeries = [{ name: "Funded", color: "#1E8449", vals: per(fundedL, o => o.fundedDate, o => o.funded) }];
+  const mfmt = (v, axis) => axis ? short(v) : money(v), cfmt = v => String(Math.round(v));
+  const askV = per(asks, o => o.askDate, o => o.ask), cntV = per(asks, o => o.askDate, () => 1), fV = fundSeries[0].vals, fcV = per(fundedL, o => o.fundedDate, () => 1);
+  const who = me ? (OP.basis === "listed" ? `opportunities ${esc(first)} is listed on` : `opportunities on ${esc(first)}'s households`) : "all opportunities";
+  const goals = OP_GOALS[gy];
+  $("op-goals").innerHTML = `<div class="card-head"><div><h2>Asks and funded, ${esc(gy)}${me ? " — " + esc(me) : ""}</h2>
+      <div class="sub">Counting ${who}. Asks by ask date; funded by the date funded.${OP.year === "all" ? ` Pick a year below to change the year.` : ""}</div></div>
+      ${me ? `<div class="card-tools"><div class="segbtn" role="group" aria-label="Count by">
+        <button type="button" data-opb="portfolio" aria-pressed="${OP.basis === "portfolio"}">Portfolio (assigned)</button>
+        <button type="button" data-opb="listed" aria-pressed="${OP.basis === "listed"}">Listed on the opportunity</button></div></div>` : ""}</div>
+    <div class="op-charts">
+      <div><h3>Ask amounts</h3>${opStack(cats, askSeries, mfmt, "Ask amounts by quarter")}</div>
+      <div><h3>Number of asks</h3>${opStack(cats, cntSeries, cfmt, "Number of asks by quarter", true)}</div>
+      <div><h3>Funded amounts</h3>${opStack(cats, fundSeries, mfmt, "Funded amounts by quarter")}</div>
+    </div>
+    ${legendHtml(OP_TYPES.map(t => ({ color: t.color, label: t.label })).concat([{ color: "#1E8449", label: "Funded" }]))}
+    <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
+      <tr><td class="txt">Asks</td>${cntV.map(v => `<td>${v}</td>`).join("")}</tr>
+      <tr><td class="txt">Ask amount</td>${askV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      <tr><td class="txt">Funded</td>${fcV.map(v => `<td>${v}</td>`).join("")}</tr>
+      <tr><td class="txt">Funded amount</td>${fV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
+    </tbody></table></div>
+    ${goals ? `<h3 style="margin:18px 0 6px;color:var(--navy-deep)">Strategic Plan, Goal 2: Increase major gift opportunities</h3>
+    <div class="bs-tablewrap" style="max-width:1000px"><table class="bs op-goal"><thead><tr><th class="txt">Goal</th><th>Target</th><th>${me ? "Counted here" : "So far"}</th><th class="txt">Progress</th></tr></thead><tbody>
+      ${goals.map(gl => { const v = gl.calc(asks), p = gl.target ? v / gl.target : 0;
+        return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
+          <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
+    </tbody></table></div>
+    <p class="op-note">Increased asks use RE's gift type "Increased Ask / Previous Giving." First-time or reengaged means the household (spouses, trusts and foundations included) gave nothing in the two years before the ask. 2D counts asks with an MCA purpose. ${me ? "With a fundraiser picked, these are that fundraiser's share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
+  $("op-goals").querySelectorAll("[data-opb]").forEach(b => b.onclick = () => { OP.basis = b.dataset.opb; opRender(); });
+}
 function opRender() {
   if (!OP.loaded) return;
   const me = opNorm(PF.fr), pool = opPool();
@@ -2754,6 +2835,7 @@ function opRender() {
       <label><input type="checkbox" id="op-check"${OP.check ? " checked" : ""}> Only ones to check</label>
     </div>`;
   const yrNote = OP.year === "all" ? "asked in 2024 or later" : `asked in ${OP.year}`;
+  opGoals(me, years);
   const asOf = OP.updated ? `Updated from Raiser's Edge ${opDate(OP.updated.slice(0, 10))}.` : "";
 
   if (!me) {
