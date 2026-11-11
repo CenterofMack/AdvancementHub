@@ -2800,13 +2800,14 @@ function opGoals(me, years) {
   const fundSeries = [{ name: "Funded", color: "#1E8449", vals: per(fundedL, o => o.fundedDate, o => o.funded) }];
   const mfmt = (v, axis) => axis ? short(v) : money(v), cfmt = v => String(Math.round(v));
   const askV = per(asks, o => o.askDate, o => o.ask), cntV = per(asks, o => o.askDate, () => 1), fV = fundSeries[0].vals, fcV = per(fundedL, o => o.fundedDate, () => 1);
-  const who = me ? (OP.basis === "listed" ? `opportunities ${esc(first)} is listed on` : `opportunities on ${esc(first)}'s households`) : "all opportunities";
+  const who = me ? (OP.basis === "listed" ? `opportunities ${esc(first)} is assigned to (listed on), whoever's household it is` : `opportunities on ${esc(first)}'s households (portfolio), whether or not ${esc(first)} is listed`)
+    : `all opportunities. Pick a fundraiser above to see ${OP.basis === "listed" ? "the ones they're assigned to" : "their portfolio's"}`;
   const goals = OP_GOALS[gy];
   $("op-goals").innerHTML = `<div class="card-head"><div><h2>Asks and funded, ${esc(gy)}${me ? " — " + esc(me) : ""}</h2>
       <div class="sub">Counting ${who}. Asks by ask date; funded by the date funded.${OP.year === "all" ? ` Pick a year below to change the year.` : ""}</div></div>
-      ${me ? `<div class="card-tools"><div class="segbtn" role="group" aria-label="Count by">
-        <button type="button" data-opb="portfolio" aria-pressed="${OP.basis === "portfolio"}">Portfolio (assigned)</button>
-        <button type="button" data-opb="listed" aria-pressed="${OP.basis === "listed"}">Listed on the opportunity</button></div></div>` : ""}</div>
+      <div class="card-tools"><div class="segbtn" role="group" aria-label="Count by">
+        <button type="button" data-opb="portfolio" aria-pressed="${OP.basis === "portfolio"}">By portfolio</button>
+        <button type="button" data-opb="listed" aria-pressed="${OP.basis === "listed"}">By assigned to opportunity</button></div></div></div>
     <div class="op-charts">
       <div><h3>Ask amounts</h3>${opStack(cats, askSeries, mfmt, "Ask amounts by quarter")}</div>
       <div><h3>Number of asks</h3>${opStack(cats, cntSeries, cfmt, "Number of asks by quarter", true)}</div>
