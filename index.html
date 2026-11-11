@@ -2692,7 +2692,7 @@ const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(
 const OP_GOALS = {
   "2026": [
     { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M", target: 40e6, kind: "money", calc: l => l.filter(o => o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
-    { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => opType(o) === "inc").length },
+    { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => /increase/i.test(o.giftType || "")).length },
     { id: "2A-2", text: "High-impact: 7 more grants or proposals of $10M or more", target: 7, kind: "count", calc: l => l.filter(o => o.ask >= 1e7).length },
     { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(opFirstOrReengaged).length },
     { id: "2D", text: "Unrestricted funds for MCA: ask for $3M", target: 3e6, kind: "money", calc: l => l.filter(o => /^C4\s*-\s*MCA/i.test(o.purpose) || /^MCA/i.test(o.name)).reduce((t, o) => t + o.ask, 0) }
@@ -2701,13 +2701,14 @@ const OP_GOALS = {
 // Kind of ask, matching RE's proposal charts: first-time proposal (Instrument = Yes, query 49231),
 // increased ask (gift type "Increased Ask / Previous Giving"), or other
 function opType(o) {
+  if (o.ask >= 1e7) return "big";   // Strategic Plan 2A-2: its own category, not part of the $40M (2A)
   if (o.firstMarked) return "first";
   if (/increase/i.test(o.giftType || "")) return "inc";
   return "other";
 }
 // Strategic Plan 2B: a first-time proposal, or a household that gave nothing in the two years before the ask
 const opFirstOrReengaged = o => !!o.firstMarked || o.firstTime === true;
-const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time proposals", color: "#F5B041" }, { k: "inc", label: "Increased asks", color: "#7DC24E" }];
+const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time proposals", color: "#F5B041" }, { k: "inc", label: "Increased asks", color: "#7DC24E" }, { k: "big", label: "$10M or more (2A-2)", color: "#8E7CC3" }];
 // Stacked bars by quarter plus a Total bar
 function opStack(cats, series, fmtV, label, whole) {
   const W = 520, H = 230, L = 52, R = 10, T = 22, B = 30;
@@ -2817,6 +2818,8 @@ function opGoals(me, years) {
     <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
       <tr><td class="txt">Asks</td>${cntV.map(v => `<td>${v}</td>`).join("")}</tr>
       <tr><td class="txt">Ask amount</td>${askV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      <tr><td class="txt">&nbsp;&nbsp;Under $10M (2A)</td>${per(asks.filter(o => o.ask < 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      <tr><td class="txt">&nbsp;&nbsp;$10M or more (2A-2)</td>${per(asks.filter(o => o.ask >= 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
       <tr><td class="txt">Funded</td>${fcV.map(v => `<td>${v}</td>`).join("")}</tr>
       <tr><td class="txt">Funded amount</td>${fV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
     </tbody></table></div>
