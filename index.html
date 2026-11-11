@@ -2691,24 +2691,31 @@ const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(
 // Strategic Plan targets for proposals (Goal 2). Add a year's targets here when the plan is set.
 const OP_GOALS = {
   "2026": [
-    { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M", target: 40e6, kind: "money", calc: l => l.filter(o => o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
-    { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => /increase/i.test(o.giftType || "")).length },
-    { id: "2A-2", text: "High-impact: 7 more grants or proposals of $10M or more", target: 7, kind: "count", calc: l => l.filter(o => o.ask >= 1e7).length },
-    { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(opFirstOrReengaged).length },
-    { id: "2D", text: "Unrestricted funds for MCA: ask for $3M", target: 3e6, kind: "money", calc: l => l.filter(o => /^C4\s*-\s*MCA/i.test(o.purpose) || /^MCA/i.test(o.name)).reduce((t, o) => t + o.ask, 0) }
+    { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M", target: 40e6, kind: "money", calc: l => l.filter(o => !opIsC4(o) && o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
+    { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => !opIsC4(o) && /increase/i.test(o.giftType || "")).length },
+    { id: "2A-2", text: "High-impact: 7 more grants or proposals of $10M or more", target: 7, kind: "count", calc: l => l.filter(o => !opIsC4(o) && o.ask >= 1e7).length },
+    { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(o => !opIsC4(o) && opFirstOrReengaged(o)).length },
+    { id: "2D", text: "Unrestricted funds for MCA: ask for $3M", target: 3e6, kind: "money", calc: l => l.filter(opIsC4).reduce((t, o) => t + o.ask, 0) }
   ]
 };
-// Kind of ask, matching RE's proposal charts: first-time proposal (Instrument = Yes, query 49231),
-// increased ask (gift type "Increased Ask / Previous Giving"), or other
+// RE's proposal charts sort asks by Instrument (query 49231): Yes = first-time, Re-Engaged, N/A - C4 Ask;
+// Reason "C4 Gift" is left out of the C3 counts. The Strategic Plan keeps C4 (MCA) separate too (Goal 2D).
+const opIsC4 = o => /c4/i.test(o.instrument || "") || /c4 gift/i.test(o.reason || "") ||
+  (!o.matched && (/^C4\s*-\s*MCA/i.test(o.purpose || "") || /^MCA/i.test(o.name || "")));
 function opType(o) {
+  if (opIsC4(o)) return "c4";
   if (o.ask >= 1e7) return "big";   // Strategic Plan 2A-2: its own category, not part of the $40M (2A)
-  if (o.firstMarked) return "first";
-  if (/increase/i.test(o.giftType || "")) return "inc";
+  if (/^yes$/i.test(o.instrument || "") || o.firstMarked) return "first";
+  if (/re-?engaged/i.test(o.instrument || "")) return "re";
   return "other";
 }
-// Strategic Plan 2B: a first-time proposal, or a household that gave nothing in the two years before the ask
-const opFirstOrReengaged = o => !!o.firstMarked || o.firstTime === true;
-const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time proposals", color: "#F5B041" }, { k: "inc", label: "Increased asks", color: "#7DC24E" }, { k: "big", label: "$10M or more (2A-2)", color: "#8E7CC3" }];
+// Strategic Plan 2B: first-time or re-engaged (Instrument). If Instrument hasn't come through yet,
+// fall back to "nothing given in the two years before the ask."
+const opHasInstrument = () => OP.rows.some(o => o.matched);
+const opFirstOrReengaged = o => opHasInstrument() ? (opType(o) === "first" || (opType(o) === "re")) || (o.ask >= 1e7 && /^yes$|re-?engaged/i.test(o.instrument || ""))
+  : (!!o.firstMarked || o.firstTime === true);
+const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time proposals", color: "#F5B041" }, { k: "re", label: "Re-engaged proposals", color: "#7DC24E" },
+  { k: "big", label: "$10M or more (2A-2)", color: "#8E7CC3" }, { k: "c4", label: "C4 / MCA asks (2D)", color: "#A7B0BE" }];
 // Stacked bars by quarter plus a Total bar
 function opStack(cats, series, fmtV, label, whole) {
   const W = 520, H = 230, L = 52, R = 10, T = 22, B = 30;
@@ -2844,9 +2851,11 @@ function opGoals(me, years) {
       ? `<p class="op-note" style="margin:0 0 8px"><b>Being prepared, not asked yet:</b> ${prep.length} opportunit${prep.length === 1 ? "y" : "ies"}${prep.some(o => o.ask > 1) ? `, ${short(prep.reduce((t, o) => t + (o.ask > 1 ? o.ask : 0), 0))} planned` : ""} (${prep.slice(0, 4).map(o => esc(o.name)).join("; ")}${prep.length > 4 ? "; …" : ""}). These count once they're asked.</p>` : ""; })()}
     <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
       <tr><td class="txt">Asks</td>${cntV.map(v => `<td>${v}</td>`).join("")}</tr>
+      <tr><td class="txt">&nbsp;&nbsp;C3 proposals (RE's count)</td>${per(asks.filter(o => !opIsC4(o)), o => o.askDate, () => 1).map(v => `<td>${v}</td>`).join("")}</tr>
       <tr><td class="txt">Ask amount</td>${askV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      <tr><td class="txt">&nbsp;&nbsp;Under $10M (2A)</td>${per(asks.filter(o => o.ask < 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      <tr><td class="txt">&nbsp;&nbsp;$10M or more (2A-2)</td>${per(asks.filter(o => o.ask >= 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      <tr><td class="txt">&nbsp;&nbsp;C3 under $10M (2A)</td>${per(asks.filter(o => !opIsC4(o) && o.ask < 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      <tr><td class="txt">&nbsp;&nbsp;C3 $10M or more (2A-2)</td>${per(asks.filter(o => !opIsC4(o) && o.ask >= 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      <tr><td class="txt">&nbsp;&nbsp;C4 / MCA (2D)</td>${per(asks.filter(opIsC4), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
       <tr><td class="txt">Funded</td>${fcV.map(v => `<td>${v}</td>`).join("")}</tr>
       <tr><td class="txt">Funded amount</td>${fV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
     </tbody></table></div>
@@ -2856,7 +2865,7 @@ function opGoals(me, years) {
         return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
           <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
     </tbody></table></div>
-    <p class="op-note">First-time proposals are the ones marked Instrument = Yes in RE (the household's first proposal ever). Increased asks use RE's gift type "Increased Ask / Previous Giving." 2B counts first-time proposals plus reengaged households: those that gave nothing (spouses, trusts and foundations included) in the two years before the ask. 2D counts asks with an MCA purpose. ${me ? "With a fundraiser picked, these are that fundraiser's share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
+    <p class="op-note">Matches RE's proposal charts: Instrument = Yes is a first-time proposal (the household's first ever), Instrument = Re-Engaged is a re-engaged proposal, and C4 asks (Instrument "N/A - C4 Ask" or Reason "C4 Gift") are kept separate. 2A, 2A-1, 2A-2 and 2B count C3 proposals only; 2D counts C4 asks. Increased asks use RE's gift type "Increased Ask / Previous Giving." ${me ? "With a fundraiser picked, these are that fundraiser's share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
   $("op-goals").querySelectorAll("[data-opb]").forEach(b => b.onclick = () => { OP.basis = b.dataset.opb; opRender(); });
 }
 function opRender() {
