@@ -313,6 +313,33 @@
   .op-bar{height:10px;background:#EDF0F4;border-radius:5px;overflow:hidden;min-width:120px}
   .op-bar i{display:block;height:100%;background:var(--teal,#0E7C86)}
   .op-goal td.txt{white-space:normal;max-width:420px}
+  .op-filters{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;margin:0 0 12px}
+  .op-fl{display:flex;align-items:center;gap:8px}.op-fl>span{font-size:12.5px;color:var(--muted)}
+  .op-ms{position:relative}.op-ms summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:#fff;font-size:13.5px}
+  .op-ms summary::-webkit-details-marker{display:none}.op-ms summary::after{content:" ▾";color:var(--muted)}
+  .op-ms-pop{position:absolute;z-index:30;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px 12px;max-height:340px;overflow:auto;min-width:240px}
+  .op-ms-pop label{display:block;padding:4px 0;font-size:13.5px;white-space:nowrap}.op-ms-btns{margin-bottom:6px}
+  .op-key{display:flex;flex-wrap:wrap;gap:6px}.op-keyb{background:none;border:1px solid transparent;border-radius:6px;padding:3px 8px;cursor:pointer;font:inherit;color:inherit}
+  .op-keyb:hover{border-color:var(--line);background:#F7F9FC}
+  .op-charts>div{max-width:520px}
+  .op-tbl td,.op-tbl th{padding:8px 9px}
+  .op-tbl td.chk{min-width:110px;max-width:150px}
+  table.bs.op-tbl th.txt,table.bs.op-tbl td.txt{position:static;box-shadow:none;min-width:115px}
+  table.bs.op-tbl th{min-width:0}
+  .op-seg{cursor:pointer}.op-seg:hover{opacity:.82}
+  .op-h3{margin:18px 0 6px;color:var(--navy-deep);font-size:15px}
+  .op-sec>summary{cursor:pointer;list-style:none}.op-sec>summary::-webkit-details-marker{display:none}
+  .op-sec>summary h2{display:inline}.op-sec>summary::before{content:"▸ ";color:var(--muted)}.op-sec[open]>summary::before{content:"▾ "}
+  .op-sec[open]>summary{margin-bottom:12px}
+  .op-tools input[type=search]{min-width:260px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;font:inherit}
+  th.op-sort{cursor:pointer;user-select:none}th.op-sort:hover{text-decoration:underline}
+  .op-drawer{position:fixed;top:0;left:0;bottom:0;width:440px;max-width:92vw;background:#fff;z-index:60;box-shadow:4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column}
+  .op-dr-head{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 18px 8px;border-bottom:1px solid var(--line)}
+  .op-dr-head h3{margin:0;color:var(--navy-deep);font-size:17px}.op-dr-x{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:var(--muted)}
+  .op-dr-sort{display:flex;align-items:center;gap:8px;padding:8px 18px;font-size:13px;color:var(--muted)}
+  .op-dr-list{overflow:auto;padding:4px 18px 18px}
+  .op-dr-item{border-bottom:1px solid #EDF0F4;padding:9px 0;font-size:13.5px}
+  .op-dr-top{display:flex;justify-content:space-between;gap:10px}.op-dr-meta{font-size:12px;color:var(--muted);margin-top:3px}
   .op-note{font-size:12.5px;color:var(--muted);margin:10px 0 0;max-width:900px}
   .pp-tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:0 0 18px;flex-wrap:wrap}
   .pp-tabs button{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 18px 9px;cursor:pointer;
@@ -708,11 +735,12 @@
     <div class="pfv" data-pfv="Opps" hidden>
       <div id="op-msg"></div>
       <div id="op-body" hidden>
-        <div class="card" id="op-goals"></div>
-        <div class="card" id="op-sum"></div>
-        <div class="card" id="op-mine"></div>
-        <div class="card" id="op-extra"></div>
+        <div class="card" id="op-bar"></div>
+        <div class="card" id="op-charts"></div>
+        <details class="card op-sec"><summary><h2>Opportunities by fundraiser</h2></summary><div id="op-byfr"></div></details>
+        <details class="card op-sec" open><summary><h2>All opportunities</h2></summary><div id="op-all"></div></details>
       </div>
+      <aside class="op-drawer" id="op-drawer" hidden></aside>
     </div>
   </section>
   <section class="panel" id="panel-EWMC" hidden>
@@ -2687,7 +2715,8 @@ document.addEventListener("mousemove", e => {
    (Attribution). Access is the Projections column in HubAccess. Window: asked in 2024 or later, or added
    in 2024 or later with no ask date. Assignments are today's. */
 const OPPS_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/03/workflows/41fe442712a548dba0a3ed77aeb939a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XCuRNixloc6ww5lEvMPVtJIls3fBbHVKryp8cv70MhU";
-const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, basis: "portfolio" };
+const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, basis: "portfolio",
+  ent: "all", frs: new Set(), lastPF: null, why: "", q: "", sortK: "date", sortD: -1, dr: null };
 // Strategic Plan targets for proposals (Goal 2). Add a year's targets here when the plan is set.
 const OP_GOALS = {
   "2026": [
@@ -2716,19 +2745,22 @@ const opFirstOrReengaged = o => opHasInstrument() ? (opType(o) === "first" || (o
   : (!!o.firstMarked || o.firstTime === true);
 const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time proposals", color: "#F5B041" }, { k: "re", label: "Re-engaged proposals", color: "#7DC24E" },
   { k: "big", label: "$10M or more (2A-2)", color: "#8E7CC3" }, { k: "c4", label: "C4 / MCA asks (2D)", color: "#A7B0BE" }];
-// Stacked bars by quarter plus a Total bar
-function opStack(cats, series, fmtV, label, whole) {
-  const W = 520, H = 230, L = 52, R = 10, T = 22, B = 30;
+// Stacked bars by quarter plus a Total bar. Each segment can be clicked (data-opq / data-opt) to list its opportunities.
+// counts[i] (optional) is written under the amount on each bar.
+function opStack(cats, series, fmtV, label, counts) {
+  const W = 560, H = 250, L = 56, R = 10, T = 34, B = 30;
   const tot = cats.map((_, i) => series.reduce((t, s) => t + s.vals[i], 0));
-  const max = whole ? Math.max(4, Math.ceil(Math.max(...tot) * 1.12 / 4) * 4) : Math.max(1, ...tot) * 1.12, step = (W - L - R) / cats.length, bw = Math.min(56, step * 0.6);
+  const max = Math.max(1, ...tot) * 1.12, step = (W - L - R) / cats.length, bw = Math.min(60, step * 0.6);
   const y = v => T + (H - T - B) * (1 - v / max);
   let g = "";
   for (let k = 0; k <= 4; k++) { const yy = T + (H - T - B) * k / 4; g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#EDF0F4"/><text class="ax" x="${L - 6}" y="${yy + 4}" text-anchor="end">${esc(fmtV(max * (1 - k / 4), true))}</text>`; }
   cats.forEach((c, i) => {
     const cx = L + step * (i + 0.5); let base = 0;
     series.forEach(s => { const v = s.vals[i]; if (v <= 0) return;
-      g += `<rect x="${cx - bw / 2}" y="${y(base + v)}" width="${bw}" height="${y(base) - y(base + v)}" fill="${s.color}" data-tip="${esc(c)} · ${esc(s.name)}: ${esc(fmtV(v))}"/>`; base += v; });
-    g += `<text class="lbl" text-anchor="middle" x="${cx}" y="${y(tot[i]) - 6}">${esc(fmtV(tot[i], true))}</text><text class="ax" text-anchor="middle" x="${cx}" y="${H - B + 16}">${esc(c)}</text>`;
+      g += `<rect class="op-seg" x="${cx - bw / 2}" y="${y(base + v)}" width="${bw}" height="${Math.max(1, y(base) - y(base + v))}" fill="${s.color}" data-opq="${i}" data-opt="${s.k}" data-tip="${esc(c)} · ${esc(s.name)}: ${esc(fmtV(v))}${s.n ? " · " + s.n[i] + " asks" : ""} (click to list)"/>`; base += v; });
+    g += `<text class="lbl" text-anchor="middle" x="${cx}" y="${y(tot[i]) - (counts ? 18 : 6)}">${esc(fmtV(tot[i], true))}</text>`;
+    if (counts) g += `<text class="ax" text-anchor="middle" x="${cx}" y="${y(tot[i]) - 5}">${counts[i]} ${counts[i] === 1 ? "ask" : "asks"}</text>`;
+    g += `<text class="ax" text-anchor="middle" x="${cx}" y="${H - B + 16}">${esc(c)}</text>`;
   });
   return svgOpen(W, H, label) + g + "</svg>";
 }
@@ -2790,150 +2822,214 @@ function opLoad() {
     .catch(() => opMessage("Opportunities didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
     .finally(() => { OP.loading = false; });
 }
-function opPool() {
+// ----- Filters shared by everything in the tab -----
+// Fundraisers: none checked = everyone. Kept in step with the Fundraiser filter at the top of Portfolio Management.
+function opSyncFromTop() {
+  if (OP.lastPF === PF.fr) return;
+  OP.lastPF = PF.fr;
+  OP.frs = PF.fr ? new Set([opNorm(PF.fr)]) : new Set();
+}
+function opSetFrs(set) {
+  OP.frs = set;
+  const one = set.size === 1 ? [...set][0] : "";
+  const opt = one ? [...$("pf-fr").options].find(o => opNorm(o.value) === one) : null;
+  PF.fr = opt ? opt.value : ""; $("pf-fr").value = PF.fr; OP.lastPF = PF.fr;
+  opRender();
+}
+const opYearOf = o => (o.askDate || o.added || "").slice(0, 4);
+function opInYear(o) {
   const thisYear = String(new Date().getFullYear());
-  return OP.rows.filter(o => (OP.year === "all" || opWhen(o).slice(0, 4) === OP.year || (o.group === "Identification" && OP.year === thisYear)) &&
-    (!OP.status || o.group === OP.status) && (!OP.check || o.flag));
+  return OP.year === "all" || opYearOf(o) === OP.year || (o.group === "Identification" && OP.year === thisYear);
+}
+const opEntOk = o => OP.ent === "all" || (OP.ent === "c4") === opIsC4(o);
+// How an opportunity belongs to the checked fundraisers
+function opWhy(o) {
+  if (!OP.frs.size) return "";
+  const port = OP.frs.has(o.assigned), listed = o.fundraisers.some(f => OP.frs.has(f));
+  return port && listed ? "both" : port ? "portfolio" : listed ? "listed" : "";
+}
+// Counted in the charts and boxes: follows "Count by"
+const opCounted = o => !OP.frs.size || (OP.basis === "listed" ? o.fundraisers.some(f => OP.frs.has(f)) : OP.frs.has(o.assigned));
+const opChartYear = () => OP.year === "all" ? String(Math.max(...OP.rows.map(o => +opYearOf(o) || 0))) : OP.year;
+const opQ = d => Math.min(4, Math.floor((+d.slice(5, 7) - 1) / 3) + 1);
+const opAsked = (o, gy) => o.askDate && o.askDate.slice(0, 4) === gy && !/^identification/i.test(o.status || "");
+const opFundedIn = (o, gy) => o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === gy;
+
+function opRender() {
+  if (!OP.loaded) return;
+  opSyncFromTop();
+  const gy = opChartYear();
+  const base = OP.rows.filter(o => opCounted(o) && opEntOk(o));
+  const asks = base.filter(o => opAsked(o, gy)), funded = base.filter(o => opFundedIn(o, gy));
+  const live = base.filter(o => opInYear(o));
+  const sum = (l, f) => l.reduce((t, o) => t + (f(o) || 0), 0);
+  const names = [...new Set(OP.rows.map(o => o.assigned).concat(...OP.rows.map(o => o.fundraisers)).filter(Boolean))].sort();
+  const selLabel = !OP.frs.size ? "All fundraisers" : OP.frs.size === 1 ? [...OP.frs][0] : `${OP.frs.size} fundraisers`;
+  const years = [...new Set(OP.rows.map(opYearOf).filter(Boolean))].sort().reverse();
+  const seg = (attr, cur, opts) => `<div class="segbtn" role="group">${opts.map(([v, l]) => `<button type="button" ${attr}="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+
+  // --- Filter bar + boxes ---
+  $("op-bar").innerHTML = `<div class="op-filters">
+      <details class="op-ms" id="op-ms"><summary>Fundraisers: <b>${esc(selLabel)}</b></summary>
+        <div class="op-ms-pop"><div class="op-ms-btns"><button type="button" class="btn sm" id="op-ms-all">Everyone</button></div>
+        ${names.map(n => `<label><input type="checkbox" value="${esc(n)}"${OP.frs.has(n) ? " checked" : ""}> ${esc(n)}</label>`).join("")}</div></details>
+      <div class="op-fl"><span>Count by</span>${seg("data-opb", OP.basis, [["portfolio", "Portfolio"], ["listed", "Assigned to opportunity"]])}</div>
+      <div class="op-fl"><span>Entity</span>${seg("data-ope", OP.ent, [["c3", "C3"], ["c4", "C4"], ["all", "Combined"]])}</div>
+      <div class="op-fl"><span>Year</span>${seg("data-opy", OP.year, [["all", "All"]].concat(years.map(y => [y, y])))}</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">Asks, ${esc(gy)}</div><div class="v">${asks.length} · ${short(sum(asks, o => o.ask))}</div></div>
+      <div class="stat"><div class="k">Funded, ${esc(gy)}</div><div class="v">${funded.length} · ${short(sum(funded, o => o.funded))}</div></div>
+      <div class="stat"><div class="k">Asked, still open</div><div class="v">${live.filter(o => o.group === "Open").length}</div></div>
+      <div class="stat"><div class="k">Not asked yet</div><div class="v">${live.filter(o => o.group === "Identification").length}</div></div>
+      <div class="stat"><div class="k">To check</div><div class="v">${live.filter(o => o.flag).length}</div></div>
+    </div>
+    <p class="op-note" style="margin-top:2px">${OP.frs.size ? (OP.basis === "listed" ? "Counting opportunities the checked fundraisers are assigned to (listed on), whoever's household it is." : "Counting opportunities on the checked fundraisers' households (portfolio), whether or not they're listed.") : "Counting everyone's opportunities."}
+      ${OP.ent === "c3" ? "C3 only (RE's proposal count)." : OP.ent === "c4" ? "C4 / MCA only." : "C3 and C4 together."} ${OP.updated ? "Updated from Raiser's Edge " + opDate(OP.updated.slice(0, 10)) + "." : ""}</p>`;
+
+  // --- Charts, quarter table, goals ---
+  const cats = ["Q1", "Q2", "Q3", "Q4", "Total"];
+  const per = (list, f, pick) => { const v = [0, 0, 0, 0]; list.forEach(o => v[opQ(f(o)) - 1] += pick(o)); v.push(v.reduce((a, b) => a + b, 0)); return v; };
+  const types = OP_TYPES.filter(t => OP.ent === "all" || (OP.ent === "c4") === (t.k === "c4"));
+  const askS = types.map(t => { const l = asks.filter(o => opType(o) === t.k); return { k: t.k, name: t.label, color: t.color, vals: per(l, o => o.askDate, o => o.ask), n: per(l, o => o.askDate, () => 1) }; });
+  const fundS = [{ k: "funded", name: "Funded", color: "#1E8449", vals: per(funded, o => o.fundedDate, o => o.funded), n: per(funded, o => o.fundedDate, () => 1) }];
+  const mfmt = (v, axis) => axis ? short(v) : money(v);
+  const prep = base.filter(o => o.group === "Identification");
+  const goals = OP_GOALS[gy];
+  const gAsks = OP.rows.filter(o => opCounted(o) && opAsked(o, gy));   // goals pick C3 or C4 themselves
+  $("op-charts").innerHTML = `<div class="card-head"><div><h2>Asks and funded, ${esc(gy)}</h2><div class="sub">Asks by ask date; funded by the date funded. Click a color in a bar, or in the key, to list those opportunities.</div></div></div>
+    <div class="op-charts">
+      <div><h3>Asks (amount, with the number of asks)</h3>${opStack(cats, askS, mfmt, "Asks by quarter", per(asks, o => o.askDate, () => 1))}</div>
+      <div><h3>Funded</h3>${opStack(cats, fundS, mfmt, "Funded by quarter", fundS[0].n)}</div>
+    </div>
+    <div class="bs-legend op-key">${askS.map(s => `<button type="button" class="op-keyb" data-opt="${s.k}"><i class="sw" style="background:${s.color}"></i>${esc(s.name)}</button>`).join("")}<button type="button" class="op-keyb" data-opt="funded"><i class="sw" style="background:#1E8449"></i>Funded</button></div>
+    ${prep.length ? `<p class="op-note" style="margin:4px 0 10px"><b>Being prepared, not asked yet:</b> <a href="#" id="op-prep">${prep.length} opportunit${prep.length === 1 ? "y" : "ies"}</a>${prep.some(o => o.ask > 1) ? `, ${short(sum(prep, o => o.ask > 1 ? o.ask : 0))} planned` : ""}. These count once they're asked.</p>` : ""}
+    <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
+      <tr><td class="txt">Asks</td>${per(asks, o => o.askDate, () => 1).map(v => `<td>${v}</td>`).join("")}</tr>
+      <tr><td class="txt">Ask amount</td>${per(asks, o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      ${OP.ent !== "c4" ? `<tr><td class="txt">&nbsp;&nbsp;of which $10M or more</td>${per(asks.filter(o => !opIsC4(o) && o.ask >= 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>` : ""}
+      <tr><td class="txt">Funded</td>${fundS[0].n.map(v => `<td>${v}</td>`).join("")}</tr>
+      <tr><td class="txt">Funded amount</td>${fundS[0].vals.map(v => `<td>${short(v)}</td>`).join("")}</tr>
+    </tbody></table></div>
+    ${goals ? `<h3 class="op-h3">Strategic Plan, Goal 2: Increase major gift opportunities</h3>
+    <div class="bs-tablewrap" style="max-width:1000px"><table class="bs op-goal"><thead><tr><th class="txt">Goal</th><th>Target</th><th>${OP.frs.size ? "Counted here" : "So far"}</th><th class="txt">Progress</th></tr></thead><tbody>
+      ${goals.map(gl => { const v = gl.calc(gAsks), p = gl.target ? v / gl.target : 0;
+        return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
+          <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
+    </tbody></table></div>
+    <p class="op-note">2A, 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 asks (the Entity switch doesn't change these). First-time = Instrument "Yes"; re-engaged = Instrument "Re-Engaged"; C4 = Instrument "N/A - C4 Ask" or Reason "C4 Gift"; increased asks = gift type "Increased Ask / Previous Giving."${OP.frs.size ? " With fundraisers checked, these are their share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
+
+  opRenderByFr(); opRenderAll();
+
+  // --- wiring ---
+  const ms = $("op-ms");
+  ms.querySelectorAll("input[type=checkbox]").forEach(cb => cb.onchange = () => {
+    const s = new Set(OP.frs); cb.checked ? s.add(cb.value) : s.delete(cb.value); OP.msOpen = true; opSetFrs(s); });
+  $("op-ms-all").onclick = () => { OP.msOpen = true; opSetFrs(new Set()); };
+  if (OP.msOpen) { $("op-ms").open = true; OP.msOpen = false; }
+  $("op-bar").querySelectorAll("[data-opb]").forEach(b => b.onclick = () => { OP.basis = b.dataset.opb; opRender(); });
+  $("op-bar").querySelectorAll("[data-ope]").forEach(b => b.onclick = () => { OP.ent = b.dataset.ope; opRender(); });
+  $("op-bar").querySelectorAll("[data-opy]").forEach(b => b.onclick = () => { OP.year = b.dataset.opy; opRender(); });
+  const pick = (t, q) => {
+    const qi = q === undefined || +q === 4 ? null : +q + 1;
+    const src = t === "funded" ? funded : asks.filter(o => opType(o) === t);
+    const list = qi ? src.filter(o => opQ(t === "funded" ? o.fundedDate : o.askDate) === qi) : src;
+    const tl = t === "funded" ? "Funded" : (OP_TYPES.find(x => x.k === t) || {}).label || "";
+    opDrawer(`${tl}${qi ? " · Q" + qi : ""} ${gy}`, list, t === "funded" ? "funded" : "ask");
+  };
+  $("op-charts").querySelectorAll("rect[data-opt]").forEach(r => r.onclick = () => pick(r.dataset.opt, r.dataset.opq));
+  $("op-charts").querySelectorAll(".op-keyb").forEach(b => b.onclick = () => pick(b.dataset.opt));
+  if ($("op-prep")) $("op-prep").onclick = e => { e.preventDefault(); opDrawer("Being prepared, not asked yet", prep, "ask"); };
+}
+
+// Close the fundraiser checklist when clicking elsewhere; Esc closes the side panel
+document.addEventListener("click", e => { const ms = $("op-ms"); if (ms && ms.open && !ms.contains(e.target)) ms.open = false; });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && OP.dr) { OP.dr = null; $("op-drawer").hidden = true; } });
+// ----- Side panel: the opportunities behind a bar or a key color -----
+function opDrawer(title, list, amt) {
+  OP.dr = { title, list, amt, sort: OP.dr && OP.dr.title === title ? OP.dr.sort : "date" };
+  opDrawerDraw();
+}
+function opDrawerDraw() {
+  const d = OP.dr, el = $("op-drawer"); if (!d) { el.hidden = true; return; }
+  const dateOf = o => (d.amt === "funded" ? o.fundedDate : o.askDate) || o.added || "";
+  const amtOf = o => d.amt === "funded" ? o.funded : o.ask;
+  const list = d.list.slice().sort((a, b) => d.sort === "amount" ? amtOf(b) - amtOf(a) : dateOf(b).localeCompare(dateOf(a)));
+  const total = list.reduce((t, o) => t + (amtOf(o) || 0), 0);
+  el.innerHTML = `<div class="op-dr-head"><div><h3>${esc(d.title)}</h3><div class="sub">${list.length} opportunit${list.length === 1 ? "y" : "ies"} · ${short(total)}</div></div>
+      <button type="button" class="op-dr-x" id="op-dr-x" aria-label="Close">×</button></div>
+    <div class="op-dr-sort">Sort by <div class="segbtn" role="group"><button type="button" data-ops="date" aria-pressed="${d.sort === "date"}">Date</button><button type="button" data-ops="amount" aria-pressed="${d.sort === "amount"}">Amount</button></div></div>
+    <div class="op-dr-list">${list.map(o => `<div class="op-dr-item">
+        <div class="op-dr-top"><b>${o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(o.householdName || o.name)}</a>` : esc(o.householdName || o.name)}</b><span>${money(amtOf(o) || 0)}</span></div>
+        <div>${esc(o.name)}</div>
+        <div class="op-dr-meta"><span class="op-pill op-${o.group}">${esc(o.group)}</span> ${opDate(dateOf(o))}${o.funded && d.amt !== "funded" ? " · funded " + short(o.funded) : ""} · ${esc(o.fundraisers.join(", ") || "no fundraiser listed")}${o.flag ? ` · <span class="op-flag">${esc(o.flag)}</span>` : ""}</div>
+      </div>`).join("") || `<p class="op-note">None.</p>`}</div>`;
+  el.hidden = false;
+  $("op-dr-x").onclick = () => { OP.dr = null; el.hidden = true; };
+  el.querySelectorAll("[data-ops]").forEach(b => b.onclick = () => { d.sort = b.dataset.ops; opDrawerDraw(); });
+}
+
+// ----- Dropdown section: by fundraiser -----
+function opRenderByFr() {
+  const pool = OP.rows.filter(o => opInYear(o) && opEntOk(o));
+  const names = [...new Set(pool.map(o => o.assigned).concat(...pool.map(o => o.fundraisers)).filter(Boolean))].sort();
+  const rows = names.map(n => {
+    const mine = pool.filter(o => o.assigned === n), extra = pool.filter(o => o.assigned !== n && o.fundraisers.includes(n));
+    const s = opStats(mine);
+    return { n, s, extra: extra.length, notListed: mine.filter(o => !o.fundraisers.includes(n)).length };
+  }).filter(x => x.s.n || x.extra).sort((a, b) => b.s.n - a.s.n || b.extra - a.extra);
+  $("op-byfr").innerHTML = `<p class="op-note" style="margin:0 0 8px">${esc(OP.year === "all" ? "All years" : OP.year)}, ${OP.ent === "c3" ? "C3" : OP.ent === "c4" ? "C4" : "C3 and C4"}. Click a name to check that fundraiser in the filter.</p>
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>On their households</th><th>Asked</th><th>Funded</th><th>Open</th><th>Not asked yet</th><th>They're not listed on</th><th>In addition to</th><th>To check</th></tr></thead><tbody>
+    ${rows.map(x => `<tr class="pick${OP.frs.has(x.n) ? " sel" : ""}" data-f="${esc(x.n)}"><td class="txt">${esc(x.n)}</td><td>${x.s.n}</td><td>${short(x.s.ask)}</td><td>${short(x.s.funded)}</td><td>${x.s.open}</td><td>${x.s.ident || "–"}</td><td>${x.notListed || "–"}</td><td>${x.extra || "–"}</td><td>${x.s.check || "–"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="op-note"><b>On their households</b>: every opportunity on a household assigned to them today, listed or not. <b>They're not listed on</b>: how many of those leave them off. <b>In addition to</b>: opportunities they're listed on for someone else's household.</p>`;
+  $("op-byfr").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => opSetFrs(new Set([tr.dataset.f])));
+}
+
+// ----- Dropdown section: all opportunities -----
+function opRenderAll() {
+  let list = OP.rows.filter(o => opInYear(o) && opEntOk(o) && (!OP.frs.size || opWhy(o)) &&
+    (!OP.status || o.group === OP.status) && (!OP.check || o.flag) &&
+    (!OP.why || opWhy(o) === OP.why || (OP.why === "portfolio" && opWhy(o) === "both")));
+  const q = (OP.q || "").trim().toLowerCase();
+  if (q) list = list.filter(o => [o.name, o.householdName, o.assigned, o.status, o.purpose, ...o.fundraisers].join(" ").toLowerCase().includes(q));
+  const k = OP.sortK || "date", dir = OP.sortD || -1;
+  const val = o => k === "date" ? (o.askDate || o.added || "") : k === "ask" ? o.ask : k === "funded" ? o.funded : k === "hh" ? (o.householdName || "").toLowerCase() : k === "status" ? o.group : (o.name || "").toLowerCase();
+  list.sort((a, b) => { const x = val(a), y = val(b); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+  const th = (key, label, cls) => `<th class="${cls || ""} op-sort" data-opk="${key}">${label}${k === key ? (dir < 0 ? " ▾" : " ▴") : ""}</th>`;
+  const whyLbl = { both: "Portfolio, listed", portfolio: "Portfolio, not listed", listed: "In addition to" };
+  $("op-all").innerHTML = `<div class="op-tools">
+      <input type="search" id="op-q" placeholder="Search names, households, fundraisers…" value="${esc(OP.q || "")}">
+      <label>Status <select id="op-status">${[["", "All"], ["Identification", "Identification (not asked yet)"], ["Open", "Open (asked, waiting)"], ["Committed", "Committed"], ["Funded", "Funded"], ["Declined", "Declined"], ["Closed", "Closed"]].map(([v, l]) => `<option value="${v}"${OP.status === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+      ${OP.frs.size ? `<label>Show <select id="op-why"><option value="">Portfolio and in addition to</option><option value="portfolio"${OP.why === "portfolio" ? " selected" : ""}>Their portfolio</option><option value="listed"${OP.why === "listed" ? " selected" : ""}>In addition to (others' households)</option></select></label>` : ""}
+      <label><input type="checkbox" id="op-check"${OP.check ? " checked" : ""}> Only ones to check</label>
+      <span class="op-note" style="margin:0">${list.length} shown</span>
+    </div>
+    <div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr>${th("hh", "Household", "txt")}${th("name", "Opportunity", "txt")}${th("status", "Status")}${th("date", "Asked")}${th("ask", "Amount")}${th("funded", "Funded")}<th class="txt">Fundraisers on it</th>${OP.frs.size ? `<th class="txt">How it's theirs</th>` : `<th class="txt">Assigned</th>`}<th class="chk">Check</th></tr></thead><tbody>
+    ${list.map(o => `<tr>
+      <td class="txt">${o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(o.householdName || o.name)}</a>` : esc(o.householdName || o.name)}</td>
+      <td class="txt">${esc(o.name)}<small>${esc(o.purpose)}${opIsC4(o) ? " · C4" : ""}</small></td>
+      <td><span class="op-pill op-${o.group}" title="${esc(o.status)}">${esc(o.group)}</span>${o.group === "Closed" || o.group === "Committed" ? `<small>${esc(o.status.replace(/^(Closed|Committed)\s*[-–]?\s*/i, "").replace(/[()]/g, ""))}</small>` : ""}</td>
+      <td>${o.askDate ? opDate(o.askDate) : "–"}<small>${o.askDate ? "" : "added " + opDate(o.added)}</small></td>
+      <td>${o.ask ? money(o.ask) : "–"}</td>
+      <td>${o.funded ? money(o.funded) : (o.group === "Funded" || o.group === "Committed" ? "$0" : "–")}<small>${[o.fundedDate ? opDate(o.fundedDate) : "", o.pledge ? "pledge" : "", o.linked ? `${o.linked} gift${o.linked === 1 ? "" : "s"} linked` : ""].filter(Boolean).join(" · ")}</small></td>
+      <td class="txt">${o.fundraisers.length ? esc(o.fundraisers.join(", ")) : '<span class="nl">None listed</span>'}</td>
+      <td class="txt">${OP.frs.size ? esc(whyLbl[opWhy(o)] || "") : esc(o.assigned || "No assigned fundraiser")}</td>
+      <td class="chk">${o.flag ? `<span class="op-flag">${esc(o.flag)}</span>` : ""}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  const qEl = $("op-q");
+  qEl.oninput = () => { OP.q = qEl.value; const pos = qEl.selectionStart; opRenderAll(); const n = $("op-q"); n.focus(); n.setSelectionRange(pos, pos); };
+  $("op-status").onchange = e => { OP.status = e.target.value; opRenderAll(); };
+  $("op-check").onchange = e => { OP.check = e.target.checked; opRenderAll(); };
+  if ($("op-why")) $("op-why").onchange = e => { OP.why = e.target.value; opRenderAll(); };
+  $("op-all").querySelectorAll("th.op-sort").forEach(h => h.onclick = () => {
+    const nk = h.dataset.opk; OP.sortD = OP.sortK === nk ? -(OP.sortD || -1) : (nk === "hh" || nk === "name" || nk === "status" ? 1 : -1); OP.sortK = nk; opRenderAll(); });
 }
 function opStats(list) {
   const s = { n: list.length, ask: 0, funded: 0, open: 0, won: 0, check: 0, ident: 0 };
   list.forEach(o => { s.ask += o.ask || 0; s.funded += o.funded || 0; if (o.group === "Open") s.open++;
     if (o.group === "Funded" || o.group === "Committed") s.won++; if (o.group === "Identification") s.ident++; if (o.flag) s.check++; });
   return s;
-}
-function opTable(list, opts) {
-  if (!list.length) return `<div class="notice"><p>${esc(opts.empty)}</p></div>`;
-  const me = opts.me || "";
-  const rows = list.slice().sort((a, b) => opWhen(b).localeCompare(opWhen(a))).map(o => {
-    const listed = me && o.fundraisers.includes(me);
-    const hh = o.householdName || o.name;
-    return `<tr>
-      <td class="txt">${o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(hh)}</a>` : esc(hh)}${opts.showAssigned ? `<small>Assigned: ${esc(o.assigned || "No assigned fundraiser")}</small>` : ""}</td>
-      <td class="txt">${esc(o.name)}<small>${esc(o.purpose)}</small></td>
-      <td><span class="op-pill op-${o.group}">${esc(o.group)}</span><small>${esc(o.status)}</small></td>
-      <td>${o.ask ? money(o.ask) : "–"}<small>${o.askDate ? "Asked " + opDate(o.askDate) : "Not asked yet · added " + opDate(o.added)}</small></td>
-      <td>${o.funded ? money(o.funded) : "–"}<small>${[o.fundedDate ? opDate(o.fundedDate) : "", o.pledge ? "pledge" : "", o.linked ? `${o.linked} gift${o.linked === 1 ? "" : "s"} linked` : ""].filter(Boolean).join(" · ")}</small></td>
-      <td class="txt">${o.fundraisers.length ? esc(o.fundraisers.join(", ")) : '<span class="nl">None listed</span>'}${opts.showListed ? `<small>${listed ? "✓ " + esc(me.split(" ")[0]) + " is listed" : '<span class="nl">' + esc(me.split(" ")[0]) + " not listed</span>"}</small>` : ""}</td>
-      <td>${o.gaveSince ? money(o.gaveSince) : "–"}<small>${o.firstGiftSince ? "first " + opDate(o.firstGiftSince) : ""}</small></td>
-      <td class="chk">${o.flag ? `<span class="op-flag">${esc(o.flag)}</span>` : ""}</td></tr>`;
-  }).join("");
-  return `<div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr><th class="txt">Household</th><th class="txt">Opportunity (ask / proposal)</th><th>Status</th><th>Asked</th><th>Funded</th><th class="txt">Fundraisers on it</th><th>Household gave since the ask</th><th class="chk">Check</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-function opGoals(me, years) {
-  const gy = OP.year === "all" ? (years[0] || String(new Date().getFullYear())) : OP.year;
-  const first = me ? me.split(" ")[0] : "";
-  const base = OP.rows.filter(o => !me || (OP.basis === "listed" ? o.fundraisers.includes(me) : o.assigned === me));
-  const asks = base.filter(o => o.askDate && o.askDate.slice(0, 4) === gy && !/^identification/i.test(o.status || ""));
-  const fundedL = base.filter(o => o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === gy);
-  const q = d => Math.min(4, Math.floor((+d.slice(5, 7) - 1) / 3) + 1);
-  const cats = ["Q1", "Q2", "Q3", "Q4", "Total"];
-  const per = (list, f, pick) => { const v = [0, 0, 0, 0]; list.forEach(o => v[q(f(o)) - 1] += pick(o)); v.push(v.reduce((a, b) => a + b, 0)); return v; };
-  const askSeries = OP_TYPES.map(t => ({ name: t.label, color: t.color, vals: per(asks.filter(o => opType(o) === t.k), o => o.askDate, o => o.ask) }));
-  const cntSeries = OP_TYPES.map(t => ({ name: t.label, color: t.color, vals: per(asks.filter(o => opType(o) === t.k), o => o.askDate, () => 1) }));
-  const fundSeries = [{ name: "Funded", color: "#1E8449", vals: per(fundedL, o => o.fundedDate, o => o.funded) }];
-  const mfmt = (v, axis) => axis ? short(v) : money(v), cfmt = v => String(Math.round(v));
-  const askV = per(asks, o => o.askDate, o => o.ask), cntV = per(asks, o => o.askDate, () => 1), fV = fundSeries[0].vals, fcV = per(fundedL, o => o.fundedDate, () => 1);
-  const who = me ? (OP.basis === "listed" ? `opportunities ${esc(first)} is assigned to (listed on), whoever's household it is` : `opportunities on ${esc(first)}'s households (portfolio), whether or not ${esc(first)} is listed`)
-    : `all opportunities. Pick a fundraiser above to see ${OP.basis === "listed" ? "the ones they're assigned to" : "their portfolio's"}`;
-  const goals = OP_GOALS[gy];
-  $("op-goals").innerHTML = `<div class="card-head"><div><h2>Asks and funded, ${esc(gy)}${me ? " — " + esc(me) : ""}</h2>
-      <div class="sub">Counting ${who}. Asks by ask date; funded by the date funded.${OP.year === "all" ? ` Pick a year below to change the year.` : ""}</div></div>
-      <div class="card-tools"><div class="segbtn" role="group" aria-label="Count by">
-        <button type="button" data-opb="portfolio" aria-pressed="${OP.basis === "portfolio"}">By portfolio</button>
-        <button type="button" data-opb="listed" aria-pressed="${OP.basis === "listed"}">By assigned to opportunity</button></div></div></div>
-    <div class="op-charts">
-      <div><h3>Ask amounts</h3>${opStack(cats, askSeries, mfmt, "Ask amounts by quarter")}</div>
-      <div><h3>Number of asks</h3>${opStack(cats, cntSeries, cfmt, "Number of asks by quarter", true)}</div>
-      <div><h3>Funded amounts</h3>${opStack(cats, fundSeries, mfmt, "Funded amounts by quarter")}</div>
-    </div>
-    ${legendHtml(OP_TYPES.map(t => ({ color: t.color, label: t.label })).concat([{ color: "#1E8449", label: "Funded" }]))}
-    ${(() => { const prep = base.filter(o => o.group === "Identification"); return prep.length
-      ? `<p class="op-note" style="margin:0 0 8px"><b>Being prepared, not asked yet:</b> ${prep.length} opportunit${prep.length === 1 ? "y" : "ies"}${prep.some(o => o.ask > 1) ? `, ${short(prep.reduce((t, o) => t + (o.ask > 1 ? o.ask : 0), 0))} planned` : ""} (${prep.slice(0, 4).map(o => esc(o.name)).join("; ")}${prep.length > 4 ? "; …" : ""}). These count once they're asked.</p>` : ""; })()}
-    <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
-      <tr><td class="txt">Asks</td>${cntV.map(v => `<td>${v}</td>`).join("")}</tr>
-      <tr><td class="txt">&nbsp;&nbsp;C3 proposals (RE's count)</td>${per(asks.filter(o => !opIsC4(o)), o => o.askDate, () => 1).map(v => `<td>${v}</td>`).join("")}</tr>
-      <tr><td class="txt">Ask amount</td>${askV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      <tr><td class="txt">&nbsp;&nbsp;C3 under $10M (2A)</td>${per(asks.filter(o => !opIsC4(o) && o.ask < 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      <tr><td class="txt">&nbsp;&nbsp;C3 $10M or more (2A-2)</td>${per(asks.filter(o => !opIsC4(o) && o.ask >= 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      <tr><td class="txt">&nbsp;&nbsp;C4 / MCA (2D)</td>${per(asks.filter(opIsC4), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      <tr><td class="txt">Funded</td>${fcV.map(v => `<td>${v}</td>`).join("")}</tr>
-      <tr><td class="txt">Funded amount</td>${fV.map(v => `<td>${short(v)}</td>`).join("")}</tr>
-    </tbody></table></div>
-    ${goals ? `<h3 style="margin:18px 0 6px;color:var(--navy-deep)">Strategic Plan, Goal 2: Increase major gift opportunities</h3>
-    <div class="bs-tablewrap" style="max-width:1000px"><table class="bs op-goal"><thead><tr><th class="txt">Goal</th><th>Target</th><th>${me ? "Counted here" : "So far"}</th><th class="txt">Progress</th></tr></thead><tbody>
-      ${goals.map(gl => { const v = gl.calc(asks), p = gl.target ? v / gl.target : 0;
-        return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
-          <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
-    </tbody></table></div>
-    <p class="op-note">Matches RE's proposal charts: Instrument = Yes is a first-time proposal (the household's first ever), Instrument = Re-Engaged is a re-engaged proposal, and C4 asks (Instrument "N/A - C4 Ask" or Reason "C4 Gift") are kept separate. 2A, 2A-1, 2A-2 and 2B count C3 proposals only; 2D counts C4 asks. Increased asks use RE's gift type "Increased Ask / Previous Giving." ${me ? "With a fundraiser picked, these are that fundraiser's share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
-  $("op-goals").querySelectorAll("[data-opb]").forEach(b => b.onclick = () => { OP.basis = b.dataset.opb; opRender(); });
-}
-function opRender() {
-  if (!OP.loaded) return;
-  const me = opNorm(PF.fr), pool = opPool();
-  const years = [...new Set(OP.rows.map(o => opWhen(o).slice(0, 4)).filter(Boolean))].sort().reverse();
-  const tools = `<div class="op-tools">
-      <div class="segbtn" role="group" aria-label="Year">${[["all", "All years"]].concat(years.map(y => [y, y])).map(([v, l]) => `<button type="button" data-opy="${v}" aria-pressed="${OP.year === v}">${l}</button>`).join("")}</div>
-      <label>Status <select id="op-status">${[["", "All"], ["Identification", "Identification (not asked yet)"], ["Open", "Open (asked, waiting)"], ["Committed", "Committed"], ["Funded", "Funded"], ["Declined", "Declined"], ["Closed", "Closed"]].map(([v, l]) => `<option value="${v}"${OP.status === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
-      <label><input type="checkbox" id="op-check"${OP.check ? " checked" : ""}> Only ones to check</label>
-    </div>`;
-  const yrNote = OP.year === "all" ? "asked in 2024 or later" : `asked in ${OP.year}`;
-  opGoals(me, years);
-  const asOf = OP.updated ? `Updated from Raiser's Edge ${opDate(OP.updated.slice(0, 10))}.` : "";
-
-  if (!me) {
-    // Everyone: one row per fundraiser
-    const names = [...new Set(pool.map(o => o.assigned).concat(...pool.map(o => o.fundraisers)).filter(Boolean))].sort();
-    const rows = names.map(n => {
-      const mine = pool.filter(o => o.assigned === n), extra = pool.filter(o => o.assigned !== n && o.fundraisers.includes(n));
-      const s = opStats(mine), notListed = mine.filter(o => !o.fundraisers.includes(n)).length;
-      return { n, s, extra: extra.length, notListed };
-    }).filter(x => x.s.n || x.extra).sort((a, b) => b.s.n - a.s.n || b.extra - a.extra);
-    const noAssigned = pool.filter(o => !o.assigned);
-    $("op-sum").innerHTML = `<div class="card-head"><div><h2>Opportunities (asks / proposals) by fundraiser</h2>
-        <div class="sub">${pool.length.toLocaleString()} opportunities ${esc(yrNote)}. ${esc(asOf)} Click a fundraiser to see theirs.</div></div></div>${tools}
-      <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>On their households</th><th>Asked</th><th>Funded</th><th>Open</th><th>Not asked yet</th><th>They're not listed on</th><th>In addition to</th><th>To check</th></tr></thead><tbody>
-      ${rows.map(x => `<tr class="pick" data-f="${esc(x.n)}"><td class="txt">${esc(x.n)}</td><td>${x.s.n}</td><td>${short(x.s.ask)}</td><td>${short(x.s.funded)}</td><td>${x.s.open}</td><td>${x.s.ident || "–"}</td><td>${x.notListed || "–"}</td><td>${x.extra || "–"}</td><td>${x.s.check || "–"}</td></tr>`).join("")}
-      ${noAssigned.length ? `<tr><td class="txt"><i>No assigned fundraiser</i></td><td>${noAssigned.length}</td><td>${short(opStats(noAssigned).ask)}</td><td>${short(opStats(noAssigned).funded)}</td><td>${opStats(noAssigned).open}</td><td>${opStats(noAssigned).ident || "–"}</td><td></td><td></td><td>${opStats(noAssigned).check || "–"}</td></tr>` : ""}
-      </tbody></table></div>
-      <p class="op-note"><b>On their households</b> counts every opportunity on a household assigned to that fundraiser today, whether or not they're listed on it. <b>They're not listed on</b> is how many of those leave the assigned fundraiser off. <b>In addition to</b> counts opportunities they're listed on for households assigned to someone else or no one.</p>`;
-    const flagged = pool.filter(o => o.flag);
-    $("op-mine").innerHTML = `<div class="card-head"><div><h2>To check</h2><div class="sub">Opportunities whose status and gifts don't line up. Pick a fundraiser above to see all of theirs.</div></div></div>
-      ${opTable(flagged, { empty: "Nothing to check.", showAssigned: true })}`;
-    $("op-extra").hidden = true;
-  } else {
-    const first = me.split(" ")[0];
-    const mine = pool.filter(o => o.assigned === me), extra = pool.filter(o => o.assigned !== me && o.fundraisers.includes(me));
-    const s = opStats(mine), notListed = mine.filter(o => !o.fundraisers.includes(me)).length, se = opStats(extra);
-    $("op-sum").innerHTML = `<div class="card-head"><div><h2>Opportunities (asks / proposals) — ${esc(me)}</h2>
-        <div class="sub">${esc(yrNote[0].toUpperCase() + yrNote.slice(1))}. ${esc(asOf)}</div></div></div>${tools}
-      <div class="stats">
-        <div class="stat"><div class="k">On ${esc(first)}'s households</div><div class="v">${s.n}</div></div>
-        <div class="stat"><div class="k">Asked</div><div class="v">${short(s.ask)}</div></div>
-        <div class="stat"><div class="k">Funded</div><div class="v">${short(s.funded)}</div></div>
-        <div class="stat"><div class="k">Asked, still open</div><div class="v">${s.open}</div></div>
-        <div class="stat"><div class="k">Not asked yet</div><div class="v">${s.ident}</div></div>
-        <div class="stat"><div class="k">${esc(first)} not listed on</div><div class="v">${notListed}</div></div>
-        <div class="stat"><div class="k">In addition to</div><div class="v">${extra.length}</div></div>
-        <div class="stat"><div class="k">To check</div><div class="v">${s.check + se.check}</div></div>
-      </div>`;
-    $("op-mine").innerHTML = `<div class="card-head"><div><h2>On ${esc(first)}'s households</h2>
-        <div class="sub">Every opportunity on a household assigned to ${esc(me)} today, whether or not ${esc(first)} is listed on it.</div></div></div>
-      ${opTable(mine, { empty: "No opportunities on these households for the filters chosen.", me, showListed: true })}`;
-    $("op-extra").hidden = false;
-    $("op-extra").innerHTML = `<div class="card-head"><div><h2>In addition to: ${esc(first)}'s work on other households</h2>
-        <div class="sub">Opportunities ${esc(first)} is listed on (wrote, helped with or was present for) where the household is assigned to someone else or no one.</div></div></div>
-      ${opTable(extra, { empty: "None for the filters chosen.", showAssigned: true })}
-      <p class="op-note">Assignments are today's: if a household moved to ${esc(first)} this year, its earlier opportunities count here too. "Household gave since the ask" adds up the household's gifts (spouses, trusts and foundations included) from the ask date on, whether or not they're linked to the opportunity.</p>`;
-  }
-  // Controls
-  $("op-sum").querySelectorAll("[data-opy]").forEach(b => b.onclick = () => { OP.year = b.dataset.opy; opRender(); });
-  $("op-status").onchange = e => { OP.status = e.target.value; opRender(); };
-  $("op-check").onchange = e => { OP.check = e.target.checked; opRender(); };
-  $("op-sum").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => {
-    const opt = [...$("pf-fr").options].find(o => opNorm(o.value) === tr.dataset.f);
-    PF.fr = opt ? opt.value : tr.dataset.f; $("pf-fr").value = opt ? opt.value : ""; renderPortfolios();
-  });
 }
 
 /* ===== Portfolio Management ===== */
