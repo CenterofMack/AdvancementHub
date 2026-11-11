@@ -2694,17 +2694,20 @@ const OP_GOALS = {
     { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M", target: 40e6, kind: "money", calc: l => l.filter(o => o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
     { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => opType(o) === "inc").length },
     { id: "2A-2", text: "High-impact: 7 more grants or proposals of $10M or more", target: 7, kind: "count", calc: l => l.filter(o => o.ask >= 1e7).length },
-    { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(o => opType(o) === "first").length },
+    { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(opFirstOrReengaged).length },
     { id: "2D", text: "Unrestricted funds for MCA: ask for $3M", target: 3e6, kind: "money", calc: l => l.filter(o => /^C4\s*-\s*MCA/i.test(o.purpose) || /^MCA/i.test(o.name)).reduce((t, o) => t + o.ask, 0) }
   ]
 };
-// Kind of ask, matching RE's proposal charts: increased ask (gift type), first-time or reengaged, or other
+// Kind of ask, matching RE's proposal charts: first-time proposal (Instrument = Yes, query 49231),
+// increased ask (gift type "Increased Ask / Previous Giving"), or other
 function opType(o) {
+  if (o.firstMarked) return "first";
   if (/increase/i.test(o.giftType || "")) return "inc";
-  if (/first|reengag/i.test(o.giftType || "") || o.firstTime === true) return "first";
   return "other";
 }
-const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time or reengaged", color: "#F5B041" }, { k: "inc", label: "Increased asks", color: "#7DC24E" }];
+// Strategic Plan 2B: a first-time proposal, or a household that gave nothing in the two years before the ask
+const opFirstOrReengaged = o => !!o.firstMarked || o.firstTime === true;
+const OP_TYPES = [{ k: "other", label: "Proposals", color: "#1C8FC6" }, { k: "first", label: "First-time proposals", color: "#F5B041" }, { k: "inc", label: "Increased asks", color: "#7DC24E" }];
 // Stacked bars by quarter plus a Total bar
 function opStack(cats, series, fmtV, label, whole) {
   const W = 520, H = 230, L = 52, R = 10, T = 22, B = 30;
@@ -2822,7 +2825,7 @@ function opGoals(me, years) {
         return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
           <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
     </tbody></table></div>
-    <p class="op-note">Increased asks use RE's gift type "Increased Ask / Previous Giving." First-time or reengaged means the household (spouses, trusts and foundations included) gave nothing in the two years before the ask. 2D counts asks with an MCA purpose. ${me ? "With a fundraiser picked, these are that fundraiser's share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
+    <p class="op-note">First-time proposals are the ones marked Instrument = Yes in RE (the household's first proposal ever). Increased asks use RE's gift type "Increased Ask / Previous Giving." 2B counts first-time proposals plus reengaged households: those that gave nothing (spouses, trusts and foundations included) in the two years before the ask. 2D counts asks with an MCA purpose. ${me ? "With a fundraiser picked, these are that fundraiser's share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
   $("op-goals").querySelectorAll("[data-opb]").forEach(b => b.onclick = () => { OP.basis = b.dataset.opb; opRender(); });
 }
 function opRender() {
