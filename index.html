@@ -328,6 +328,7 @@
   table.bs.op-tbl th.txt,table.bs.op-tbl td.txt{position:static;box-shadow:none;min-width:115px}
   table.bs.op-tbl th{min-width:0}
   .op-seg{cursor:pointer}.op-seg:hover{opacity:.82}
+  tr.op-strong td{font-weight:600}
   .op-h3{margin:18px 0 6px;color:var(--navy-deep);font-size:15px}
   .op-sec>summary{cursor:pointer;list-style:none}.op-sec>summary::-webkit-details-marker{display:none}
   .op-sec>summary h2{display:inline}.op-sec>summary::before{content:"▸ ";color:var(--muted)}.op-sec[open]>summary::before{content:"▾ "}
@@ -2912,11 +2913,19 @@ function opRender() {
     <div class="bs-legend op-key">${askS.map(s => `<button type="button" class="op-keyb" data-opt="${s.k}"><i class="sw" style="background:${s.color}"></i>${esc(s.name)}</button>`).join("")}<button type="button" class="op-keyb" data-opt="funded"><i class="sw" style="background:#1E8449"></i>Funded</button></div>
     ${prep.length ? `<p class="op-note" style="margin:4px 0 10px"><b>Being prepared, not asked yet:</b> <a href="#" id="op-prep">${prep.length} opportunit${prep.length === 1 ? "y" : "ies"}</a>${prep.some(o => o.ask > 1) ? `, ${short(sum(prep, o => o.ask > 1 ? o.ask : 0))} planned` : ""}. These count once they're asked.</p>` : ""}
     <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
-      <tr><td class="txt">Asks</td>${per(asks, o => o.askDate, () => 1).map(v => `<td>${v}</td>`).join("")}</tr>
-      <tr><td class="txt">Ask amount</td>${per(asks, o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>
-      ${OP.ent !== "c4" ? `<tr><td class="txt">&nbsp;&nbsp;of which $10M or more</td>${per(asks.filter(o => !opIsC4(o) && o.ask >= 1e7), o => o.askDate, o => o.ask).map(v => `<td>${short(v)}</td>`).join("")}</tr>` : ""}
-      <tr><td class="txt">Funded</td>${fundS[0].n.map(v => `<td>${v}</td>`).join("")}</tr>
-      <tr><td class="txt">Funded amount</td>${fundS[0].vals.map(v => `<td>${short(v)}</td>`).join("")}</tr>
+      ${(() => {   // always counts and amounts, whatever the Show switch says
+        const big = asks.filter(o => !opIsC4(o) && o.ask >= 1e7), c4 = asks.filter(opIsC4), rest = asks.filter(o => !opIsC4(o) && o.ask < 1e7);
+        const row = (label, list, f, pick, fmt, cls) => `<tr${cls ? ` class="${cls}"` : ""}><td class="txt">${label}</td>${per(list, f, pick).map(v => `<td>${fmt(v)}</td>`).join("")}</tr>`;
+        const n = v => String(v), m = v => short(v);
+        return row("Asks", asks, o => o.askDate, () => 1, n, "op-strong")
+          + (OP.ent !== "c4" ? row("&nbsp;&nbsp;C3 under $10M (2A)", rest, o => o.askDate, () => 1, n) + row("&nbsp;&nbsp;C3 $10M or more (2A-2)", big, o => o.askDate, () => 1, n) : "")
+          + (OP.ent !== "c3" ? row("&nbsp;&nbsp;C4 / MCA (2D)", c4, o => o.askDate, () => 1, n) : "")
+          + row("Ask amount", asks, o => o.askDate, o => o.ask, m, "op-strong")
+          + (OP.ent !== "c4" ? row("&nbsp;&nbsp;C3 under $10M (2A)", rest, o => o.askDate, o => o.ask, m) + row("&nbsp;&nbsp;C3 $10M or more (2A-2)", big, o => o.askDate, o => o.ask, m) : "")
+          + (OP.ent !== "c3" ? row("&nbsp;&nbsp;C4 / MCA (2D)", c4, o => o.askDate, o => o.ask, m) : "")
+          + row("Funded", funded, o => o.fundedDate, () => 1, n, "op-strong")
+          + row("Funded amount", funded, o => o.fundedDate, o => o.funded, m, "op-strong");
+      })()}
     </tbody></table></div>
     ${goals ? `<h3 class="op-h3">Strategic Plan, Goal 2: Increase major gift opportunities</h3>
     <div class="bs-tablewrap" style="max-width:1000px"><table class="bs op-goal"><thead><tr><th class="txt">Goal</th><th>Target</th><th>${OP.frs.size ? "Counted here" : "So far"}</th><th class="txt">Progress</th></tr></thead><tbody>
