@@ -2817,6 +2817,7 @@ function opLoad() {
       if (!res.ok) { opMessage("Opportunities didn't load", `The data service returned an error (status ${res.status}).`, true); return; }
       const d = await res.json(), r = d && d.opportunities;
       if (!r || !Array.isArray(r.opportunities)) { opMessage("Opportunities didn't load", "The data service sent back something unexpected.", true); return; }
+      // "Remove" opportunities are left out (as in RE's proposal charts); inactive ones are counted
       OP.rows = r.opportunities.filter(o => !/^remove$/i.test(String(o.status || "").trim()));
       OP.rows.forEach(o => { o.group = opGroup(o.status); o.pledge = /pledge/i.test(o.status || ""); o.flag = opFlag(o); });
       OP.updated = r.updated || ""; OP.loaded = true;
