@@ -313,6 +313,12 @@
   .op-bar{height:10px;background:#EDF0F4;border-radius:5px;overflow:hidden;min-width:120px}
   .op-bar i{display:block;height:100%;background:var(--teal,#0E7C86)}
   .op-goal td.txt{white-space:normal;max-width:420px}
+  .rt-link{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:#B8C4D4;text-underline-offset:3px}
+  .rt-link:hover{color:var(--teal,#0E7C86);text-decoration-color:currentColor}
+  #rt-list{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff}
+  .rt-list-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}
+  .rt-list-head h3{margin:0;color:var(--navy-deep);font-size:16px}.rt-list-tools{display:flex;gap:10px;align-items:center}
+  .rt-list-wrap{max-height:520px;overflow:auto}
   .op-filters{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;margin:0 0 12px}
   .op-fl{display:flex;align-items:center;gap:8px}.op-fl>span{font-size:12.5px;color:var(--muted)}
   .op-ms{position:relative}.op-ms summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:#fff;font-size:13.5px}
@@ -1317,26 +1323,30 @@ function rtRender() {
   const n = RT_LEVELS.length, Z = () => Array(n).fill(0);
   const t = { up: Z(), rep: Z(), dec: Z(), lap: Z(), tot: Z(), cA: Z(), cB: Z() };
   const named = RT_LEVELS.slice(0, RT_NAMED).map(() => ({ lap: [], dec: [], up: [] }));
+  const L = RT_LEVELS.map(() => ({ tot: [], up: [], rep: [], dec: [], lap: [] })), newL = [];
   let comeback = 0, comebackKnown = 0, newOrBack = 0;
   pool.forEach(x => {
     const a = P.a(x), b = P.b(x), la = rtLevel(a), lb = rtLevel(b);
     if (la >= 0) t.cA[la]++;
     if (lb >= 0) t.cB[lb]++;
     if (la < 0) {
-      if (lb >= 0) { newOrBack++; if (RT.cmp === "2026" && RT.mode !== "ytd" && x.m24 > 0) comebackKnown++; }
+      if (lb >= 0) { newOrBack++; newL.push({ x, a, b }); if (RT.cmp === "2026" && RT.mode !== "ytd" && x.m24 > 0) comebackKnown++; }
       return;
     }
     t.tot[la]++;
     const kind = lb < 0 ? "lap" : lb === la ? "rep" : lb < la ? "up" : "dec";
     t[kind][la]++;
+    L[la].tot.push({ x, a, b }); L[la][kind].push({ x, a, b });
     if (la < RT_NAMED && kind !== "rep") named[la][kind].push({ x, a, b });
   });
   const sum = arr => arr.reduce((s, v) => s + v, 0);
   const pc = (v, d) => d ? Math.round(v / d * 100) + "%" : "–";
   const I = v => v ? v.toLocaleString("en-US") : "–";
+  RT.lists = { L, newL, P };
+  const K = (v, key) => v ? `<button type="button" class="rt-link" data-rl="${key}">${v.toLocaleString("en-US")}</button>` : "–";
   // Retention by level
   const rows = RT_LEVELS.map((l, i) => `<tr><td class="txt"><b>${esc(l.label)}</b> <span class="rt-rng">${esc(l.range)}</span></td>
-    <td>${I(t.tot[i])}</td><td>${I(t.up[i])}</td><td>${I(t.rep[i])}</td><td>${i === n - 1 ? "<span class='rt-na'>n/a</span>" : I(t.dec[i])}</td><td>${I(t.lap[i])}</td>
+    <td>${K(t.tot[i], i + "|tot")}</td><td>${K(t.up[i], i + "|up")}</td><td>${K(t.rep[i], i + "|rep")}</td><td>${i === n - 1 ? "<span class='rt-na'>n/a</span>" : K(t.dec[i], i + "|dec")}</td><td>${K(t.lap[i], i + "|lap")}</td>
     <td class="hl">${pc(t.up[i] + t.rep[i], t.tot[i])}</td><td class="hl"><b>${pc(t.tot[i] - t.lap[i], t.tot[i])}</b></td></tr>`).join("");
   const T = { tot: sum(t.tot), up: sum(t.up), rep: sum(t.rep), dec: sum(t.dec), lap: sum(t.lap) };
   $("rt-table").innerHTML = `<div class="card-head"><div><h2>${esc(P.title)}${RT.fr ? " — " + esc(RT.fr) : ""}${esc(where)}</h2>
@@ -1344,15 +1354,17 @@ function rtRender() {
     <div class="stats">
       <div class="stat"><div class="k">Overall retention</div><div class="v">${pc(T.tot - T.lap, T.tot)}</div></div>
       <div class="stat"><div class="k">Repeat or upgrade</div><div class="v">${pc(T.up + T.rep, T.tot)}</div></div>
-      <div class="stat"><div class="k">${esc(P.A)} donors</div><div class="v">${T.tot.toLocaleString("en-US")}</div></div>
-      <div class="stat"><div class="k">Lapsed</div><div class="v">${T.lap.toLocaleString("en-US")}</div></div>
-      <div class="stat"><div class="k">New + renewed in ${esc(P.B)}</div><div class="v">${newOrBack.toLocaleString("en-US")}</div></div>
+      <div class="stat"><div class="k">${esc(P.A)} donors</div><div class="v">${K(T.tot, "all|tot")}</div></div>
+      <div class="stat"><div class="k">Lapsed</div><div class="v">${K(T.lap, "all|lap")}</div></div>
+      <div class="stat"><div class="k">New + renewed in ${esc(P.B)}</div><div class="v">${K(newOrBack, "new|new")}</div></div>
     </div>
     ${P.complete ? "" : `<div class="mp-flag">${esc(P.B)} isn't over yet, so households whose ${RT.mode === "proj" ? "gifts aren't in or projected yet" : "gifts haven't come in yet"} show as lapsed or decreased for now.</div>`}
     <div class="bs-tablewrap"><table class="bs rt"><thead><tr><th class="txt">${esc(P.A)} level</th><th>${esc(P.A)} donors</th><th>Upgrade</th><th>Repeat</th><th>Decrease</th><th>Lapsed</th><th class="hl">Repeat / upgrade retention</th><th class="hl">Retention</th></tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr><td class="txt">Total donor retention</td><td>${I(T.tot)}</td><td>${I(T.up)}</td><td>${I(T.rep)}</td><td>${I(T.dec)}</td><td>${I(T.lap)}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td></tr></tfoot></table></div>
-    <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level.</p>`;
+      <tfoot><tr><td class="txt">Total donor retention</td><td>${K(T.tot, "all|tot")}</td><td>${K(T.up, "all|up")}</td><td>${K(T.rep, "all|rep")}</td><td>${K(T.dec, "all|dec")}</td><td>${K(T.lap, "all|lap")}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td></tr></tfoot></table></div>
+    <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level. Click any number to see the households behind it.</p>
+    <div id="rt-list" hidden></div>`;
+  if (RT.open) rtListDraw();
   rtTrend(); rtBet(P);
   // Donors by level, both years; then new and renewed in the annual report's wording
   const yB = RT.cmp === "2025" ? 2025 : 2026, yA = yB - 1;
@@ -1381,6 +1393,33 @@ function rtRender() {
       <div class="rt-cols">${block("Lapsed", named[i].lap, "lap")}${block("Decreased", named[i].dec, "dec")}${block("Increased", named[i].up, "inc")}</div></div>`).join("")}`;
 }
 
+// The households behind a number in the retention table
+function rtListDraw() {
+  const el = $("rt-list"), o = RT.open; if (!el || !o || !RT.lists) return;
+  const { L, newL, P } = RT.lists;
+  const [lv, kind] = o.key.split("|");
+  const kindName = { tot: P.A + " donors", up: "Upgraded", rep: "Repeated", dec: "Decreased", lap: "Lapsed", new: "New + renewed in " + P.B }[kind];
+  let list = lv === "new" ? newL : lv === "all" ? [].concat(...L.map(g => g[kind])) : L[+lv][kind];
+  const sort = o.sort || "amount";
+  list = list.slice().sort((p, q) => sort === "name" ? p.x.name.localeCompare(q.x.name) : sort === "change" ? (q.b - q.a) - (p.b - p.a) : (q.a || q.b) - (p.a || p.b));
+  const lvName = lv === "all" || lv === "new" ? "All levels" : RT_LEVELS[+lv].label;
+  el.hidden = false;
+  el.innerHTML = `<div class="rt-list-head"><div><h3>${esc(lvName)} · ${esc(kindName)} · ${list.length.toLocaleString("en-US")} household${list.length === 1 ? "" : "s"}</h3>
+      <div class="sub">${esc(P.A)} giving → ${esc(P.B)} giving. Names open the record in Raiser's Edge.</div></div>
+      <div class="rt-list-tools"><div class="segbtn" role="group">${[["amount", "Amount"], ["change", "Change"], ["name", "Name"]].map(([v, l]) => `<button type="button" data-rls="${v}" aria-pressed="${sort === v}">${l}</button>`).join("")}</div>
+      <button type="button" class="op-dr-x" id="rt-list-x" aria-label="Close">×</button></div></div>
+    <div class="bs-tablewrap rt-list-wrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th>${esc(P.A)}</th><th>${esc(P.B)}</th><th>Change</th></tr></thead><tbody>
+      ${list.map(r => { const ch = r.b - r.a; return `<tr><td class="txt">${r.x.sid ? `<a href="${esc(RECORD_URL(r.x.sid))}" target="_blank" rel="noopener">${esc(r.x.name)}</a>` : esc(r.x.name)}${r.x.dec ? ` <span class="tag off">deceased</span>` : ""}</td>
+        <td class="txt">${esc(r.x.fr)}</td><td>${r.a ? money(r.a) : "–"}</td><td>${r.b ? money(r.b) : "–"}</td><td class="${ch > 0 ? "up" : ch < 0 ? "down" : ""}">${ch ? (ch > 0 ? "+" : "") + money(ch) : "–"}</td></tr>`; }).join("")}
+    </tbody></table></div>`;
+  $("rt-list-x").onclick = () => { RT.open = null; el.hidden = true; };
+  el.querySelectorAll("[data-rls]").forEach(b => b.onclick = () => { RT.open.sort = b.dataset.rls; rtListDraw(); });
+}
+$("rt-table").addEventListener("click", e => {
+  const b = e.target.closest(".rt-link"); if (!b) return;
+  RT.open = { key: b.dataset.rl, sort: RT.open && RT.open.sort || "amount" };
+  rtListDraw(); $("rt-list").scrollIntoView({ block: "nearest", behavior: "smooth" });
+});
 document.querySelectorAll("[data-rtc]").forEach(b => b.addEventListener("click", () => { RT.cmp = b.dataset.rtc; rtRender(); }));
 document.querySelectorAll("[data-rtm]").forEach(b => b.addEventListener("click", () => { RT.mode = b.dataset.rtm; rtRender(); }));
 $("rt-fr").addEventListener("change", e => { RT.fr = e.target.value; rtRender(); });
