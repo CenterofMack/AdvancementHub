@@ -313,6 +313,11 @@
   .op-bar{height:10px;background:#EDF0F4;border-radius:5px;overflow:hidden;min-width:120px}
   .op-bar i{display:block;height:100%;background:var(--teal,#0E7C86)}
   .op-goal td.txt{white-space:normal;max-width:420px}
+  table.bs th.rt-prev{background:#EEF0F3;color:#5A6474;font-style:italic}
+  table.bs th.rt-prev small{display:block;font-weight:400;font-style:normal;font-size:11px}
+  table.bs td.rt-prev{background:#F6F7F9;color:#5A6474;font-style:italic;border-left:2px dashed #C9CFD8}
+  table.bs th.rt-prev{border-left:2px dashed #C9CFD8}
+  .rt-prev-stat{background:#F6F7F9;border-style:dashed}.rt-prev-stat .v{color:#5A6474;font-style:italic}
   .rt-link{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:#B8C4D4;text-underline-offset:3px}
   .rt-link:hover{color:var(--teal,#0E7C86);text-decoration-color:currentColor}
   #rt-list{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff}
@@ -1343,26 +1348,34 @@ function rtRender() {
   const pc = (v, d) => d ? Math.round(v / d * 100) + "%" : "–";
   const I = v => v ? v.toLocaleString("en-US") : "–";
   RT.lists = { L, newL, P };
+  // Last year's rate for comparison: 2024 donors who gave again in 2025 (full year), same filters
+  const prev = RT.cmp === "2026" ? (() => {
+    const tot = Z(), lap = Z();
+    pool.forEach(x => { const la = rtLevel(x.m24), lb = rtLevel(x.m25); if (la < 0) return; tot[la]++; if (lb < 0) lap[la]++; });
+    return { tot, lap, T: sum(tot), TL: sum(lap) };
+  })() : null;
+  const prevCell = i => prev ? `<td class="rt-prev">${i === "all" ? pc(prev.T - prev.TL, prev.T) : pc(prev.tot[i] - prev.lap[i], prev.tot[i])}</td>` : "";
   const K = (v, key) => v ? `<button type="button" class="rt-link" data-rl="${key}">${v.toLocaleString("en-US")}</button>` : "–";
   // Retention by level
   const rows = RT_LEVELS.map((l, i) => `<tr><td class="txt"><b>${esc(l.label)}</b> <span class="rt-rng">${esc(l.range)}</span></td>
     <td>${K(t.tot[i], i + "|tot")}</td><td>${K(t.up[i], i + "|up")}</td><td>${K(t.rep[i], i + "|rep")}</td><td>${i === n - 1 ? "<span class='rt-na'>n/a</span>" : K(t.dec[i], i + "|dec")}</td><td>${K(t.lap[i], i + "|lap")}</td>
-    <td class="hl">${pc(t.up[i] + t.rep[i], t.tot[i])}</td><td class="hl"><b>${pc(t.tot[i] - t.lap[i], t.tot[i])}</b></td></tr>`).join("");
+    <td class="hl">${pc(t.up[i] + t.rep[i], t.tot[i])}</td><td class="hl"><b>${pc(t.tot[i] - t.lap[i], t.tot[i])}</b></td>${prevCell(i)}</tr>`).join("");
   const T = { tot: sum(t.tot), up: sum(t.up), rep: sum(t.rep), dec: sum(t.dec), lap: sum(t.lap) };
   $("rt-table").innerHTML = `<div class="card-head"><div><h2>${esc(P.title)}${RT.fr ? " — " + esc(RT.fr) : ""}${esc(where)}</h2>
       <div class="sub">Each ${esc(P.A)} donor household, by its ${esc(P.A)} giving level, and what it did in ${esc(P.B)}. Upgrade or decrease means moving to a higher or lower level.</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Overall retention</div><div class="v">${pc(T.tot - T.lap, T.tot)}</div></div>
+      ${prev ? `<div class="stat rt-prev-stat"><div class="k">Last year (2025 rate)</div><div class="v">${pc(prev.T - prev.TL, prev.T)}</div></div>` : ""}
       <div class="stat"><div class="k">Repeat or upgrade</div><div class="v">${pc(T.up + T.rep, T.tot)}</div></div>
       <div class="stat"><div class="k">${esc(P.A)} donors</div><div class="v">${K(T.tot, "all|tot")}</div></div>
       <div class="stat"><div class="k">Lapsed</div><div class="v">${K(T.lap, "all|lap")}</div></div>
       <div class="stat"><div class="k">New + renewed in ${esc(P.B)}</div><div class="v">${K(newOrBack, "new|new")}</div></div>
     </div>
     ${P.complete ? "" : `<div class="mp-flag">${esc(P.B)} isn't over yet, so households whose ${RT.mode === "proj" ? "gifts aren't in or projected yet" : "gifts haven't come in yet"} show as lapsed or decreased for now.</div>`}
-    <div class="bs-tablewrap"><table class="bs rt"><thead><tr><th class="txt">${esc(P.A)} level</th><th>${esc(P.A)} donors</th><th>Upgrade</th><th>Repeat</th><th>Decrease</th><th>Lapsed</th><th class="hl">Repeat / upgrade retention</th><th class="hl">Retention</th></tr></thead>
+    <div class="bs-tablewrap"><table class="bs rt"><thead><tr><th class="txt">${esc(P.A)} level</th><th>${esc(P.A)} donors</th><th>Upgrade</th><th>Repeat</th><th>Decrease</th><th>Lapsed</th><th class="hl">Repeat / upgrade retention</th><th class="hl">Retention</th>${prev ? `<th class="rt-prev">Last year's retention<small>2025 rate, for comparison</small></th>` : ""}</tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr><td class="txt">Total donor retention</td><td>${K(T.tot, "all|tot")}</td><td>${K(T.up, "all|up")}</td><td>${K(T.rep, "all|rep")}</td><td>${K(T.dec, "all|dec")}</td><td>${K(T.lap, "all|lap")}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td></tr></tfoot></table></div>
-    <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level. Click any number to see the households behind it.</p>
+      <tfoot><tr><td class="txt">Total donor retention</td><td>${K(T.tot, "all|tot")}</td><td>${K(T.up, "all|up")}</td><td>${K(T.rep, "all|rep")}</td><td>${K(T.dec, "all|dec")}</td><td>${K(T.lap, "all|lap")}</td><td class="hl">${pc(T.up + T.rep, T.tot)}</td><td class="hl">${pc(T.tot - T.lap, T.tot)}</td>${prevCell("all")}</tr></tfoot></table></div>
+    <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level. Click any number to see the households behind it.${prev ? " <b>Last year's retention</b> is the full 2025 rate (2024 donors who gave again in 2025), with the same fundraiser and region filters, for comparison." : ""}</p>
     <div id="rt-list" hidden></div>`;
   if (RT.open) rtListDraw();
   rtTrend(); rtBet(P);
