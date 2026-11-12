@@ -2717,7 +2717,7 @@ document.addEventListener("mousemove", e => {
    (Attribution). Access is the Projections column in HubAccess. Window: asked in 2024 or later, or added
    in 2024 or later with no ask date. Assignments are today's. */
 const OPPS_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/03/workflows/41fe442712a548dba0a3ed77aeb939a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XCuRNixloc6ww5lEvMPVtJIls3fBbHVKryp8cv70MhU";
-const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, basis: "portfolio",
+const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, basis: "listed",
   ent: "all", metric: "amount", frs: new Set(), lastPF: null, why: "", q: "", sortK: "date", sortD: -1, dr: null };
 // Strategic Plan targets for proposals (Goal 2). Add a year's targets here when the plan is set.
 const OP_GOALS = {
@@ -2875,7 +2875,7 @@ function opRender() {
       <details class="op-ms" id="op-ms"><summary>Fundraisers: <b>${esc(selLabel)}</b></summary>
         <div class="op-ms-pop"><div class="op-ms-btns"><button type="button" class="btn sm" id="op-ms-all">Everyone</button></div>
         ${names.map(n => `<label><input type="checkbox" value="${esc(n)}"${OP.frs.has(n) ? " checked" : ""}> ${esc(n)}</label>`).join("")}</div></details>
-      <div class="op-fl"><span>Count by</span>${seg("data-opb", OP.basis, [["portfolio", "Portfolio"], ["listed", "Assigned to opportunity"]])}</div>
+      <div class="op-fl"><span>Count by</span>${seg("data-opb", OP.basis, [["listed", "Involved in opportunity"], ["portfolio", "Portfolio"]])}</div>
       <div class="op-fl"><span>Entity</span>${seg("data-ope", OP.ent, [["c3", "C3"], ["c4", "C4"], ["all", "Combined"]])}</div>
       <div class="op-fl"><span>Year</span>${seg("data-opy", OP.year, [["all", "All"]].concat(years.map(y => [y, y])))}</div>
     </div>
@@ -2886,7 +2886,9 @@ function opRender() {
       <div class="stat"><div class="k">Not asked yet</div><div class="v">${live.filter(o => o.group === "Identification").length}</div></div>
       <div class="stat"><div class="k">To check</div><div class="v">${live.filter(o => o.flag).length}</div></div>
     </div>
-    <p class="op-note" style="margin-top:2px">${OP.frs.size ? (OP.basis === "listed" ? "Counting opportunities the checked fundraisers are assigned to (listed on), whoever's household it is." : "Counting opportunities on the checked fundraisers' households (portfolio), whether or not they're listed.") : "Counting everyone's opportunities."}
+    <p class="op-note" style="margin-top:2px">${OP.basis === "listed"
+      ? `<b>Involved in opportunity:</b> ${OP.frs.size ? "opportunities the checked fundraisers are listed on, whoever's household it is." : "pick fundraisers to see the opportunities they're listed on, whoever's household it is."} That includes whoever made the ask (determined by the notes) and whoever wrote the proposal. In 2027, reporting will work on a new process to separate the person who wrote a grant from the person who made the ask.`
+      : `<b>Portfolio:</b> ${OP.frs.size ? "opportunities on households assigned to the checked fundraisers today, whether or not they're listed on the opportunity." : "pick fundraisers to see the opportunities on the households assigned to them today, whether or not they're listed on the opportunity."} If a household moved to someone this year, its earlier opportunities count for the new fundraiser.`}
       ${OP.ent === "c3" ? "C3 only (RE's proposal count)." : OP.ent === "c4" ? "C4 / MCA only." : "C3 and C4 together."} ${OP.updated ? "Updated from Raiser's Edge " + opDate(OP.updated.slice(0, 10)) + "." : ""}</p>`;
 
   // --- Charts, quarter table, goals ---
@@ -2986,10 +2988,10 @@ function opRenderByFr() {
     return { n, s, extra: extra.length, notListed: mine.filter(o => !o.fundraisers.includes(n)).length };
   }).filter(x => x.s.n || x.extra).sort((a, b) => b.s.n - a.s.n || b.extra - a.extra);
   $("op-byfr").innerHTML = `<p class="op-note" style="margin:0 0 8px">${esc(OP.year === "all" ? "All years" : OP.year)}, ${OP.ent === "c3" ? "C3" : OP.ent === "c4" ? "C4" : "C3 and C4"}. Click a name to check that fundraiser in the filter.</p>
-    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>On their households</th><th>Asked</th><th>Funded</th><th>Open</th><th>Not asked yet</th><th>They're not listed on</th><th>In addition to</th><th>To check</th></tr></thead><tbody>
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>On their households</th><th>Asked</th><th>Funded</th><th>Open</th><th>Not asked yet</th><th>Not involved in</th><th>Involved, others' households</th><th>To check</th></tr></thead><tbody>
     ${rows.map(x => `<tr class="pick${OP.frs.has(x.n) ? " sel" : ""}" data-f="${esc(x.n)}"><td class="txt">${esc(x.n)}</td><td>${x.s.n}</td><td>${short(x.s.ask)}</td><td>${short(x.s.funded)}</td><td>${x.s.open}</td><td>${x.s.ident || "–"}</td><td>${x.notListed || "–"}</td><td>${x.extra || "–"}</td><td>${x.s.check || "–"}</td></tr>`).join("")}
     </tbody></table></div>
-    <p class="op-note"><b>On their households</b>: every opportunity on a household assigned to them today, listed or not. <b>They're not listed on</b>: how many of those leave them off. <b>In addition to</b>: opportunities they're listed on for someone else's household.</p>`;
+    <p class="op-note"><b>On their households</b>: every opportunity on a household assigned to them today (portfolio), involved or not. <b>Not involved in</b>: how many of those don't list them. <b>Involved, others' households</b>: opportunities they're listed on (made the ask or wrote the proposal) for someone else's household.</p>`;
   $("op-byfr").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => opSetFrs(new Set([tr.dataset.f])));
 }
 
@@ -3004,11 +3006,11 @@ function opRenderAll() {
   const val = o => k === "date" ? (o.askDate || o.added || "") : k === "ask" ? o.ask : k === "funded" ? o.funded : k === "hh" ? (o.householdName || "").toLowerCase() : k === "status" ? o.group : (o.name || "").toLowerCase();
   list.sort((a, b) => { const x = val(a), y = val(b); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
   const th = (key, label, cls) => `<th class="${cls || ""} op-sort" data-opk="${key}">${label}${k === key ? (dir < 0 ? " ▾" : " ▴") : ""}</th>`;
-  const whyLbl = { both: "Portfolio, listed", portfolio: "Portfolio, not listed", listed: "In addition to" };
+  const whyLbl = { both: "Portfolio, involved", portfolio: "Portfolio, not involved", listed: "Involved, someone else's household" };
   $("op-all").innerHTML = `<div class="op-tools">
       <input type="search" id="op-q" placeholder="Search names, households, fundraisers…" value="${esc(OP.q || "")}">
       <label>Status <select id="op-status">${[["", "All"], ["Identification", "Identification (not asked yet)"], ["Open", "Open (asked, waiting)"], ["Committed", "Committed"], ["Funded", "Funded"], ["Declined", "Declined"], ["Closed", "Closed"]].map(([v, l]) => `<option value="${v}"${OP.status === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
-      ${OP.frs.size ? `<label>Show <select id="op-why"><option value="">Portfolio and in addition to</option><option value="portfolio"${OP.why === "portfolio" ? " selected" : ""}>Their portfolio</option><option value="listed"${OP.why === "listed" ? " selected" : ""}>In addition to (others' households)</option></select></label>` : ""}
+      ${OP.frs.size ? `<label>Show <select id="op-why"><option value="">Involved or in their portfolio</option><option value="portfolio"${OP.why === "portfolio" ? " selected" : ""}>Their portfolio</option><option value="listed"${OP.why === "listed" ? " selected" : ""}>Involved, someone else's household</option></select></label>` : ""}
       <label><input type="checkbox" id="op-check"${OP.check ? " checked" : ""}> Only ones to check</label>
       <span class="op-note" style="margin:0">${list.length} shown</span>
     </div>
