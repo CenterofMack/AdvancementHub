@@ -2724,7 +2724,8 @@ const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(
 // Strategic Plan targets for proposals (Goal 2). Add a year's targets here when the plan is set.
 const OP_GOALS = {
   "2026": [
-    { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M", target: 40e6, kind: "money", calc: l => l.filter(o => !opIsC4(o) && o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
+    // 2A matches RE's "2026 Proposals - Amount Asked": every ask under $10M, MCA asks included, Reason "C4 Gift" left out
+    { id: "2A", text: "Ask for $40M+ in grants and proposals, individual asks below $10M (MCA asks included)", target: 40e6, kind: "money", calc: l => l.filter(o => !opC4Gift(o) && o.ask < 1e7).reduce((t, o) => t + o.ask, 0) },
     { id: "2A-1", text: "Growth from existing donors: 50 increased asks over the previous year's giving", target: 50, kind: "count", calc: l => l.filter(o => !opIsC4(o) && /increase/i.test(o.giftType || "")).length },
     { id: "2A-2", text: "High-impact: 7 more grants or proposals of $10M or more", target: 7, kind: "count", calc: l => l.filter(o => !opIsC4(o) && o.ask >= 1e7).length },
     { id: "2B", text: "First-time or reengaged donors (nothing given in at least two years): 80 grants or proposals", target: 80, kind: "count", calc: l => l.filter(o => !opIsC4(o) && opFirstOrReengaged(o)).length },
@@ -2733,6 +2734,7 @@ const OP_GOALS = {
 };
 // RE's proposal charts sort asks by Instrument (query 49231): Yes = first-time, Re-Engaged, N/A - C4 Ask;
 // Reason "C4 Gift" is left out of the C3 counts. The Strategic Plan keeps C4 (MCA) separate too (Goal 2D).
+const opC4Gift = o => /c4 gift/i.test(o.reason || "");
 const opIsC4 = o => /c4/i.test(o.instrument || "") || /c4 gift/i.test(o.reason || "") ||
   (!o.matched && (/^C4\s*-\s*MCA/i.test(o.purpose || "") || /^MCA/i.test(o.name || "")));
 function opType(o) {
@@ -2916,15 +2918,17 @@ function opRender() {
     ${prep.length ? `<p class="op-note" style="margin:4px 0 10px"><b>Being prepared, not asked yet:</b> <a href="#" id="op-prep">${prep.length} opportunit${prep.length === 1 ? "y" : "ies"}</a>${prep.some(o => o.ask > 1) ? `, ${short(sum(prep, o => o.ask > 1 ? o.ask : 0))} planned` : ""}. These count once they're asked.</p>` : ""}
     <div class="bs-tablewrap" style="max-width:760px"><table class="bs"><thead><tr><th class="txt">${esc(gy)}</th>${cats.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
       ${(() => {   // always counts and amounts, whatever the Show switch says
-        const big = asks.filter(o => !opIsC4(o) && o.ask >= 1e7), c4 = asks.filter(opIsC4), rest = asks.filter(o => !opIsC4(o) && o.ask < 1e7);
+        const big = asks.filter(o => !opIsC4(o) && o.ask >= 1e7), c4 = asks.filter(opIsC4), rest = asks.filter(o => !opC4Gift(o) && o.ask < 1e7);
         const row = (label, list, f, pick, fmt, cls) => `<tr${cls ? ` class="${cls}"` : ""}><td class="txt">${label}</td>${per(list, f, pick).map(v => `<td>${fmt(v)}</td>`).join("")}</tr>`;
         const n = v => String(v), m = v => short(v);
         return row("Asks", asks, o => o.askDate, () => 1, n, "op-strong")
-          + (OP.ent !== "c4" ? row("&nbsp;&nbsp;C3 under $10M (2A)", rest, o => o.askDate, () => 1, n) + row("&nbsp;&nbsp;C3 $10M or more (2A-2)", big, o => o.askDate, () => 1, n) : "")
-          + (OP.ent !== "c3" ? row("&nbsp;&nbsp;C4 / MCA (2D)", c4, o => o.askDate, () => 1, n) : "")
+          + row("&nbsp;&nbsp;Under $10M (2A, MCA included)", rest, o => o.askDate, () => 1, n)
+          + (OP.ent !== "c4" ? row("&nbsp;&nbsp;C3 $10M or more (2A-2)", big, o => o.askDate, () => 1, n) : "")
+          + (OP.ent !== "c3" ? row("&nbsp;&nbsp;C4 / MCA (2D, also in 2A)", c4, o => o.askDate, () => 1, n) : "")
           + row("Ask amount", asks, o => o.askDate, o => o.ask, m, "op-strong")
-          + (OP.ent !== "c4" ? row("&nbsp;&nbsp;C3 under $10M (2A)", rest, o => o.askDate, o => o.ask, m) + row("&nbsp;&nbsp;C3 $10M or more (2A-2)", big, o => o.askDate, o => o.ask, m) : "")
-          + (OP.ent !== "c3" ? row("&nbsp;&nbsp;C4 / MCA (2D)", c4, o => o.askDate, o => o.ask, m) : "")
+          + row("&nbsp;&nbsp;Under $10M (2A, MCA included)", rest, o => o.askDate, o => o.ask, m)
+          + (OP.ent !== "c4" ? row("&nbsp;&nbsp;C3 $10M or more (2A-2)", big, o => o.askDate, o => o.ask, m) : "")
+          + (OP.ent !== "c3" ? row("&nbsp;&nbsp;C4 / MCA (2D, also in 2A)", c4, o => o.askDate, o => o.ask, m) : "")
           + row("Funded", funded, o => o.fundedDate, () => 1, n, "op-strong")
           + row("Funded amount", funded, o => o.fundedDate, o => o.funded, m, "op-strong");
       })()}
@@ -2935,7 +2939,7 @@ function opRender() {
         return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
           <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
     </tbody></table></div>
-    <p class="op-note">2A, 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 asks (the Entity switch doesn't change these). First-time = Instrument "Yes"; re-engaged = Instrument "Re-Engaged"; C4 = Instrument "N/A - C4 Ask" or Reason "C4 Gift"; increased asks = gift type "Increased Ask / Previous Giving."${OP.frs.size ? " With fundraisers checked, these are their share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
+    <p class="op-note">2A counts every ask under $10M, MCA asks included (as RE's amount chart does), leaving out Reason "C4 Gift." 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 / MCA asks. The Entity switch doesn't change these. First-time = Instrument "Yes"; re-engaged = Instrument "Re-Engaged"; C4 = Instrument "N/A - C4 Ask" or Reason "C4 Gift"; increased asks = gift type "Increased Ask / Previous Giving."${OP.frs.size ? " With fundraisers checked, these are their share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
 
   opRenderByFr(); opRenderAll();
 
