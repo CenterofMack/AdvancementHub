@@ -335,7 +335,8 @@
   .op-sec[open]>summary{margin-bottom:12px}
   .op-tools input[type=search]{min-width:260px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;font:inherit}
   th.op-sort{cursor:pointer;user-select:none}th.op-sort:hover{text-decoration:underline}
-  .op-chartwrap.dr{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:20px;align-items:start}
+  .op-chartwrap.dr{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:20px;align-items:start}
+  .op-chartwrap #op-drawer{order:2}
   .op-drawer{position:sticky;top:8px;max-height:640px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
   @media (max-width:900px){.op-chartwrap.dr{grid-template-columns:1fr}.op-drawer{position:static;max-height:420px}}
   .op-dr-head{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 18px 8px;border-bottom:1px solid var(--line)}
