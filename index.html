@@ -403,11 +403,13 @@
   .rt-col li small{display:block;color:var(--muted);font-size:11.5px}
   .rt-amt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
   .rt-none{color:#A7AFBD;font-style:italic;font-size:12.5px;margin:4px 0}
-  .rt-src-tools{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:4px 0 14px}
-  .rt-src-tools select{max-width:260px}
   .rt-st-ret{color:#1F6B3A} .rt-st-rec{color:#8A5A00} .rt-st-new{color:var(--teal,#006C85)} .rt-st-lap{color:var(--red)}
   table.bs tr.rt-mail td{background:#F3F8F9;font-weight:600}
-  #rt-src-list{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff}
+  .rt-exp{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+  .rt-exp:hover{color:var(--teal,#006C85)} .rt-exp:focus-visible{outline:2px solid var(--teal,#006C85);outline-offset:2px}
+  .rt-car{display:inline-block;width:16px;color:var(--teal,#006C85)}
+  .rt-new tr.rt-subrow td{background:#F7FAFB;font-size:13px}
+  .rt-new tr.rt-subrow td.txt{padding-left:34px;color:var(--muted)}
   @media (max-width:900px){ .rt-cols{grid-template-columns:1fr} }
   /* County map state picker and the address review list */
   .td-coh{display:flex;align-items:center;gap:8px}
@@ -906,7 +908,7 @@
             <li><b>Lapsed:</b> gave last year, nothing this year. For the current year this means “not yet renewed” until December 31.</li>
           </ul>
           <p><b>First gift ever</b> is the earlier of the household's Raiser's Edge first gift date (either spouse) and its earliest gift in the Projections data.</p>
-          <p><b>Where they came from</b> is the appeal on the household's first gift of the year. <b>Internal Mailing Program</b> means BMM, Impact or the CC mailing; online CapCon doesn't count. <b>External Mailing Program</b> means the House File, National House File, Michigan Prospect and National Prospect letters. A gift with no appeal shows as “No Appeal”, or “No Appeal – CapCon Fund” when it went to a CapCon fund.</p>
+          <p><b>Where they came from</b> (the Internal and External Mailing Program counts) is the appeal on the household's first gift of the year. <b>Internal Mailing Program</b> means BMM, Impact or the CC mailing, plus gifts to a CapCon fund with no appeal; online CapCon doesn't count. <b>External Mailing Program</b> means the House File, National House File, Michigan Prospect and National Prospect letters. A gift with no appeal shows as “No Appeal”, or “No Appeal – CapCon Fund” when it went to a CapCon fund.</p>
           <p>New, Retained, Recaptured and Lapsed use gifts actually received, not projections. Eberle gifts (2022) aren't filtered out yet, so a few households whose only earlier gift was Eberle show as Recaptured instead of New.</p>
         </div>
       </details>
@@ -914,7 +916,6 @@
       <div class="card rt-bet" id="rt-bet" hidden></div>
       <div class="card" id="rt-table"></div>
       <div class="card" id="rt-counts"></div>
-      <div class="card" id="rt-src"></div>
       <div class="card" id="rt-named"></div>
     </div>
   </section>
@@ -1257,7 +1258,7 @@ function mpLineChartYears(cats, series, fmt, label) {
    levels from the annual retention report. It loads the first time the tab is opened. */
 const RETENTION_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/dedd4f9d14234c1a990d815cb7de46e0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=l2oc-_PQU86JXmbwWaflVf4s9IOKLUttXtwJHIZwwXA";
 const RT = { rows: [], monthly: {}, lastMonth26: 12, loaded: false, loading: false, cmp: "2026", mode: "proj", fr: "", region: "all",
-  src: {}, hasSrc: false, sCat: "", sApp: "", sProg: "", sOpen: null };
+  src: {}, hasSrc: false, newOpen: {} };
 // Southeast Michigan: the seven SEMCOG counties
 const RT_SE = ["Livingston", "Macomb", "Monroe", "Oakland", "St. Clair", "Washtenaw", "Wayne"];
 let RT_SE_KEYS = null;   // filled the first time it's needed (countyKey is defined further down the page)
@@ -1412,7 +1413,7 @@ function rtRender() {
     <p class="bs-note">Retention counts upgrade, repeat and decrease (everyone who gave again). Repeat / upgrade retention leaves out the decreases. “Donor” (under $100) can't decrease, since it's the lowest level. Click any number to see the households behind it.${prev ? " <b>Last year's retention</b> is the full 2025 rate (2024 donors who gave again in 2025), with the same fundraiser and region filters, for comparison." : ""}</p>
     <div id="rt-list" hidden></div>`;
   if (RT.open) rtListDraw();
-  rtTrend(); rtBet(P); rtSrcRender();
+  rtTrend(); rtBet(P);
   // Donors by level, both years; then new and renewed in the annual report's wording
   const yB = RT.cmp === "2025" ? 2025 : 2026, yA = yB - 1;
   $("rt-counts").innerHTML = `<div class="card-head"><div><h2>Donors by level, ${esc(P.A)} and ${esc(P.B)}</h2>
@@ -1441,7 +1442,7 @@ const RT_STATUS = [["Retained", "rt-st-ret"], ["Recaptured", "rt-st-rec"], ["New
 // External Mailing Program: the direct-mail fundraising letters, by appeal category
 const RT_EXTERNAL = ["House File", "National House File", "Michigan Prospect Letter", "National Prospect Letter"];
 const RT_PROGRAMS = [["int", "Internal Mailing Program"], ["ext", "External Mailing Program"], ["none", "Neither"]];
-const rtProgram = g => g.mail ? "int" : RT_EXTERNAL.includes(g.cat) ? "ext" : "none";
+const rtProgram = g => g.mail || g.app === "No Appeal – CapCon Fund" ? "int" : RT_EXTERNAL.includes(g.cat) ? "ext" : "none";
 const rtMoney = (x, y) => y === 2026 ? x.m26 : y === 2025 ? x.m25 : y === 2024 ? x.m24 : 0;
 function rtStatus(x, y) {
   const cur = rtMoney(x, y), prev = rtMoney(x, y - 1), h = RT.src[x.id];
@@ -1454,113 +1455,33 @@ function rtStatus(x, y) {
 }
 function rtNewTable(yB, yA) {
   if (!RT.hasSrc) return `<p class="bs-note">New and recaptured need the RetentionSource table and version 3 of the Hub Retention Export script in the Projections workbook.</p>`;
-  const pool = rtPool(RT.region === "bet" ? "mi" : RT.region), c = { New: 0, Recaptured: 0 };
-  pool.forEach(x => { const st = rtStatus(x, yB); if (c[st] !== undefined) c[st]++; });
+  const pool = rtPool(RT.region === "bet" ? "mi" : RT.region);
+  const c = { New: { tot: 0, int: 0, ext: 0 }, Recaptured: { tot: 0, int: 0, ext: 0 } };
+  pool.forEach(x => {
+    const st = rtStatus(x, yB); if (!c[st]) return;
+    c[st].tot++;
+    const g = (RT.src[x.id] || { y: {} }).y[yB];
+    if (g) { const p = rtProgram(g); if (p !== "none") c[st][p]++; }
+  });
   const I = v => v.toLocaleString("en-US");
+  RT.newOpen = RT.newOpen || {};
+  const row = (st, label, note) => {
+    const open = !!RT.newOpen[st];
+    return `<tr><td class="txt"><button type="button" class="rt-exp" data-rtx="${st}" aria-expanded="${open}"><span class="rt-car" aria-hidden="true">${open ? "▾" : "▸"}</span>${label}</button><small>${note}</small></td><td>${I(c[st].tot)}</td></tr>
+      ${open ? `<tr class="rt-subrow"><td class="txt">Internal Mailing Program</td><td>${I(c[st].int)}</td></tr>
+      <tr class="rt-subrow"><td class="txt">External Mailing Program</td><td>${I(c[st].ext)}</td></tr>` : ""}`;
+  };
   return `<div class="bs-tablewrap rt-new" style="max-width:720px"><table class="bs"><tbody>
-      <tr><td class="txt">Total new donors in ${yB}<small>First gift ever was in ${yB}</small></td><td>${I(c.New)}</td></tr>
-      <tr><td class="txt">Total recaptured (renewal of lapsed donors)<small>Gave before ${yA}, and in ${yB} but not in ${yA}</small></td><td>${I(c.Recaptured)}</td></tr>
-      <tr class="tot"><td class="txt"><b><i>Total Sum</i></b></td><td><b>${I(c.New + c.Recaptured)}</b></td></tr>
+      ${row("New", `Total new donors in ${yB}`, `First gift ever was in ${yB}`)}
+      ${row("Recaptured", "Total recaptured (renewal of lapsed donors)", `Gave before ${yA}, and in ${yB} but not in ${yA}`)}
+      <tr class="tot"><td class="txt"><b><i>Total Sum</i></b></td><td><b>${I(c.New.tot + c.Recaptured.tot)}</b></td></tr>
     </tbody></table></div>
-    <p class="bs-note">Counts gifts actually received in ${yB}, not projections, so they can differ from “New + renewed” above when 2026 is shown as projected. See where they came from below.</p>`;
+    <p class="bs-note">Click a row to see how many came from the Internal and External Mailing Programs, by the appeal on their first gift of ${yB}. Counts gifts actually received in ${yB}, not projections, so they can differ from “New + renewed” above when 2026 is shown as projected. <button type="button" class="rt-link" data-terms="1">What the terms mean</button></p>`;
 }
-function rtSrcItems(y) {
-  return rtPool(RT.region === "bet" ? "mi" : RT.region).map(x => {
-    const st = rtStatus(x, y); if (!st || st === "Lapsed") return null;
-    const g = (RT.src[x.id] || { y: {} }).y[y] || { cat: "No Appeal", app: "No Appeal", mail: false, date: null };
-    return { x, st, g, amt: rtMoney(x, y), prev: rtMoney(x, y - 1) };
-  }).filter(Boolean);
-}
-function rtSrcRender() {
-  const box = $("rt-src"); if (!box) return;
-  const y = RT.cmp === "2025" ? 2025 : 2026;
-  const where = { all: "", mi: " · Michigan", us: " · outside Michigan", bet: " · Michigan" }[RT.region];
-  if (!RT.hasSrc) { box.innerHTML = `<h2>Where donors came from</h2><p class="bs-note">This needs the RetentionSource table and version 3 of the Hub Retention Export script in the Projections workbook.</p>`; return; }
-  const all = rtSrcItems(y);
-  // For now the filters are the two mailing programs and their appeals (a deeper dive comes later)
-  if (!["", "int", "ext"].includes(RT.sProg)) RT.sProg = "";
-  const inProg = all.filter(o => !RT.sProg || rtProgram(o.g) === RT.sProg);
-  const apps = [...new Set(inProg.filter(o => rtProgram(o.g) !== "none").map(o => o.g.app))].sort((a, b) => a.localeCompare(b));
-  if (RT.sApp && !apps.includes(RT.sApp)) RT.sApp = "";
-  const items = inProg.filter(o => !RT.sApp || o.g.app === RT.sApp);
-  RT.srcItems = items;
-  // Lapsed households, for the stat (no gift this year, so no appeal to filter on)
-  const lapsed = rtPool(RT.region === "bet" ? "mi" : RT.region).filter(x => rtStatus(x, y) === "Lapsed").length;
-  const filtered = RT.sApp || RT.sProg;
-  // Rows: each mailing-program appeal
-  const keyOf = o => o.g.app;
-  const groups = new Map();
-  items.filter(o => rtProgram(o.g) !== "none").forEach(o => { const k = keyOf(o); const g = groups.get(k) || { Retained: 0, Recaptured: 0, New: 0, tot: 0, prog: rtProgram(o.g) === "int" ? "Internal" : "External" }; g[o.st]++; g.tot++; groups.set(k, g); });
-  const sorted = [...groups.entries()].sort((a, b) => b[1].tot - a[1].tot || a[0].localeCompare(b[0]));
-  const T = { Retained: 0, Recaptured: 0, New: 0, tot: 0, int: 0, ext: 0, none: 0 };
-  items.forEach(o => { T[o.st]++; T.tot++; T[rtProgram(o.g)]++; });
-  const I = v => v ? v.toLocaleString("en-US") : "–";
-  const K = (v, key) => v ? `<button type="button" class="rt-link" data-rs="${esc(key)}">${v.toLocaleString("en-US")}</button>` : "–";
-  const pc = (v, d) => !d ? "–" : v && v / d < 0.005 ? "<1%" : Math.round(v / d * 100) + "%";
-  const opt = (list, cur, allLabel) => `<option value="">${esc(allLabel)}</option>` + list.map(v => `<option${v === cur ? " selected" : ""}>${esc(v)}</option>`).join("");
-  const progRow = (key, label, cls) => { const m = { Retained: 0, Recaptured: 0, New: 0, tot: 0 };
-    items.filter(o => key === "both" ? rtProgram(o.g) !== "none" : rtProgram(o.g) === key).forEach(o => { m[o.st]++; m.tot++; });
-    return `<tr class="${cls}"><td class="txt">${esc(label)}</td>${RT_STATUS.map(([st]) => `<td>${K(m[st], "p:" + key + "|" + st)} <span class="rt-rng">${pc(m[st], T[st])}</span></td>`).join("")}<td>${K(m.tot, "p:" + key + "|all")} <span class="rt-rng">${pc(m.tot, T.tot)}</span></td></tr>`; };
-  box.innerHTML = `<div class="card-head"><div><h2>Where ${y} donors came from${RT.fr ? " — " + esc(RT.fr) : ""}${esc(where)}</h2>
-      <div class="sub">Each household that gave in ${y}, by status, and the appeal on its first gift of ${y}. Gifts received only, not projections. <button type="button" class="rt-link" data-terms="1">What the terms mean</button></div></div></div>
-    <div class="rt-src-tools">
-      <label class="bs-through">Mailing program <select id="rt-s-prog">
-        ${[["", "All gifts"], ["int", "Internal Mailing Program"], ["ext", "External Mailing Program"]].map(([v, l]) => `<option value="${v}"${RT.sProg === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
-      <label class="bs-through">Appeal <select id="rt-s-app">${opt(apps, RT.sApp, RT.sProg ? "All appeals in this program" : "All mailing appeals")}</select></label>
-      ${filtered ? `<button type="button" class="btn" id="rt-s-clear">Clear</button>` : ""}
-    </div>
-    <div class="stats">
-      ${RT_STATUS.map(([st, cls]) => `<div class="stat"><div class="k">${st}</div><div class="v ${cls}">${K(T[st], "all|" + st)}</div></div>`).join("")}
-      <div class="stat"><div class="k">From the Internal Mailing Program</div><div class="v">${K(T.int, "p:int|all")}</div></div>
-      <div class="stat"><div class="k">From the External Mailing Program</div><div class="v">${K(T.ext, "p:ext|all")}</div></div>
-      ${filtered ? "" : `<div class="stat"><div class="k">Lapsed${y === 2026 ? " (not yet renewed)" : ""}</div><div class="v rt-st-lap">${I(lapsed)}</div></div>`}
-    </div>
-    <h3 class="rt-sub">Mailing program</h3>
-    <div class="bs-tablewrap" style="max-width:900px"><table class="bs"><thead><tr><th class="txt">First gift of ${y} came from</th>${RT_STATUS.map(([st]) => `<th>${st}</th>`).join("")}<th>Total</th></tr></thead>
-      <tbody>${progRow("int", "Internal Mailing Program", "")}${progRow("ext", "External Mailing Program", "")}${progRow("both", "Both programs together", "rt-mail")}${progRow("none", "Neither (other appeals, no appeal)", "")}</tbody></table></div>
-    <p class="bs-note">Internal is BMM, Impact and the CC mailing. External is ${esc(RT_EXTERNAL.join(", "))}. Percentages are each row's share of that column.</p>
-    <h3 class="rt-sub">By appeal${RT.sProg ? " · " + (RT.sProg === "int" ? "Internal" : "External") + " Mailing Program" : ", both mailing programs"}</h3>
-    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Appeal</th><th class="txt">Program</th>${RT_STATUS.map(([st]) => `<th>${st}</th>`).join("")}<th>Total</th><th>Share of all</th></tr></thead>
-      <tbody>${sorted.length ? sorted.map(([k, g]) => `<tr><td class="txt">${esc(k)}</td><td class="txt">${esc(g.prog)}</td>${RT_STATUS.map(([st]) => `<td>${K(g[st], "g:" + k + "|" + st)}</td>`).join("")}<td><b>${K(g.tot, "g:" + k + "|all")}</b></td><td>${pc(g.tot, T.tot)}</td></tr>`).join("")
-        : `<tr><td class="txt" colspan="7"><span class="rt-none">No households match these filters.</span></td></tr>`}</tbody>
-      <tfoot><tr><td class="txt" colspan="2">Total, mailing appeals</td>${RT_STATUS.map(([st]) => `<td>${I(sorted.reduce((a, [, g]) => a + g[st], 0))}</td>`).join("")}<td>${I(sorted.reduce((a, [, g]) => a + g.tot, 0))}</td><td>${pc(sorted.reduce((a, [, g]) => a + g.tot, 0), T.tot)}</td></tr></tfoot></table></div>
-    <p class="bs-note">“Share of all” is out of every ${y} donor household shown above, including those whose first gift wasn't a mailing. Click any number to see the households behind it. Lapsed households gave nothing this year, so they have no appeal and aren't in the tables.</p>
-    <div id="rt-src-list" hidden></div>`;
-  if (RT.sOpen) rtSrcListDraw();
-}
-function rtSrcListDraw() {
-  const el = $("rt-src-list"), key = RT.sOpen; if (!el || !key) return;
-  const y = RT.cmp === "2025" ? 2025 : 2026;
-  const bar = key.lastIndexOf("|"), grp = key.slice(0, bar), st = key.slice(bar + 1);
-  let list = (RT.srcItems || []).filter(o => st === "all" || o.st === st);
-  if (grp.startsWith("p:")) { const k = grp.slice(2); list = list.filter(o => k === "both" ? rtProgram(o.g) !== "none" : rtProgram(o.g) === k); }
-  else if (grp.startsWith("g:")) { const k = grp.slice(2); list = list.filter(o => o.g.app === k && rtProgram(o.g) !== "none"); }
-  list = list.slice().sort((p, q) => q.amt - p.amt);
-  const progName = { int: "Internal Mailing Program", ext: "External Mailing Program", both: "Internal or External Mailing Program", none: "Neither mailing program" };
-  const label = (grp === "all" ? "All" : grp.startsWith("p:") ? progName[grp.slice(2)] : grp.slice(2)) + " · " + (st === "all" ? "all statuses" : st);
-  el.hidden = false;
-  el.innerHTML = `<div class="rt-list-head"><div><h3>${esc(label)} · ${list.length.toLocaleString("en-US")} household${list.length === 1 ? "" : "s"}</h3>
-      <div class="sub">First gift of ${y} and its appeal. Names open the record in Raiser's Edge.</div></div>
-      <div class="rt-list-tools"><button type="button" class="op-dr-x" id="rt-src-x" aria-label="Close">×</button></div></div>
-    <div class="bs-tablewrap rt-list-wrap"><table class="bs"><thead><tr><th class="txt">Household</th><th class="txt">Fundraiser</th><th class="txt">Status</th><th class="txt">Appeal category</th><th class="txt">Appeal</th><th>First gift of ${y}</th><th>First gift ever</th><th>${y - 1}</th><th>${y}</th></tr></thead><tbody>
-      ${list.map(o => { const h = RT.src[o.x.id] || {}; return `<tr><td class="txt">${o.x.sid ? `<a href="${esc(RECORD_URL(o.x.sid))}" target="_blank" rel="noopener">${esc(o.x.name)}</a>` : esc(o.x.name)}${o.x.dec ? ` <span class="tag off">deceased</span>` : ""}</td>
-        <td class="txt">${esc(o.x.fr)}</td><td class="txt">${esc(o.st)}</td><td class="txt">${esc(o.g.cat)}</td><td class="txt">${esc(o.g.app)}</td>
-        <td>${o.g.date ? fmtDate(o.g.date.toISOString().slice(0, 10)) : "–"}</td><td>${h.fe ? fmtDate(h.fe.toISOString().slice(0, 10)) : "–"}</td>
-        <td>${o.prev ? money(o.prev) : "–"}</td><td>${money(o.amt)}</td></tr>`; }).join("")}
-    </tbody></table></div>`;
-  $("rt-src-x").onclick = () => { RT.sOpen = null; el.hidden = true; };
-}
-$("rt-src").addEventListener("change", e => {
-  if (e.target.id === "rt-s-app") RT.sApp = e.target.value;
-  else if (e.target.id === "rt-s-prog") { RT.sProg = e.target.value; RT.sApp = ""; }
-  else return;
-  RT.sOpen = null; rtSrcRender();
-});
-$("rt-src").addEventListener("click", e => {
-  if (e.target.id === "rt-s-clear") { RT.sCat = RT.sApp = RT.sProg = ""; RT.sOpen = null; rtSrcRender(); return; }
+$("rt-counts").addEventListener("click", e => {
   if (e.target.closest("[data-terms]")) { rtOpenTerms(); return; }
-  const b = e.target.closest("[data-rs]"); if (!b) return;
-  RT.sOpen = b.dataset.rs; rtSrcListDraw(); $("rt-src-list").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  const b = e.target.closest("[data-rtx]"); if (!b) return;
+  RT.newOpen[b.dataset.rtx] = !RT.newOpen[b.dataset.rtx]; rtRender();
 });
 function rtOpenTerms() { const d = $("rt-terms"); d.open = true; d.scrollIntoView({ block: "start", behavior: "smooth" }); }
 $("rt-terms-link").addEventListener("click", rtOpenTerms);
