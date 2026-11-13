@@ -2505,9 +2505,7 @@ function loadBoard(month) {
   if (/^PASTE_/.test(BOARD_URL)) { boardMsg("Board Slides isn't connected yet", "The Board Slides flow address hasn't been added to this page.", false); return; }
   BS.loading = true; $("bs-month").disabled = true;
   $("bs-body").hidden = true;
-  $("bs-msg").innerHTML = month === "latest"
-    ? `<div class="loading">Building from the latest projections run… this can take up to a minute.</div>`
-    : `<div class="loading">Loading board slides…</div>`;
+  $("bs-msg").innerHTML = `<div class="loading">Loading board slides…</div>`;
   client.getUserIdentityToken()
     .then(token => fetch(BOARD_URL + "&tab=" + encodeURIComponent("Board Slides") + (month ? "&month=" + encodeURIComponent(month) : ""), { method: "POST", body: token }))
     .then(async res => {
@@ -2517,8 +2515,13 @@ function loadBoard(month) {
       if (!d.snapshot) { boardMsg("No board slides yet", "No monthly snapshots were found in the Board Slides folder.", false); return; }
       BS.months = (d.months || []).map(m => m.month).filter(Boolean);
       BS.history = d.history || {};
-      BS.month = d.month;
       BS.cache[d.month] = d.snapshot;
+      // The "latest projections run" option was retired: if the flow ever sends it, show the newest monthly snapshot instead
+      if (d.month === "latest") {
+        if (BS.months.length) { BS.loading = false; loadBoard(BS.months[0]); return; }
+        boardMsg("No board slides yet", "No monthly snapshots were found in the Board Slides folder.", false); return;
+      }
+      BS.month = d.month;
       fillMonths();
       renderBoard();
     })
@@ -2526,17 +2529,14 @@ function loadBoard(month) {
     .finally(() => { BS.loading = false; $("bs-month").disabled = false; if (BS.month) $("bs-month").value = BS.month; });
 }
 function fillMonths() {
-  const live = BS.cache.latest;
-  const liveLabel = live ? `Latest run (through ${monthOf(live.throughDate).slice(0, 3)} ${Number(String(live.throughDate).slice(8, 10))})` : "Latest projections run";
-  $("bs-month").innerHTML = `<option value="latest">${esc(liveLabel)}</option>` +
-    BS.months.map(m => `<option value="${esc(m)}">${esc(monthLabel(m))}</option>`).join("");
+  $("bs-month").innerHTML = BS.months.map(m => `<option value="${esc(m)}">${esc(monthLabel(m))}</option>`).join("");
   $("bs-month").value = BS.month;
 }
 $("bs-month").addEventListener("change", e => loadBoard(e.target.value));
 
 function renderBoard() {
   const s = BS.cache[BS.month]; if (!s) return;
-  $("bs-asof").textContent = "Through " + longDate(s.throughDate) + (BS.month === "latest" ? " · latest projections run" : "");
+  $("bs-asof").textContent = "Through " + longDate(s.throughDate);
   const funds = [...new Set((s.households || []).map(h => h.fundraiser).filter(Boolean))].sort();
   if (BS.ui.fr && !funds.includes(BS.ui.fr)) BS.ui.fr = "";
   renderRevenue(s); renderVolume(s); renderSocieties(s, funds); renderQuarterly(s);
