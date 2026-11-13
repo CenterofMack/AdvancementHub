@@ -906,7 +906,7 @@
             <li><b>Lapsed:</b> gave last year, nothing this year. For the current year this means “not yet renewed” until December 31.</li>
           </ul>
           <p><b>First gift ever</b> is the earlier of the household's Raiser's Edge first gift date (either spouse) and its earliest gift in the Projections data.</p>
-          <p><b>Where they came from</b> is the appeal on the household's first gift of the year. <b>Internal Mailing Program</b> means BMM, Impact or the CC mailing; online CapCon doesn't count. A gift with no appeal shows as “No Appeal”, or “No Appeal – CapCon Fund” when it went to a CapCon fund.</p>
+          <p><b>Where they came from</b> is the appeal on the household's first gift of the year. <b>Internal Mailing Program</b> means BMM, Impact or the CC mailing; online CapCon doesn't count. <b>External Mailing Program</b> means the House File, National House File, Michigan Prospect and National Prospect letters. A gift with no appeal shows as “No Appeal”, or “No Appeal – CapCon Fund” when it went to a CapCon fund.</p>
           <p>New, Retained, Recaptured and Lapsed use gifts actually received, not projections. Eberle gifts (2022) aren't filtered out yet, so a few households whose only earlier gift was Eberle show as Recaptured instead of New.</p>
         </div>
       </details>
@@ -1257,7 +1257,7 @@ function mpLineChartYears(cats, series, fmt, label) {
    levels from the annual retention report. It loads the first time the tab is opened. */
 const RETENTION_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/dedd4f9d14234c1a990d815cb7de46e0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=l2oc-_PQU86JXmbwWaflVf4s9IOKLUttXtwJHIZwwXA";
 const RT = { rows: [], monthly: {}, lastMonth26: 12, loaded: false, loading: false, cmp: "2026", mode: "proj", fr: "", region: "all",
-  src: {}, hasSrc: false, sCat: "", sApp: "", sMail: "", sOpen: null };
+  src: {}, hasSrc: false, sCat: "", sApp: "", sProg: "", sOpen: null };
 // Southeast Michigan: the seven SEMCOG counties
 const RT_SE = ["Livingston", "Macomb", "Monroe", "Oakland", "St. Clair", "Washtenaw", "Wayne"];
 let RT_SE_KEYS = null;   // filled the first time it's needed (countyKey is defined further down the page)
@@ -1438,6 +1438,10 @@ function rtRender() {
    Uses gifts actually received (Money In), not projections, and the RetentionSource table
    (first gift of each year, first gift ever) sent by version 3 of the Hub Retention Export script. */
 const RT_STATUS = [["Retained", "rt-st-ret"], ["Recaptured", "rt-st-rec"], ["New", "rt-st-new"]];
+// External Mailing Program: the direct-mail fundraising letters, by appeal category
+const RT_EXTERNAL = ["House File", "National House File", "Michigan Prospect Letter", "National Prospect Letter"];
+const RT_PROGRAMS = [["int", "Internal Mailing Program"], ["ext", "External Mailing Program"], ["none", "Neither"]];
+const rtProgram = g => g.mail ? "int" : RT_EXTERNAL.includes(g.cat) ? "ext" : "none";
 const rtMoney = (x, y) => y === 2026 ? x.m26 : y === 2025 ? x.m25 : y === 2024 ? x.m24 : 0;
 function rtStatus(x, y) {
   const cur = rtMoney(x, y), prev = rtMoney(x, y - 1), h = RT.src[x.id];
@@ -1473,52 +1477,54 @@ function rtSrcRender() {
   const where = { all: "", mi: " · Michigan", us: " · outside Michigan", bet: " · Michigan" }[RT.region];
   if (!RT.hasSrc) { box.innerHTML = `<h2>Where donors came from</h2><p class="bs-note">This needs the RetentionSource table and version 3 of the Hub Retention Export script in the Projections workbook.</p>`; return; }
   const all = rtSrcItems(y);
-  const cats = [...new Set(all.map(o => o.g.cat))].sort((a, b) => a.localeCompare(b));
-  if (RT.sCat && !cats.includes(RT.sCat)) { RT.sCat = ""; RT.sApp = ""; }
-  const inCat = all.filter(o => !RT.sCat || o.g.cat === RT.sCat);
-  const apps = [...new Set(inCat.map(o => o.g.app))].sort((a, b) => a.localeCompare(b));
+  // For now the filters are the two mailing programs and their appeals (a deeper dive comes later)
+  if (!["", "int", "ext"].includes(RT.sProg)) RT.sProg = "";
+  const inProg = all.filter(o => !RT.sProg || rtProgram(o.g) === RT.sProg);
+  const apps = [...new Set(inProg.filter(o => rtProgram(o.g) !== "none").map(o => o.g.app))].sort((a, b) => a.localeCompare(b));
   if (RT.sApp && !apps.includes(RT.sApp)) RT.sApp = "";
-  const items = inCat.filter(o => (!RT.sApp || o.g.app === RT.sApp) && (!RT.sMail || (RT.sMail === "yes") === o.g.mail));
+  const items = inProg.filter(o => !RT.sApp || o.g.app === RT.sApp);
   RT.srcItems = items;
   // Lapsed households, for the stat (no gift this year, so no appeal to filter on)
   const lapsed = rtPool(RT.region === "bet" ? "mi" : RT.region).filter(x => rtStatus(x, y) === "Lapsed").length;
-  const filtered = RT.sCat || RT.sApp || RT.sMail;
-  // Rows: by category, or by appeal once a category is picked
-  const keyOf = o => RT.sCat ? o.g.app : o.g.cat;
+  const filtered = RT.sApp || RT.sProg;
+  // Rows: each mailing-program appeal
+  const keyOf = o => o.g.app;
   const groups = new Map();
-  items.forEach(o => { const k = keyOf(o); const g = groups.get(k) || { Retained: 0, Recaptured: 0, New: 0, mail: 0, tot: 0 }; g[o.st]++; g.tot++; if (o.g.mail) g.mail++; groups.set(k, g); });
+  items.filter(o => rtProgram(o.g) !== "none").forEach(o => { const k = keyOf(o); const g = groups.get(k) || { Retained: 0, Recaptured: 0, New: 0, tot: 0, prog: rtProgram(o.g) === "int" ? "Internal" : "External" }; g[o.st]++; g.tot++; groups.set(k, g); });
   const sorted = [...groups.entries()].sort((a, b) => b[1].tot - a[1].tot || a[0].localeCompare(b[0]));
-  const T = { Retained: 0, Recaptured: 0, New: 0, mail: 0, tot: 0 };
-  items.forEach(o => { T[o.st]++; T.tot++; if (o.g.mail) T.mail++; });
+  const T = { Retained: 0, Recaptured: 0, New: 0, tot: 0, int: 0, ext: 0, none: 0 };
+  items.forEach(o => { T[o.st]++; T.tot++; T[rtProgram(o.g)]++; });
   const I = v => v ? v.toLocaleString("en-US") : "–";
   const K = (v, key) => v ? `<button type="button" class="rt-link" data-rs="${esc(key)}">${v.toLocaleString("en-US")}</button>` : "–";
   const pc = (v, d) => !d ? "–" : v && v / d < 0.005 ? "<1%" : Math.round(v / d * 100) + "%";
   const opt = (list, cur, allLabel) => `<option value="">${esc(allLabel)}</option>` + list.map(v => `<option${v === cur ? " selected" : ""}>${esc(v)}</option>`).join("");
-  const mailRow = (label, pick) => { const m = { Retained: 0, Recaptured: 0, New: 0, tot: 0 }; items.filter(o => o.g.mail === pick).forEach(o => { m[o.st]++; m.tot++; });
-    return `<tr class="${pick ? "rt-mail" : ""}"><td class="txt">${esc(label)}</td>${RT_STATUS.map(([st]) => `<td>${K(m[st], "mail" + pick + "|" + st)} <span class="rt-rng">${pc(m[st], T[st])}</span></td>`).join("")}<td>${K(m.tot, "mail" + pick + "|all")}</td></tr>`; };
+  const progRow = (key, label, cls) => { const m = { Retained: 0, Recaptured: 0, New: 0, tot: 0 };
+    items.filter(o => key === "both" ? rtProgram(o.g) !== "none" : rtProgram(o.g) === key).forEach(o => { m[o.st]++; m.tot++; });
+    return `<tr class="${cls}"><td class="txt">${esc(label)}</td>${RT_STATUS.map(([st]) => `<td>${K(m[st], "p:" + key + "|" + st)} <span class="rt-rng">${pc(m[st], T[st])}</span></td>`).join("")}<td>${K(m.tot, "p:" + key + "|all")} <span class="rt-rng">${pc(m.tot, T.tot)}</span></td></tr>`; };
   box.innerHTML = `<div class="card-head"><div><h2>Where ${y} donors came from${RT.fr ? " — " + esc(RT.fr) : ""}${esc(where)}</h2>
       <div class="sub">Each household that gave in ${y}, by status, and the appeal on its first gift of ${y}. Gifts received only, not projections. <button type="button" class="rt-link" data-terms="1">What the terms mean</button></div></div></div>
     <div class="rt-src-tools">
-      <label class="bs-through">Appeal category <select id="rt-s-cat">${opt(cats, RT.sCat, "All categories")}</select></label>
-      <label class="bs-through">Appeal <select id="rt-s-app">${opt(apps, RT.sApp, RT.sCat ? "All appeals in this category" : "All appeals")}</select></label>
-      <label class="bs-through">Internal Mailing Program <select id="rt-s-mail">
-        <option value="">Either</option><option value="yes"${RT.sMail === "yes" ? " selected" : ""}>Came from it</option><option value="no"${RT.sMail === "no" ? " selected" : ""}>Didn't</option></select></label>
+      <label class="bs-through">Mailing program <select id="rt-s-prog">
+        ${[["", "All gifts"], ["int", "Internal Mailing Program"], ["ext", "External Mailing Program"]].map(([v, l]) => `<option value="${v}"${RT.sProg === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="bs-through">Appeal <select id="rt-s-app">${opt(apps, RT.sApp, RT.sProg ? "All appeals in this program" : "All mailing appeals")}</select></label>
       ${filtered ? `<button type="button" class="btn" id="rt-s-clear">Clear</button>` : ""}
     </div>
     <div class="stats">
       ${RT_STATUS.map(([st, cls]) => `<div class="stat"><div class="k">${st}</div><div class="v ${cls}">${K(T[st], "all|" + st)}</div></div>`).join("")}
-      <div class="stat"><div class="k">From the Internal Mailing Program</div><div class="v">${K(T.mail, "mailtrue|all")}</div></div>
+      <div class="stat"><div class="k">From the Internal Mailing Program</div><div class="v">${K(T.int, "p:int|all")}</div></div>
+      <div class="stat"><div class="k">From the External Mailing Program</div><div class="v">${K(T.ext, "p:ext|all")}</div></div>
       ${filtered ? "" : `<div class="stat"><div class="k">Lapsed${y === 2026 ? " (not yet renewed)" : ""}</div><div class="v rt-st-lap">${I(lapsed)}</div></div>`}
     </div>
-    <h3 class="rt-sub">Internal Mailing Program (BMM, Impact, CC mailing)</h3>
-    <div class="bs-tablewrap" style="max-width:860px"><table class="bs"><thead><tr><th class="txt">First gift of ${y}</th>${RT_STATUS.map(([st]) => `<th>${st}</th>`).join("")}<th>Total</th></tr></thead>
-      <tbody>${mailRow("Came from the Internal Mailing Program", true)}${mailRow("Everything else", false)}</tbody></table></div>
-    <h3 class="rt-sub">By ${RT.sCat ? "appeal in " + esc(RT.sCat) : "appeal category"}</h3>
-    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">${RT.sCat ? "Appeal" : "Appeal category"}</th>${RT_STATUS.map(([st]) => `<th>${st}</th>`).join("")}<th>Total</th><th>Share of all</th></tr></thead>
-      <tbody>${sorted.length ? sorted.map(([k, g]) => `<tr><td class="txt">${esc(k)}</td>${RT_STATUS.map(([st]) => `<td>${K(g[st], "g:" + k + "|" + st)}</td>`).join("")}<td><b>${K(g.tot, "g:" + k + "|all")}</b></td><td>${pc(g.tot, T.tot)}</td></tr>`).join("")
-        : `<tr><td class="txt" colspan="6"><span class="rt-none">No households match these filters.</span></td></tr>`}</tbody>
-      <tfoot><tr><td class="txt">Total</td>${RT_STATUS.map(([st]) => `<td>${I(T[st])}</td>`).join("")}<td>${I(T.tot)}</td><td>${T.tot ? "100%" : "–"}</td></tr></tfoot></table></div>
-    <p class="bs-note">Click any number to see the households behind it. Lapsed households gave nothing this year, so they have no appeal and aren't in the tables.</p>
+    <h3 class="rt-sub">Mailing program</h3>
+    <div class="bs-tablewrap" style="max-width:900px"><table class="bs"><thead><tr><th class="txt">First gift of ${y} came from</th>${RT_STATUS.map(([st]) => `<th>${st}</th>`).join("")}<th>Total</th></tr></thead>
+      <tbody>${progRow("int", "Internal Mailing Program", "")}${progRow("ext", "External Mailing Program", "")}${progRow("both", "Both programs together", "rt-mail")}${progRow("none", "Neither (other appeals, no appeal)", "")}</tbody></table></div>
+    <p class="bs-note">Internal is BMM, Impact and the CC mailing. External is ${esc(RT_EXTERNAL.join(", "))}. Percentages are each row's share of that column.</p>
+    <h3 class="rt-sub">By appeal${RT.sProg ? " · " + (RT.sProg === "int" ? "Internal" : "External") + " Mailing Program" : ", both mailing programs"}</h3>
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Appeal</th><th class="txt">Program</th>${RT_STATUS.map(([st]) => `<th>${st}</th>`).join("")}<th>Total</th><th>Share of all</th></tr></thead>
+      <tbody>${sorted.length ? sorted.map(([k, g]) => `<tr><td class="txt">${esc(k)}</td><td class="txt">${esc(g.prog)}</td>${RT_STATUS.map(([st]) => `<td>${K(g[st], "g:" + k + "|" + st)}</td>`).join("")}<td><b>${K(g.tot, "g:" + k + "|all")}</b></td><td>${pc(g.tot, T.tot)}</td></tr>`).join("")
+        : `<tr><td class="txt" colspan="7"><span class="rt-none">No households match these filters.</span></td></tr>`}</tbody>
+      <tfoot><tr><td class="txt" colspan="2">Total, mailing appeals</td>${RT_STATUS.map(([st]) => `<td>${I(sorted.reduce((a, [, g]) => a + g[st], 0))}</td>`).join("")}<td>${I(sorted.reduce((a, [, g]) => a + g.tot, 0))}</td><td>${pc(sorted.reduce((a, [, g]) => a + g.tot, 0), T.tot)}</td></tr></tfoot></table></div>
+    <p class="bs-note">“Share of all” is out of every ${y} donor household shown above, including those whose first gift wasn't a mailing. Click any number to see the households behind it. Lapsed households gave nothing this year, so they have no appeal and aren't in the tables.</p>
     <div id="rt-src-list" hidden></div>`;
   if (RT.sOpen) rtSrcListDraw();
 }
@@ -1527,11 +1533,11 @@ function rtSrcListDraw() {
   const y = RT.cmp === "2025" ? 2025 : 2026;
   const bar = key.lastIndexOf("|"), grp = key.slice(0, bar), st = key.slice(bar + 1);
   let list = (RT.srcItems || []).filter(o => st === "all" || o.st === st);
-  if (grp === "mailtrue") list = list.filter(o => o.g.mail);
-  else if (grp === "mailfalse") list = list.filter(o => !o.g.mail);
-  else if (grp.startsWith("g:")) { const k = grp.slice(2); list = list.filter(o => (RT.sCat ? o.g.app : o.g.cat) === k); }
+  if (grp.startsWith("p:")) { const k = grp.slice(2); list = list.filter(o => k === "both" ? rtProgram(o.g) !== "none" : rtProgram(o.g) === k); }
+  else if (grp.startsWith("g:")) { const k = grp.slice(2); list = list.filter(o => o.g.app === k && rtProgram(o.g) !== "none"); }
   list = list.slice().sort((p, q) => q.amt - p.amt);
-  const label = (grp === "all" ? "All" : grp === "mailtrue" ? "Internal Mailing Program" : grp === "mailfalse" ? "Not the Internal Mailing Program" : grp.slice(2)) + " · " + (st === "all" ? "all statuses" : st);
+  const progName = { int: "Internal Mailing Program", ext: "External Mailing Program", both: "Internal or External Mailing Program", none: "Neither mailing program" };
+  const label = (grp === "all" ? "All" : grp.startsWith("p:") ? progName[grp.slice(2)] : grp.slice(2)) + " · " + (st === "all" ? "all statuses" : st);
   el.hidden = false;
   el.innerHTML = `<div class="rt-list-head"><div><h3>${esc(label)} · ${list.length.toLocaleString("en-US")} household${list.length === 1 ? "" : "s"}</h3>
       <div class="sub">First gift of ${y} and its appeal. Names open the record in Raiser's Edge.</div></div>
@@ -1545,14 +1551,13 @@ function rtSrcListDraw() {
   $("rt-src-x").onclick = () => { RT.sOpen = null; el.hidden = true; };
 }
 $("rt-src").addEventListener("change", e => {
-  if (e.target.id === "rt-s-cat") { RT.sCat = e.target.value; RT.sApp = ""; }
-  else if (e.target.id === "rt-s-app") RT.sApp = e.target.value;
-  else if (e.target.id === "rt-s-mail") RT.sMail = e.target.value;
+  if (e.target.id === "rt-s-app") RT.sApp = e.target.value;
+  else if (e.target.id === "rt-s-prog") { RT.sProg = e.target.value; RT.sApp = ""; }
   else return;
   RT.sOpen = null; rtSrcRender();
 });
 $("rt-src").addEventListener("click", e => {
-  if (e.target.id === "rt-s-clear") { RT.sCat = RT.sApp = RT.sMail = ""; RT.sOpen = null; rtSrcRender(); return; }
+  if (e.target.id === "rt-s-clear") { RT.sCat = RT.sApp = RT.sProg = ""; RT.sOpen = null; rtSrcRender(); return; }
   if (e.target.closest("[data-terms]")) { rtOpenTerms(); return; }
   const b = e.target.closest("[data-rs]"); if (!b) return;
   RT.sOpen = b.dataset.rs; rtSrcListDraw(); $("rt-src-list").scrollIntoView({ block: "nearest", behavior: "smooth" });
