@@ -1421,8 +1421,8 @@ function rtRender() {
     <div class="bs-tablewrap" style="max-width:720px"><table class="bs"><thead><tr><th class="txt">Level</th><th>${esc(P.A)}</th><th>${esc(P.B)}</th><th>Change</th></tr></thead><tbody>
       ${RT_LEVELS.map((l, i) => { const ch = t.cB[i] - t.cA[i]; return `<tr><td class="txt"><b>${esc(l.label)}</b> <span class="rt-rng">${esc(l.range)}</span></td><td>${I(t.cA[i])}</td><td>${I(t.cB[i])}</td><td class="${ch > 0 ? "up" : ch < 0 ? "down" : ""}">${ch > 0 ? "+" : ""}${ch ? ch.toLocaleString("en-US") : "–"}</td></tr>`; }).join("")}
     </tbody><tfoot><tr><td class="txt">Total</td><td>${I(sum(t.cA))}</td><td>${I(sum(t.cB))}</td><td>${(sum(t.cB) - sum(t.cA) > 0 ? "+" : "") + (sum(t.cB) - sum(t.cA)).toLocaleString("en-US")}</td></tr></tfoot></table></div>
-    <h3 class="rt-sub">New and renewed donors in ${yB}</h3>
-    ${rtNewTable(yB, yA)}`;
+    <h3 class="rt-sub">New and renewed donors by year</h3>
+    ${rtNewTable()}`;
   // Named lists, 1851 and above
   const showB = RT.cmp === "2025";
   const item = o => `<li><span>${o.x.sid ? `<a href="${esc(RECORD_URL(o.x.sid))}" target="_blank" rel="noopener">${esc(o.x.name)}</a>` : esc(o.x.name)}${o.x.dec ? ` <span class="tag off">deceased</span>` : ""}
@@ -1453,30 +1453,39 @@ function rtStatus(x, y) {
   }
   return prev > 0 ? "Lapsed" : null;
 }
-function rtNewTable(yB, yA) {
+// New and recaptured for each year side by side. 2024 has no 2023 gifts to compare with,
+// so only its New count is known (Recaptured needs to know who skipped 2023).
+const RT_NEW_YEARS = [2026, 2025];
+function rtNewTable() {
   if (!RT.hasSrc) return `<p class="bs-note">New and recaptured need the RetentionSource table and version 3 of the Hub Retention Export script in the Projections workbook.</p>`;
   const pool = rtPool(RT.region === "bet" ? "mi" : RT.region);
-  const c = { New: { tot: 0, int: 0, ext: 0 }, Recaptured: { tot: 0, int: 0, ext: 0 } };
-  pool.forEach(x => {
-    const st = rtStatus(x, yB); if (!c[st]) return;
-    c[st].tot++;
-    const g = (RT.src[x.id] || { y: {} }).y[yB];
-    if (g) { const p = rtProgram(g); if (p !== "none") c[st][p]++; }
+  const Z = () => ({ tot: 0, int: 0, ext: 0 });
+  const c = {};
+  RT_NEW_YEARS.forEach(y => {
+    c[y] = { New: Z(), Recaptured: Z() };
+    pool.forEach(x => {
+      const st = rtStatus(x, y); if (!c[y][st]) return;
+      const g = (RT.src[x.id] || { y: {} }).y[y];
+      const o = c[y][st]; o.tot++;
+      if (g) { const p = rtProgram(g); if (p !== "none") o[p]++; }
+    });
   });
+  const known = (y, st) => !(y === 2024 && st === "Recaptured");
   const I = v => v.toLocaleString("en-US");
+  const cell = (y, st, k) => known(y, st) ? I(c[y][st][k]) : `<span class="rt-na" title="Needs 2023 gifts">n/a</span>`;
   RT.newOpen = RT.newOpen || {};
   const row = (st, label, note) => {
     const open = !!RT.newOpen[st];
-    return `<tr><td class="txt"><button type="button" class="rt-exp" data-rtx="${st}" aria-expanded="${open}"><span class="rt-car" aria-hidden="true">${open ? "▾" : "▸"}</span>${label}</button><small>${note}</small></td><td>${I(c[st].tot)}</td></tr>
-      ${open ? `<tr class="rt-subrow"><td class="txt">Internal Mailing Program</td><td>${I(c[st].int)}</td></tr>
-      <tr class="rt-subrow"><td class="txt">External Mailing Program</td><td>${I(c[st].ext)}</td></tr>` : ""}`;
+    return `<tr><td class="txt"><button type="button" class="rt-exp" data-rtx="${st}" aria-expanded="${open}"><span class="rt-car" aria-hidden="true">${open ? "▾" : "▸"}</span>${label}</button><small>${note}</small></td>${RT_NEW_YEARS.map(y => `<td>${cell(y, st, "tot")}</td>`).join("")}</tr>
+      ${open ? `<tr class="rt-subrow"><td class="txt">Internal Mailing Program</td>${RT_NEW_YEARS.map(y => `<td>${cell(y, st, "int")}</td>`).join("")}</tr>
+      <tr class="rt-subrow"><td class="txt">External Mailing Program</td>${RT_NEW_YEARS.map(y => `<td>${cell(y, st, "ext")}</td>`).join("")}</tr>` : ""}`;
   };
-  return `<div class="bs-tablewrap rt-new" style="max-width:720px"><table class="bs"><tbody>
-      ${row("New", `Total new donors in ${yB}`, `First gift ever was in ${yB}`)}
-      ${row("Recaptured", "Total recaptured (renewal of lapsed donors)", `Gave before ${yA}, and in ${yB} but not in ${yA}`)}
-      <tr class="tot"><td class="txt"><b><i>Total Sum</i></b></td><td><b>${I(c.New.tot + c.Recaptured.tot)}</b></td></tr>
+  return `<div class="bs-tablewrap rt-new" style="max-width:820px"><table class="bs"><thead><tr><th class="txt"></th>${RT_NEW_YEARS.map(y => `<th>${y}${y === 2026 ? " so far" : ""}</th>`).join("")}</tr></thead><tbody>
+      ${row("New", "Total new donors", "First gift ever was that year")}
+      ${row("Recaptured", "Total recaptured (renewal of lapsed donors)", "Gave before the prior year, and that year but not the prior year")}
+      <tr class="tot"><td class="txt"><b><i>Total Sum</i></b></td>${RT_NEW_YEARS.map(y => `<td><b>${y === 2024 ? "n/a" : I(c[y].New.tot + c[y].Recaptured.tot)}</b></td>`).join("")}</tr>
     </tbody></table></div>
-    <p class="bs-note">Click a row to see how many came from the Internal and External Mailing Programs, by the appeal on their first gift of ${yB}. Counts gifts actually received in ${yB}, not projections, so they can differ from “New + renewed” above when 2026 is shown as projected. <button type="button" class="rt-link" data-terms="1">What the terms mean</button></p>`;
+    <p class="bs-note">Click a row to see how many came from the Internal and External Mailing Programs, by the appeal on their first gift of the year. Counts gifts actually received, not projections. <button type="button" class="rt-link" data-terms="1">What the terms mean</button></p>`;
 }
 $("rt-counts").addEventListener("click", e => {
   if (e.target.closest("[data-terms]")) { rtOpenTerms(); return; }
