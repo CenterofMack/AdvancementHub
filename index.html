@@ -858,7 +858,7 @@
   </section>
   <section class="panel" id="panel-Retention" hidden>
     <div class="head">
-      <div><h1>Donor Retention</h1><div class="asof">By household, every giving level · live from the Projections workbook · <button type="button" class="rt-link" id="rt-terms-link">What the terms mean</button></div></div>
+      <div><h1>Donor Retention</h1><div class="asof"><span id="rt-asof"></span>By household, every giving level · live from the Projections workbook · <button type="button" class="rt-link" id="rt-terms-link">What the terms mean</button></div></div>
       <div class="actions">
         <label class="bs-through" for="rt-rg">Where <select id="rt-rg">
           <option value="all">Overall</option>
@@ -1340,6 +1340,9 @@ function rtLoad() {
       RT.loaded = true;
       const funds = [...new Set(RT.rows.map(x => x.fr))].sort((a, b) => (a === "No Assigned Fundraiser") - (b === "No Assigned Fundraiser") || a.localeCompare(b));
       $("rt-fr").innerHTML = `<option value="">All fundraisers</option>` + funds.map(f => `<option>${esc(f)}</option>`).join("");
+      // Same "Data through" date as Projections Data, from the workbook's YTD Through column
+      const rtThru = RT.rows.map(x => x.thru).find(v => toDate(v));
+      $("rt-asof").textContent = rtThru ? "Data through " + fmtDate(rtThru) + " · " : "";
       $("rt-msg").innerHTML = ""; $("rt-body").hidden = false;
       rtRender();
     })
