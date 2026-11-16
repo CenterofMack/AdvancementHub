@@ -2080,6 +2080,18 @@ function renderPipeline() {
   renderDonorMap("cb");
 }
 
+// A household's amount on the Donors map (see "Who's on the Donors map" in renderDonorMap)
+function tdMapVal(r, key) {
+  const inY = num(r[KEYS.curYear]), out = num(r["Outstanding Projected"]);
+  const who = PF.tdWho || "both";
+  const cur = Math.max(0, who === "in" ? inY : who === "proj" ? out : inY + out);
+  if (key === KEYS.total) return cur;
+  if (key === TD_AVG) {
+    const past = tdAvgKeys().filter(k => k !== KEYS.total);
+    return (cur + past.reduce((t, k) => t + Math.max(0, num(r[k])), 0)) / (past.length + 1);
+  }
+  return Math.max(0, num(r[key]));   // a past year: money in
+}
 function renderDonorMap(mode) {
   // mode false = Donors map; true = Pipeline map (prospects and lapsed donors not on the projections);
   // "cb" = Combined map (donors on the projections and the pipeline together, each household tagged)
@@ -2089,12 +2101,24 @@ function renderDonorMap(mode) {
   const ks = ROWS.length ? Object.keys(ROWS[0]) : [];
   const stKey = ks.find(k => /preferred state/i.test(k)) || ks.find(k => /^state$/i.test(k));
   const coKey = ks.find(k => /preferred county/i.test(k)) || ks.find(k => /^county$/i.test(k));
-  // Who's on the map: "On Projections" = households with money in the chosen year;
-  // "All Households" = everyone on the Projections list
-  if (PF.tdPop === "nogift") PF.tdPop = "proj";
-  const pop = pl ? "nogift" : (PF.tdPop || "proj"), noGift = !!pl;
-  let yearSw = tdYearSwitch(); const yearLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
-  const popBtn = (k, t) => `<button type="button" data-tdp="${k}" aria-pressed="${pop === k}">${t}</button>`;
+  // Who's on the Donors map, for the current year:
+  //   "in"   = In the door: households with money received this year (dollars = money in)
+  //   "proj" = Still projected: households with an open projection (dollars = projected, not yet in)
+  //   "both" = Combined: either one, each household once (dollars = money in + still projected)
+  // Past years are over, so they always use money in; the other two options are greyed out then.
+  // The 3-year average uses money in for the two past years and the chosen option for this year.
+  const noGift = !!pl;
+  let yearSw = tdYearSwitch(); let yearLbl = (tdYearOptions().find(o => o.key === PF.tdKey) || {}).label || "";
+  if (!pl && !cb) {
+    const opts = tdYearOptions(), cy = (KEYS.curYear || "").replace("Money In ", "");
+    const isPast = PF.tdKey && PF.tdKey !== KEYS.total && PF.tdKey !== TD_AVG;
+    const who = isPast ? "in" : (PF.tdWho || "both");
+    const whoTxt = { in: "in the door", proj: "still projected", both: "in the door + still projected" }[who];
+    yearSw = `<div class="segbtn" role="group" aria-label="Year">` + opts.map(o => `<button type="button" data-tdk="${esc(o.key)}" aria-pressed="${o.key === PF.tdKey}">${esc(o.key === TD_AVG ? "3-yr avg" : o.key === KEYS.total ? cy : o.label)}</button>`).join("") + `</div>`;
+    yearLbl = PF.tdKey === TD_AVG ? `${tdAvgLabel().replace(/^3-year average/, "3-year average")}, ${cy} ${whoTxt}` : PF.tdKey === KEYS.total ? `${cy}, ${whoTxt}` : `${yearLbl}, in the door`;
+    const wb = (k, t) => `<button type="button" data-tdw="${k}" aria-pressed="${who === k}"${isPast && k !== "in" ? ` disabled title="${esc((PF.tdKey || "").replace("Money In ", ""))} is over, so only money in the door applies"` : ""}>${t}</button>`;
+    yearSw = `<div class="segbtn" role="group" aria-label="Who's on the map">${wb("in", "In the door")}${wb("proj", "Still projected")}${wb("both", "Combined")}</div>` + yearSw;
+  }
   const head = cb ? `<div class="card-head"><div><h2>Donors and pipeline together${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
     <div class="sub">Households on the ${esc((KEYS.curYear || "").replace("Money In ", ""))} projections (donors) and the pipeline not on them, by each household's preferred address. Hover a state or county for both counts; click one to list its households, each tagged Donor or Pipeline. Clicking a state also shows its counties.</div></div></div>
     <div class="td-controls">
@@ -2107,12 +2131,10 @@ function renderDonorMap(mode) {
       ${noGift ? `<label class="bs-through">Classification <select id="pl-cls"><option value="">All classifications</option>${plClassesFor(tdPool().filter(r => plQualifies(r))).map(c => `<option${c === PF.plClass ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
       <label class="bs-through">Amount <select id="pl-amt">${PL_AMTS.map(a => `<option value="${esc(a.k)}"${a.k === (PF.plAmt || "all") ? " selected" : ""}>${esc(a.t)}</option>`).join("")}</select></label>
       <label class="bs-through">Range <select id="pl-rng">${PL_RANGES().map(x => `<option value="${esc(x.k)}"${x.k === (PF.plRange || "any") ? " selected" : ""}>${esc(x.t)}</option>`).join("")}</select></label>` : ""}
-      ${noGift ? "" : `<div class="segbtn" role="group" aria-label="Who's on the map">${popBtn("proj", "On Projections")}${popBtn("all", "All Households")}</div>
-      ${yearSw}
+      ${noGift ? "" : `${yearSw}
       <div class="segbtn" role="group" aria-label="Measure">
         <button type="button" data-tdm="dollars" aria-pressed="${PF.tdMetric !== "households"}">By Dollars</button>
-        <button type="button" data-tdm="households" aria-pressed="${PF.tdMetric === "households"}">By Household</button></div>
-      ${tdProjToggle()}`}
+        <button type="button" data-tdm="households" aria-pressed="${PF.tdMetric === "households"}">By Household</button></div>`}
     </div>`;
   if (!stKey) { box.innerHTML = head + `<div class="notice"><p>The Projections data doesn't include a Preferred State column yet, so the map can't be drawn.</p></div>`; return; }
   if (!GEO.data) { box.innerHTML = head + `<div class="loading">Loading the map…</div>`;
@@ -2133,8 +2155,8 @@ function renderDonorMap(mode) {
       if (KEYS.total && num(r[KEYS.total]) > 0) grp = "d"; else if (plQualifies(r)) grp = "p"; else return;
       grp === "d" ? dAll++ : pAll++;
     }
-    const v = cb ? (grp === "d" ? num(r[KEYS.total]) : plSpqTotal(r)) : noGift ? plAmtOf(r) : tdVal(r, key);
-    if (!cb && pop === "proj" && !v) return;
+    const v = cb ? (grp === "d" ? num(r[KEYS.total]) : plSpqTotal(r)) : noGift ? plAmtOf(r) : tdMapVal(r, key);
+    if (!cb && !noGift && !(v > 0)) return;
     if (noGift && (!plQualifies(r) || (PF.plClass && plClass(r) !== PF.plClass) || !plInRange(v))) return;
     all.n++; all.amt += v;
     const rawSt = String(r[stKey] ?? "").trim(), rawCo = coKey ? String(r[coKey] ?? "").trim() : "";
@@ -2200,7 +2222,7 @@ function renderDonorMap(mode) {
       ${cb ? `<div class="st"><b>${dAll.toLocaleString("en-US")} · ${pAll.toLocaleString("en-US")}</b><span>donors on the projections · pipeline households</span></div>`
         : noGift ? `<div class="st"><b>${all.n.toLocaleString("en-US")}</b><span>households on the map${PF.plClass ? " · " + esc(PF.plClass) : ""}</span></div>`
         : `<div class="st"><b>${pctOf(mi.amt, known.amt)}</b><span>of dollars come from Michigan (${pctOf(known.amt - mi.amt, known.amt)} elsewhere)</span></div>`}
-      <div class="st"><b>${Object.keys(st).length}</b><span>states and DC with at least one ${noGift || cb ? "of these households" : pop === "all" ? "household" : "giving household"}</span></div>
+      <div class="st"><b>${Object.keys(st).length}</b><span>states and DC with at least one ${noGift || cb ? "of these households" : (PF.tdWho || "both") === "proj" && (PF.tdKey === KEYS.total || PF.tdKey === TD_AVG) ? "projected household" : "household"}</span></div>
     </div>
     <div class="td-maps${sel ? " sel" : ""}">
       <div class="chart"><h4>By state</h4>${usSvg}</div>
@@ -2212,10 +2234,10 @@ function renderDonorMap(mode) {
     <p class="bs-note">${cb ? "Donors are households with money in or projected for this year. Pipeline is assigned households with neither, as set in the Pipeline view. Shading counts households of both kinds." : noGift ? "Assigned households with nothing given or projected this year. Follows the Both / Prospects / Lapsed donors choice above; the classification can be picked here or in the table above. Amount and Range filter the map only; the ranges are the giving society levels." : "Based on constituents assigned to a fundraiser, or who have donated $1k+. Other donors under $1k aren't on the map, since they're combined into one line with no address."}${unknown.n ? ` ${unknown.n.toLocaleString("en-US")} household${unknown.n === 1 ? " has" : "s have"} no usable state on file${noGift || cb ? "" : ` (${esc(ovMoney(unknown.amt))})`} and ${unknown.n === 1 ? "is" : "are"} left out of the percentages${noAddr.length ? "; pick “No address on file” in the county map's state list to see the ones with no address" : ""}.` : ""} Boundaries: US Census Bureau.</p>`;
   tdFitCounty(box);
   box.querySelectorAll("[data-tdm]").forEach(b => b.onclick = () => { PF.tdMetric = b.dataset.tdm; renderDonorMap(mode); });
-  box.querySelectorAll("[data-tdp]").forEach(b => b.onclick = () => { PF.tdPop = b.dataset.tdp; PF.tdSel = null; renderDonorMap(mode); });
+  box.querySelectorAll("[data-tdw]").forEach(b => b.onclick = () => { if (b.disabled) return; PF.tdWho = b.dataset.tdw; PF.tdSel = null; renderDonorMap(mode); });
   // Changing it here changes the whole page, the same as the filter at the top
   if ($(ID + "-fr")) $(ID + "-fr").onchange = e => { PF.fr = e.target.value; $("pf-fr").value = PF.fr; PF.tdSel = null; PF.plSel = null; PF.cbSel = null; renderPortfolios(); };
-  if (!pl && !cb) { tdWireYear(box); tdWireProj(box); }
+  if (!pl && !cb) tdWireYear(box);
   // The classification picked here also filters the list above, the same as clicking it in the table
   if (pl && $("pl-cls")) $("pl-cls").onchange = e => { PF.plClass = e.target.value; PF.plSel = null; renderPipeline(); };
   // Amount and range only change the map
