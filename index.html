@@ -464,6 +464,11 @@
   .pf-list .bs-tablewrap{max-height:360px;overflow:auto}
   .pf-list table.bs tfoot td,.pf-list table.bs tfoot td.txt{position:sticky;bottom:0;background:#F7F9FB;font-weight:700;border-top:2px solid var(--navy-deep);color:var(--navy-deep)}
   .pf-list table.bs tfoot td.up{color:#1F6B3A} .pf-list table.bs tfoot td.down{color:var(--red)}
+  .sp-src{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+  .sp-src.live{background:#E6F2F5;color:var(--navy-deep)} .sp-src.plan{background:#F3EFE4;color:#7A6330}
+  .sp-sec{margin-bottom:22px} .sp-sec h2{margin:0 0 4px}
+  .sp-note2{display:block;font-size:12px;color:var(--muted);font-style:italic;margin-top:2px}
+  table.sp-goals td.c{text-align:center}
   .bs-divider{display:flex;align-items:center;gap:14px;margin:34px 0 18px;color:var(--navy-deep)}
   .bs-divider::before,.bs-divider::after{content:"";flex:1;border-top:2px solid var(--line)}
   .bs-divider span{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
@@ -858,10 +863,12 @@
     </div>
   </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
-    <div class="head"><div><h1>Strategic Plan</h1><div class="asof" id="sp-asof"></div></div><div class="actions" id="sp-years"></div></div>
-    <div id="sp-msg"></div>
-    <div id="sp-body" hidden></div>
-    <p class="op-note">The rest of the plan will appear here in a future update.</p>
+    <div class="head"><div><h1 id="sp-title">Advancement: 2026 Strategic Plan</h1><div class="asof" id="sp-asof"></div></div>
+      <div class="actions"><label class="bs-through" for="sp-year">Plan <select id="sp-year">
+        <option value="2026" selected>2026</option>
+        <option value="2027" disabled>2027 - Not Yet Available</option>
+      </select></label></div></div>
+    <div id="sp-body"></div>
   </section>
   <section class="panel" id="panel-Retention" hidden>
     <div class="head">
@@ -1003,7 +1010,7 @@ function selectTab(name) {
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
-  if (name === "StrategicPlan") { if (OP.loaded) spRender(); else if (!OP.loading) opLoad(); }
+  if (name === "StrategicPlan") { spRender(); if (!OP.loaded && !OP.loading) opLoad(); }
 }
 /* Tabs are real links to the Hub's page in Raiser's Edge, so right-click → "Open link in new tab"
    and middle-click work. The Hub only runs inside RE, so the link opens the Hub page, and a short
@@ -2980,14 +2987,12 @@ function opNorm(s) {
 const opDate = d => { if (!d) return ""; const [y, m, dd] = d.slice(0, 10).split("-"); return `${+m}/${+dd}/${y}`; };
 const opWhen = o => o.askDate || o.added || "";
 function opMessage(title, text, retry) {
-  // Shown on Portfolio Management (Opportunities) and on the Strategic Plan tab, which use the same data
-  [["op", "Opportunities"], ["sp", "Strategic Plan"]].forEach(([k]) => {
-    $(k + "-body").hidden = true;
-    $(k + "-msg").innerHTML = text === undefined
-      ? `<div class="loading">${esc(title)}</div>`
-      : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? `<button class="btn" id="${k}-retry">Try again</button>` : ""}</div>`;
-    if (retry) $(k + "-retry").onclick = opLoad;
-  });
+  $("op-body").hidden = true;
+  $("op-msg").innerHTML = text === undefined
+    ? `<div class="loading">${esc(title)}</div>`
+    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="op-retry">Try again</button>' : ""}</div>`;
+  if (retry) $("op-retry").onclick = opLoad;
+  if (text !== undefined) { OP.err = title; spRender(); }   // the Strategic Plan tab falls back to the plan workbook's numbers
 }
 // Status groups: Identification (not asked yet), Open (asked, waiting), Committed (pledge, conditional pledge, DAF),
 // Funded, Declined, Closed (including No Response). "Remove" is dropped when the data loads.
@@ -3027,7 +3032,7 @@ function opLoad() {
       OP.rows.forEach(o => { o.group = opGroup(o.status); o.pledge = /pledge/i.test(o.status || ""); o.flag = opFlag(o); });
       OP.updated = r.updated || ""; OP.loaded = true;
       $("op-msg").innerHTML = ""; $("op-body").hidden = false;
-      $("sp-msg").innerHTML = ""; $("sp-body").hidden = false;
+      OP.err = "";
       opRender(); spRender();
     })
     .catch(() => opMessage("Opportunities didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
@@ -3080,20 +3085,83 @@ function opGoalsHtml(gy, gAsks, share, inPortfolio) {
     <p class="op-note">2A counts every ask under $10M, MCA asks included (as RE's amount chart does), leaving out Reason "C4 Gift." 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 / MCA asks.${inPortfolio ? " The Entity switch doesn't change these." : ""} First-time = Instrument "Yes"; re-engaged = Instrument "Re-Engaged"; C4 = Instrument "N/A - C4 Ask" or Reason "C4 Gift"; increased asks = gift type "Increased Ask / Previous Giving."${share ? " With fundraisers checked, these are their share, not the team's total." : ""}</p>`;
 }
 /* ===== Strategic Plan tab =====
-   Goal 2 for the whole team (no fundraiser filter), from the same Opportunities data as Portfolio Management.
-   Opens on this year if it has targets, otherwise the latest year that does. */
-const SP = { year: "" };
-function spRender() {
-  if (!OP.loaded) return;
-  const years = Object.keys(OP_GOALS).sort().reverse(), now = String(new Date().getFullYear());
-  if (!SP.year) SP.year = years.includes(now) ? now : (years[0] || now);
-  const gy = SP.year;
-  $("sp-asof").textContent = `Goal 2 · whole team · ${gy}${OP.updated ? " · updated from Raiser's Edge " + opDate(OP.updated.slice(0, 10)) : ""}`;
-  $("sp-years").innerHTML = years.length > 1
-    ? `<div class="segbtn" role="group" aria-label="Year">${years.map(y => `<button type="button" data-spy="${y}" aria-pressed="${y === gy}">${y}</button>`).join("")}</div>` : "";
-  $("sp-years").querySelectorAll("[data-spy]").forEach(b => b.onclick = () => { SP.year = b.dataset.spy; spRender(); });
-  $("sp-body").innerHTML = opGoalsHtml(gy, OP.rows.filter(o => opAsked(o, gy)), false, false);
+   The whole plan, one table per section. Goals marked "live" are worked out from Hub data:
+     in   = money received, all entities (the Overview's "Money in", from the Projections data)
+     op:X = Goal 2 opportunity counts, from OP_GOALS (the same numbers as Portfolio Management)
+   Everything else, and any live goal whose data didn't load (e.g. no Projections access), shows the
+   plan workbook's own figures from SP_PLAN. Update SP_PLAN when a new version of the workbook comes in.
+   2027 is listed in the dropdown but greyed out until its plan is set. */
+const SP_PLAN = {
+  "2026": { updated: "2026-11-12", due: "2026-12-31", sections: [
+    { n: "1", title: "Raise sufficient funds to fully carry out MCPP mission", goals: [
+      { id: "1A", pri: "A", who: "Walker", live: "in", target: 13e6, text: "Raise $13M to meet 2026 MCPP budget", plan: "Raise $13M to meet 2026 MCPP budget - Raised YTD $8.2M", prog: 0.63 },
+      { id: "1A-1", pri: "A", who: "Cobb", text: "Of that $13M, $1.5M be unrestricted funds for Mackinac Center Action", plan: "Of that $13M, $1.5M be unrestricted funds for Mackinac Center Action - Raised YTD $46K", prog: 0.03,
+        why: "No MCA unrestricted money-in figure in the Hub data yet." },
+      { id: "1B", pri: "B", who: "Walker", live: "in", target: 20e6, text: "Raise $20M to meet 2026 vision (stretch goal)", plan: "Raise $20M to meet 2026 vision (stretch goal) - Raised YTD $8.2M", prog: 0.41 }] },
+    { n: "2", title: "Increase Major Gift Opportunities", goals: [
+      { id: "2A", pri: "A", who: "Team", live: "op:2A", text: "Ask for a total of $40M+ in grants and proposals, with individual asks below $10M", plan: "Ask for a total of $40M+ in grants and proposals, with individual asks below $10M. Asked YTD $14.9M", prog: 0.37 },
+      { id: "2A-1", pri: "A", who: "Team", live: "op:2A-1", text: "Growth from Existing Donors: Of these proposals, 50 should represent increased asks compared to the previous year’s giving", plan: "Growth from Existing Donors: Of these proposals, 50 should represent increased asks compared to the previous year’s giving. YTD - 22", prog: 0.44, note: "Smith Notes: At least $5k increase" },
+      { id: "2A-2", pri: "B", who: "Posthumus / Irrer", live: "op:2A-2", text: "High-Impact Opportunities: Ask for an additional seven grants or proposals of $10M or more, not included in the $40M total above", plan: "High-Impact Opportunities: Ask for an additional seven grants or proposals of $10M or more, not included in the $40M total above. YTD - 1", prog: 0.1 },
+      { id: "2B", pri: "A", who: "Posthumus/Fundraisers", live: "op:2B", text: "First-Time or Reengaged Donors: Ask for 80 grants or proposals from first-time donors or those who have not given in at least two years", plan: "First-Time or Reengaged Donors: Ask for 80 grants or proposals from first-time donors or those who have not given in at least two years. YTD - 50", prog: 0.63 },
+      { id: "2D", pri: "A", who: "Cobb", live: "op:2D", text: "Unrestricted Funds for MCA: Ask for $3M to support MCA funding priorities", plan: "Unrestricted Funds for MCA: Ask for $3M to support MCA funding priorities. YTD - $800K", prog: 0.27 }] },
+    { n: "3", title: "Deepen Donor and Prospect Engagement", goals: [
+      { id: "3A", pri: "A", who: "Team", plan: "Conduct 550 total visits - YTD 398", prog: 0.72 },
+      { id: "3B", pri: "A", who: "Fundraisers", plan: "24% of total visits (132) to be first-time visits - YTD 74", prog: 0.56 },
+      { id: "3C", pri: "A", who: "Irrer", plan: "Conduct 15 visits with natural partners or donor-provided leads - YTD 5 (Marcus) (Craig Snider Foundation) (Tina Snider Foundation) (Kalshi) (Zach Musso)", prog: 0.33 },
+      { id: "3D", pri: "A", who: "Fundraisers", plan: "Make 30 asks to join Legacy Society - YTD 2", prog: 0.07 }] },
+    { n: "4", title: "Additional Team Goals", goals: [
+      { id: "4A", pri: "C", who: "Team", plan: "Increase donor acquisition and retention numbers year over year, producing cumulative growth (54%)", prog: 0 },
+      { id: "4B", pri: "A", who: "Rickel", plan: "Run an Intern Feasibility Study that includes 30 visits, with at least 15 ending with a request for continued or increased giving - YTD 28 Meetings", prog: 0.93 },
+      { id: "4C", pri: "A", who: "Rickel", plan: "Identify 4 ways to utilize AI, and test one of them - 4 identified (BB Fundraiser, BB intelligent workflow, Irmler, Contio Meeting), 1 - Testing (Intelligent Workflow) 2 - Using Claude to teach Chris Power Automate/Automate Receipts 3- Using Claude for research 4) Using Claude to create EWMC spreadsheet (working on app)", prog: 1 },
+      { id: "4D", pri: "A", who: "Rickel / Vitale", plan: "Identify 10 supporters to host donor events, and execute 4 events - 2 Completed (Kevin Lavery and Bouchard) 1 Identified - Pangborn", prog: 0.35 },
+      { id: "4E", pri: "A", who: "Posthumus/Smith/Vitale", plan: "Send at least 1 marketing email per month, with at least 6 campaigns resulting in either 10 gifts or $1000+ - YTD 12 emails ($904 - 8 gifts)", prog: 1 }] }
+  ] }
+};
+const SP = { year: "2026" };
+// Money received, all entities: the Overview's "Money in" (the same figure as the Overview's "In the door today")
+function spMoneyIn() {
+  const fr = OV.filter(r => r.section === "Fundraising");
+  return fr.length > 2 ? num(fr[2].value) : null;
 }
+// A live goal's current value, or null when its data isn't loaded
+function spLive(gl, gy) {
+  if (gl.live === "in") return spMoneyIn();
+  if (/^op:/.test(gl.live || "") && OP.loaded) {
+    const g = (OP_GOALS[gy] || []).find(x => x.id === gl.live.slice(3)); if (!g) return null;
+    return { v: g.calc(OP.rows.filter(o => opAsked(o, gy))), target: g.target, kind: g.kind };
+  }
+  return null;
+}
+function spRender() {
+  const body = $("sp-body"); if (!body) return;
+  const gy = SP.year, plan = SP_PLAN[gy];
+  $("sp-title").textContent = `Advancement: ${gy} Strategic Plan`;
+  $("sp-year").value = gy;
+  if (!plan) { body.innerHTML = `<div class="notice"><h2>The ${esc(gy)} plan isn't available yet</h2><p>It will appear here once the plan is set.</p></div>`; return; }
+  const upd = opDate(plan.updated), due = opDate(plan.due);
+  const bits = [];
+  if (OV.length && spMoneyIn() !== null) bits.push("money " + dataThrough().replace(/^Data through/i, "through"));
+  if (OP.loaded) bits.push("opportunities updated " + opDate((OP.updated || "").slice(0, 10)));
+  $("sp-asof").innerHTML = `<span class="sp-src live">Live</span> from Raiser's Edge data${bits.length ? " (" + esc(bits.join("; ")) + ")" : ""} · <span class="sp-src plan">Plan ${esc(upd)}</span> from the plan workbook updated ${esc(upd)} · all goals due ${esc(due)}`;
+  const bar = p => `<div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, Math.max(0, p) * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div>`;
+  body.innerHTML = plan.sections.map(sec => `<div class="card sp-sec"><h2>${esc(sec.n)}) ${esc(sec.title)}</h2>
+    <div class="bs-tablewrap"><table class="bs op-goal sp-goals"><thead><tr><th class="txt">Goal</th><th>Priority</th><th>So far</th><th>Target</th><th class="txt">Progress</th><th class="txt">Persons</th></tr></thead><tbody>
+    ${sec.goals.map(gl => {
+      let v = null, t = gl.target, kind = "money";
+      if (gl.live === "in") v = spLive(gl, gy);
+      else if (gl.live) { const r = spLive(gl, gy); if (r) { v = r.v; t = r.target; kind = r.kind; } }
+      const live = v !== null && v !== undefined;
+      const f = x => kind === "money" ? short(x) : Math.round(x).toLocaleString("en-US");
+      const chip = live ? `<span class="sp-src live">Live</span>` : `<span class="sp-src plan">Plan ${esc(upd)}</span>`;
+      const why = !live && gl.live ? (gl.live === "in" ? "Live figure needs Projections access." : OP.err ? "Live figure didn't load: " + OP.err + "." : "Loading the live figure…") : gl.why || "";
+      return `<tr><td class="txt"><b>${esc(gl.id)})</b> ${esc(live ? gl.text : gl.plan)}${chip}${gl.note ? `<span class="sp-note2">${esc(gl.note)}</span>` : ""}${why ? `<span class="sp-note2">${esc(why)}</span>` : ""}</td>
+        <td class="c">${esc(gl.pri)}</td><td>${live ? f(v) : "–"}</td><td>${live && t ? f(t) : "–"}</td><td class="txt">${bar(live && t ? v / t : gl.prog)}</td><td class="txt">${esc(gl.who)}</td></tr>`;
+    }).join("")}
+    </tbody></table></div>
+    ${sec.n === "2" ? `<p class="op-note">Live Goal 2 numbers match Portfolio Management › Opportunities for the whole team. 2A counts every ask under $10M, MCA asks included, leaving out Reason "C4 Gift"; 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 / MCA asks.</p>` : ""}
+    ${sec.n === "1" ? `<p class="op-note">Live 1A and 1B use money received so far, all entities (the Overview’s “In the door today”).</p>` : ""}</div>`).join("");
+}
+$("sp-year").addEventListener("change", e => { SP.year = e.target.value; spRender(); });
 
 function opRender() {
   if (!OP.loaded) return;
