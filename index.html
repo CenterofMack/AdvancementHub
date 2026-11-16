@@ -464,6 +464,10 @@
   .pf-list .bs-tablewrap{max-height:360px;overflow:auto}
   .pf-list table.bs tfoot td,.pf-list table.bs tfoot td.txt{position:sticky;bottom:0;background:#F7F9FB;font-weight:700;border-top:2px solid var(--navy-deep);color:var(--navy-deep)}
   .pf-list table.bs tfoot td.up{color:#1F6B3A} .pf-list table.bs tfoot td.down{color:var(--red)}
+  .bs-divider{display:flex;align-items:center;gap:14px;margin:34px 0 18px;color:var(--navy-deep)}
+  .bs-divider::before,.bs-divider::after{content:"";flex:1;border-top:2px solid var(--line)}
+  .bs-divider span{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+  .bs-live{display:inline-block;background:#E6F2F5;color:var(--navy-deep);border-radius:4px;padding:2px 8px;font-size:12.5px;font-weight:600;margin-top:6px}
   .td-proj{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
   .pf-list td.name button{background:none;border:0;padding:0;color:var(--navy);cursor:pointer;font-weight:500;border-bottom:1px solid #BFD0EA;text-align:left;white-space:normal}
   td.up{color:#1F6B3A} td.down{color:var(--red)}
@@ -712,6 +716,9 @@
       <div class="card" id="bs-societies"></div>
       <div class="card" id="bs-quarterly"></div>
     </div>
+    <!-- All-households donor pyramid: live from the Donor Retention data, not the monthly snapshot -->
+    <div class="bs-divider" role="separator"><span>Live data · not part of the monthly snapshot</span></div>
+    <div class="card" id="bs-pyr"></div>
   </section>
   <section class="panel" id="panel-Portfolios" hidden>
     <div class="head">
@@ -992,6 +999,7 @@ function selectTab(name) {
   closeDrawer();
   if (name === "Households") requestAnimationFrame(sizeTopScroll);
   if (name === "BoardSlides" && !BS.month && !BS.loading) loadBoard();
+  if (name === "BoardSlides") { if (RT.loaded) bsPyrRender(); else if (!RT.loading) rtLoad(); }
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
@@ -1287,6 +1295,7 @@ const RT_NAMED = 4;   // named lists for the top four levels (1851 and above)
 const rtLevel = v => v > 0 ? RT_LEVELS.findIndex(l => v >= l.min) : -1;
 
 function rtMessage(title, text, retry) {
+  bsPyrMessage(title, text, retry);
   $("rt-body").hidden = true;
   $("rt-msg").innerHTML = text === undefined
     ? `<div class="loading">${esc(title)}</div>`
@@ -1344,7 +1353,7 @@ function rtLoad() {
       const rtThru = RT.rows.map(x => x.thru).find(v => toDate(v));
       $("rt-asof").textContent = rtThru ? "Data through " + fmtDate(rtThru) + " · " : "";
       $("rt-msg").innerHTML = ""; $("rt-body").hidden = false;
-      rtRender();
+      rtRender(); bsPyrRender();
     })
     .catch(() => rtMessage("Donor Retention didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
     .finally(() => { RT.loading = false; });
@@ -1802,6 +1811,16 @@ function renderPyramid() {
     if (isUnderLine(r)) { rolled += v; tiers[4].amt += v; return; }
     const t = tiers.find(t => v >= t.min); t.n++; t.amt += v;
   });
+  box.innerHTML = `<div class="card-head"><div><h2>${key === TD_AVG ? "Donor Pyramid, " + esc(yearLbl) : esc(yearLbl.replace(/ if it ends as projected| so far/, "")) + " Donor Pyramid" + (/projected/.test(yearLbl) ? " (as projected)" : / so far/.test(yearLbl) ? " (so far)" : "")}${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
+      <div class="sub">Households by giving level for the year. Hover a level for exact figures.</div></div><div class="card-tools">${sw}${tdProjToggle()}</div></div>
+    <div class="pyr chart">${pyrSvg(tiers, rolled, yearLbl + " donor pyramid")}</div>
+    ${!PF.incProj ? `<p class="bs-note">Open projections are left out, so ${esc((KEYS.curYear || "").replace("Money In ", ""))} counts money received so far only${key === TD_AVG ? ", and the 3-year average uses that partial year" : ""}.</p>` : ""}
+    ${rolled ? `<p class="bs-note">The $1 – $999 level includes the Gifts Under $1k line (${esc(money(rolled))}). Those donors are rolled into one line in the Projections workbook, so the household count for that level only covers the small donors listed by name, hence the “+”.</p>` : ""}`;
+  tdWireYear(box); tdWireProj(box);
+}
+// Pyramid drawing, shared by Portfolio Management and Advancement Reports.
+// tiers: TD_TIERS with n (households) and amt; rolled: Gifts Under $1k dollars with no household count (0 if none)
+function pyrSvg(tiers, rolled, label) {
   const total = tiers.reduce((a, t) => a + t.amt, 0), listed = tiers.reduce((a, t) => a + t.n, 0);
   // Drawing: full-width shaded rows, a pyramid in the middle, level on the left, dollars on the right
   const W = 960, rowH = 64, top = 8, H = top + rowH * 5 + 54, cx = W / 2, baseHalf = 240;
@@ -1822,12 +1841,45 @@ function renderPyramid() {
   g += `<text class="t-tot" x="24" y="${ty}">Total</text>
     <text class="t-tot" x="${cx}" y="${ty}" text-anchor="middle">${listed.toLocaleString("en-US")} households${rolled ? " + gifts under $1K" : ""}</text>
     <text class="t-tot" x="${W - 24}" y="${ty}" text-anchor="end">${esc(ovMoney(total))}</text>`;
-  box.innerHTML = `<div class="card-head"><div><h2>${key === TD_AVG ? "Donor Pyramid, " + esc(yearLbl) : esc(yearLbl.replace(/ if it ends as projected| so far/, "")) + " Donor Pyramid" + (/projected/.test(yearLbl) ? " (as projected)" : / so far/.test(yearLbl) ? " (so far)" : "")}${PF.fr ? " — " + esc(PF.fr) : ""}</h2>
-      <div class="sub">Households by giving level for the year. Hover a level for exact figures.</div></div><div class="card-tools">${sw}${tdProjToggle()}</div></div>
-    <div class="pyr chart">${svgOpen(W, H, yearLbl + " donor pyramid")}${g}</svg></div>
-    ${!PF.incProj ? `<p class="bs-note">Open projections are left out, so ${esc((KEYS.curYear || "").replace("Money In ", ""))} counts money received so far only${key === TD_AVG ? ", and the 3-year average uses that partial year" : ""}.</p>` : ""}
-    ${rolled ? `<p class="bs-note">The $1 – $999 level includes the Gifts Under $1k line (${esc(money(rolled))}). Those donors are rolled into one line in the Projections workbook, so the household count for that level only covers the small donors listed by name, hence the “+”.</p>` : ""}`;
-  tdWireYear(box); tdWireProj(box);
+  return `${svgOpen(W, H, label)}${g}</svg>`;
+}
+
+/* ===== Advancement Reports: Donor Pyramid, all households =====
+   Live from the Donor Retention data (the "Hub Retention Export" script), which lists every household at
+   every giving level, so there's no Gifts Under $1k roll-up. It does NOT follow the Through (snapshot)
+   dropdown. Needs the Retention column in HubAccess. General Anonymous is left out (as on Donor Retention). */
+const BSP = { key: "cur", incProj: false };
+function bsPyrMessage(title, text, retry) {
+  const box = $("bs-pyr"); if (!box) return;
+  const head = `<div class="card-head"><div><h2>Donor Pyramid, All Households</h2></div></div>`;
+  box.innerHTML = head + (text === undefined
+    ? `<div class="loading">${esc(title === "Loading retention…" ? "Loading every household's giving…" : title)}</div>`
+    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(/access/.test(title) ? "This chart needs Donor Retention access" : title)}</h2><p>${esc(/access/.test(title)
+        ? `The all-households pyramid uses the Donor Retention data. Ask ${OWNER} to add Retention to your Advancement Hub access.` : text)}</p>${retry ? '<button class="btn" id="bsp-retry">Try again</button>' : ""}</div>`);
+  if (retry) $("bsp-retry").onclick = rtLoad;
+}
+function bsPyrRender() {
+  const box = $("bs-pyr"); if (!box || !RT.loaded) return;
+  const cur = x => x.m26 + (BSP.incProj ? x.proj : 0);
+  const opts = [
+    { k: "avg", btn: "3-yr avg", title: `Donor Pyramid, 3-year average (2024–2026${BSP.incProj ? " projected" : " so far"})`, v: x => (x.m24 + x.m25 + cur(x)) / 3 },
+    { k: "cur", btn: BSP.incProj ? "2026 projected" : "2026 so far", title: `2026 Donor Pyramid (${BSP.incProj ? "as projected" : "so far"})`, v: cur },
+    { k: "2025", btn: "2025", title: "2025 Donor Pyramid", v: x => x.m25 },
+    { k: "2024", btn: "2024", title: "2024 Donor Pyramid", v: x => x.m24 }];
+  const o = opts.find(x => x.k === BSP.key) || opts[1];
+  const tiers = TD_TIERS.map(t => ({ ...t, n: 0, amt: 0 }));
+  RT.rows.forEach(x => { const v = Math.max(0, o.v(x)); if (!(v > 0)) return; const t = tiers.find(t => v >= t.min); t.n++; t.amt += v; });
+  const thru = RT.rows.map(x => x.thru).find(v => toDate(v));
+  const thruTxt = thru ? fmtDate(thru) : "";
+  box.innerHTML = `<div class="card-head"><div><h2>${esc(o.title)}, All Households</h2>
+      <div class="sub">Every household that gave, at every giving level, each counted once. Hover a level for exact figures.</div>
+      <div class="bs-live">${thruTxt ? `Data through ${esc(thruTxt)} (live, not the snapshot date above)` : "Live data, not the snapshot date above"}</div></div>
+      <div class="card-tools"><div class="segbtn" role="group" aria-label="Year">${opts.map(x => `<button type="button" data-bspk="${x.k}" aria-pressed="${x.k === o.k}">${esc(x.btn)}</button>`).join("")}</div>
+      <label class="td-proj"><input type="checkbox" id="bsp-proj"${BSP.incProj ? " checked" : ""}> Include open projections</label></div></div>
+    <div class="pyr chart">${pyrSvg(tiers, 0, o.title + ", all households")}</div>
+    <p class="bs-note">Unlike the reports above, this chart doesn't change with the Through dropdown: it always shows the latest giving${thruTxt ? ", through " + esc(thruTxt) : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out.${BSP.incProj ? " 2026 adds open projections to money received." : " 2026 counts money received so far only" + (o.k === "avg" ? ", and the 3-year average uses that partial year" : "") + "."}</p>`;
+  box.querySelectorAll("[data-bspk]").forEach(b => b.onclick = () => { BSP.key = b.dataset.bspk; bsPyrRender(); });
+  $("bsp-proj").onchange = e => { BSP.incProj = e.target.checked; bsPyrRender(); };
 }
 
 /* --- Donor map: by state, plus Michigan by county --- */
