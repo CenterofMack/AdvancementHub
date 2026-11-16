@@ -851,8 +851,10 @@
     </div>
   </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
-    <div class="head"><div><h1>Strategic Plan</h1></div></div>
-    <div class="notice"><h2>Strategic Plan is coming</h2><p>Progress on the Advancement Strategic Plan will appear here in a future update.</p></div>
+    <div class="head"><div><h1>Strategic Plan</h1><div class="asof" id="sp-asof"></div></div><div class="actions" id="sp-years"></div></div>
+    <div id="sp-msg"></div>
+    <div id="sp-body" hidden></div>
+    <p class="op-note">The rest of the plan will appear here in a future update.</p>
   </section>
   <section class="panel" id="panel-Retention" hidden>
     <div class="head">
@@ -993,6 +995,7 @@ function selectTab(name) {
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
+  if (name === "StrategicPlan") { if (OP.loaded) spRender(); else if (!OP.loading) opLoad(); }
 }
 /* Tabs are real links to the Hub's page in Raiser's Edge, so right-click → "Open link in new tab"
    and middle-click work. The Hub only runs inside RE, so the link opens the Hub page, and a short
@@ -2921,11 +2924,14 @@ function opNorm(s) {
 const opDate = d => { if (!d) return ""; const [y, m, dd] = d.slice(0, 10).split("-"); return `${+m}/${+dd}/${y}`; };
 const opWhen = o => o.askDate || o.added || "";
 function opMessage(title, text, retry) {
-  $("op-body").hidden = true;
-  $("op-msg").innerHTML = text === undefined
-    ? `<div class="loading">${esc(title)}</div>`
-    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="op-retry">Try again</button>' : ""}</div>`;
-  if (retry) $("op-retry").onclick = opLoad;
+  // Shown on Portfolio Management (Opportunities) and on the Strategic Plan tab, which use the same data
+  [["op", "Opportunities"], ["sp", "Strategic Plan"]].forEach(([k]) => {
+    $(k + "-body").hidden = true;
+    $(k + "-msg").innerHTML = text === undefined
+      ? `<div class="loading">${esc(title)}</div>`
+      : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? `<button class="btn" id="${k}-retry">Try again</button>` : ""}</div>`;
+    if (retry) $(k + "-retry").onclick = opLoad;
+  });
 }
 // Status groups: Identification (not asked yet), Open (asked, waiting), Committed (pledge, conditional pledge, DAF),
 // Funded, Declined, Closed (including No Response). "Remove" is dropped when the data loads.
@@ -2965,7 +2971,8 @@ function opLoad() {
       OP.rows.forEach(o => { o.group = opGroup(o.status); o.pledge = /pledge/i.test(o.status || ""); o.flag = opFlag(o); });
       OP.updated = r.updated || ""; OP.loaded = true;
       $("op-msg").innerHTML = ""; $("op-body").hidden = false;
-      opRender();
+      $("sp-msg").innerHTML = ""; $("sp-body").hidden = false;
+      opRender(); spRender();
     })
     .catch(() => opMessage("Opportunities didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
     .finally(() => { OP.loading = false; });
@@ -3002,6 +3009,35 @@ const opChartYear = () => OP.year === "all" ? String(Math.max(...OP.rows.map(o =
 const opQ = d => Math.min(4, Math.floor((+d.slice(5, 7) - 1) / 3) + 1);
 const opAsked = (o, gy) => o.askDate && o.askDate.slice(0, 4) === gy && !/^identification/i.test(o.status || "");
 const opFundedIn = (o, gy) => o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === gy;
+
+// Strategic Plan Goal 2 table. Used on Portfolio Management (Opportunities) and on the Strategic Plan tab.
+// share = fundraisers are checked, so the numbers are their share; inPortfolio = shown under the Entity switch
+function opGoalsHtml(gy, gAsks, share, inPortfolio) {
+  const goals = OP_GOALS[gy];
+  if (!goals) return `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`;
+  return `<h3 class="op-h3">Strategic Plan, Goal 2: Increase major gift opportunities</h3>
+    <div class="bs-tablewrap" style="max-width:1000px"><table class="bs op-goal"><thead><tr><th class="txt">Goal</th><th>Target</th><th>${share ? "Counted here" : "So far"}</th><th class="txt">Progress</th></tr></thead><tbody>
+      ${goals.map(gl => { const v = gl.calc(gAsks), p = gl.target ? v / gl.target : 0;
+        return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
+          <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
+    </tbody></table></div>
+    <p class="op-note">2A counts every ask under $10M, MCA asks included (as RE's amount chart does), leaving out Reason "C4 Gift." 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 / MCA asks.${inPortfolio ? " The Entity switch doesn't change these." : ""} First-time = Instrument "Yes"; re-engaged = Instrument "Re-Engaged"; C4 = Instrument "N/A - C4 Ask" or Reason "C4 Gift"; increased asks = gift type "Increased Ask / Previous Giving."${share ? " With fundraisers checked, these are their share, not the team's total." : ""}</p>`;
+}
+/* ===== Strategic Plan tab =====
+   Goal 2 for the whole team (no fundraiser filter), from the same Opportunities data as Portfolio Management.
+   Opens on this year if it has targets, otherwise the latest year that does. */
+const SP = { year: "" };
+function spRender() {
+  if (!OP.loaded) return;
+  const years = Object.keys(OP_GOALS).sort().reverse(), now = String(new Date().getFullYear());
+  if (!SP.year) SP.year = years.includes(now) ? now : (years[0] || now);
+  const gy = SP.year;
+  $("sp-asof").textContent = `Goal 2 · whole team · ${gy}${OP.updated ? " · updated from Raiser's Edge " + opDate(OP.updated.slice(0, 10)) : ""}`;
+  $("sp-years").innerHTML = years.length > 1
+    ? `<div class="segbtn" role="group" aria-label="Year">${years.map(y => `<button type="button" data-spy="${y}" aria-pressed="${y === gy}">${y}</button>`).join("")}</div>` : "";
+  $("sp-years").querySelectorAll("[data-spy]").forEach(b => b.onclick = () => { SP.year = b.dataset.spy; spRender(); });
+  $("sp-body").innerHTML = opGoalsHtml(gy, OP.rows.filter(o => opAsked(o, gy)), false, false);
+}
 
 function opRender() {
   if (!OP.loaded) return;
@@ -3047,7 +3083,6 @@ function opRender() {
   const cfmt = v => String(Math.round(v));
   const mfmt = (v, axis) => axis ? short(v) : money(v);
   const prep = base.filter(o => o.group === "Identification");
-  const goals = OP_GOALS[gy];
   const gAsks = OP.rows.filter(o => opCounted(o) && opAsked(o, gy));   // goals pick C3 or C4 themselves
   $("op-charts").innerHTML = `<div class="card-head"><div><h2>Asks and funded, ${esc(gy)}</h2><div class="sub">Asks by ask date; funded by the date funded. Click a color in a bar, or in the key, to list those opportunities.</div></div>
       <div class="card-tools"><label class="bs-through">Show <select id="op-metric"><option value="amount"${byCount ? "" : " selected"}>Amounts</option><option value="count"${byCount ? " selected" : ""}>Number of opportunities</option></select></label></div></div>
@@ -3074,13 +3109,7 @@ function opRender() {
           + row("Funded amount", funded, o => o.fundedDate, o => o.funded, m, "op-strong");
       })()}
     </tbody></table></div>
-    ${goals ? `<h3 class="op-h3">Strategic Plan, Goal 2: Increase major gift opportunities</h3>
-    <div class="bs-tablewrap" style="max-width:1000px"><table class="bs op-goal"><thead><tr><th class="txt">Goal</th><th>Target</th><th>${OP.frs.size ? "Counted here" : "So far"}</th><th class="txt">Progress</th></tr></thead><tbody>
-      ${goals.map(gl => { const v = gl.calc(gAsks), p = gl.target ? v / gl.target : 0;
-        return `<tr><td class="txt"><b>${esc(gl.id)}</b> ${esc(gl.text)}</td><td>${gl.kind === "money" ? short(gl.target) : gl.target}</td><td>${gl.kind === "money" ? short(v) : v}</td>
-          <td class="txt"><div style="display:flex;align-items:center;gap:8px"><div class="op-bar"><i style="width:${Math.min(100, p * 100).toFixed(0)}%"></i></div>${Math.round(p * 100)}%</div></td></tr>`; }).join("")}
-    </tbody></table></div>
-    <p class="op-note">2A counts every ask under $10M, MCA asks included (as RE's amount chart does), leaving out Reason "C4 Gift." 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 / MCA asks. The Entity switch doesn't change these. First-time = Instrument "Yes"; re-engaged = Instrument "Re-Engaged"; C4 = Instrument "N/A - C4 Ask" or Reason "C4 Gift"; increased asks = gift type "Increased Ask / Previous Giving."${OP.frs.size ? " With fundraisers checked, these are their share, not the team's total." : ""}</p>` : `<p class="op-note">No Strategic Plan targets are set up for ${esc(gy)}.</p>`}`;
+    ${opGoalsHtml(gy, gAsks, OP.frs.size > 0, true)}`;
 
   opRenderByFr(); opRenderAll();
 
