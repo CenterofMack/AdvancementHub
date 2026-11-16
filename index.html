@@ -1717,38 +1717,70 @@ function renderOverview(rows) {
 
 function newDoc() { const { jsPDF } = window.jspdf; return new jsPDF({ orientation: "landscape", unit: "pt", format: "legal", compress: true }); }
 function drawOverview(doc) {
-  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 36, gap = 18;
+  // Laid out like the Overview tab in the Projections workbook: three bands of three boxes, lined up across.
+  //   Band 1: Fundraising Activity | Non-MCPP C3 Revenue | Other MCPP C3 Revenue (the last two get a grey note bar)
+  //   Band 2: Operations (All Entities)
+  //   Band 3: C3 Operations | C4 Operations | Estimated Balances (padded so the bottom lines line up)
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 36, gap = 22;
   doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(23, 42, 73);
   doc.text(pdfText(HEADER.label || "Projections - Overview"), M, M + 6);
   doc.setFont("helvetica", "italic"); doc.setFontSize(9); doc.setTextColor(94, 104, 120);
   doc.text(pdfText(HEADER.value || ""), M, M + 20);
-  const colW = (W - 2*M - 2*gap) / 3;
-  const layout = [["Fundraising", "Operations", "C3 Operations"], ["Non-MCPP C3 Revenue", "C4 Operations"], ["Other MCPP C3 Revenue", "Estimated Balances"]];
+  const colW = (W - 2 * M - 2 * gap) / 3, colX = i => M + i * (colW + gap);
   const titles = { "Fundraising": "Overview - Fundraising Activity All Entities", "Operations": "Overview - Operations (All Entities)", "C3 Operations": "Overview - C3 Operations", "C4 Operations": "Overview - C4 Operations" };
-  layout.forEach((stack, ci) => {
-    let y = M + 36; const x = M + ci * (colW + gap);
-    stack.forEach(sec => {
-      const rows = OV.filter(r => r.section === sec); if (!rows.length) return;
+  const notes = { "Non-MCPP C3 Revenue": "Subtracted from operations cash flow", "Other MCPP C3 Revenue": "Added to operations cash flow" };
+  // Money as on the workbook: $1.0M and up in millions, under $50K in thousands with one decimal
+  const m = n => { const a = Math.abs(n), sg = n < 0 ? "-" : ""; if (!a) return "$0";
+    if (a >= 5e4) return sg + "$" + (a / 1e6).toFixed(1) + "M"; if (a >= 1e3) return sg + "$" + (a / 1e3).toFixed(1) + "K"; return sg + "$" + Math.round(a); };
+  const bands = [["Fundraising", "Non-MCPP C3 Revenue", "Other MCPP C3 Revenue"], ["Operations", null, null], ["C3 Operations", "C4 Operations", "Estimated Balances"]];
+  let y = M + 38;
+  bands.forEach((band, bi) => {
+    const sets = band.map(sec => sec ? OV.filter(r => r.section === sec) : []);
+    // Band 3: pad shorter boxes with blank lines above their last line, so the totals sit side by side
+    if (bi === 2) { const n = Math.max(...sets.map(x => x.length)); sets.forEach((x, i) => { if (x.length && x.length < n) { const last = x[x.length - 1]; sets[i] = x.slice(0, -1).concat(Array(n - x.length).fill({ label: "", value: "", format: "text", blank: true }), [last]); } }); }
+    let bottom = y; const finals = [];
+    band.forEach((sec, ci) => {
+      const rows = sets[ci]; if (!sec || !rows.length) return;
       doc.autoTable({
-        startY: y, margin: { left: x }, tableWidth: colW, theme: "plain",
+        startY: y, margin: { left: colX(ci) }, tableWidth: colW, theme: "plain",
         head: [[pdfText(titles[sec] || sec), ""]],
-        body: rows.map(r => [pdfText(r.label), r.format === "pct" ? pct(num(r.value)) : r.format === "money" ? ovMoney(num(r.value)) : pdfText(r.value)]),
-        styles: { font: "helvetica", fontSize: 8, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 }, textColor: [28, 37, 51] },
-        headStyles: { fillColor: [68, 84, 106], textColor: 255, fontStyle: "bold" },
-        columnStyles: { 1: { halign: "right", cellWidth: 56 } },
+        body: rows.map(r => [pdfText(r.label), r.blank ? "" : r.format === "pct" ? pct(num(r.value)) : r.format === "money" ? m(num(r.value)) : pdfText(r.value)]),
+        styles: { font: "helvetica", fontSize: 8.5, cellPadding: { top: 3.5, bottom: 3.5, left: 5, right: 5 }, textColor: [28, 37, 51], minCellHeight: 17 },
+        headStyles: { fillColor: [68, 84, 106], textColor: 255, fontStyle: "bold", fontSize: 9, cellPadding: { top: 7, bottom: 4, left: 7, right: 5 } },
+        columnStyles: { 1: { halign: "right", cellWidth: 60 } },
         didParseCell: d => {
           if (d.section !== "body") return;
-          if (/surplus|total/i.test(String(d.row.raw[0]))) { d.cell.styles.fontStyle = "bold"; d.cell.styles.fillColor = [236, 234, 226]; }
-          if (sec === "Fundraising" && ovHighlight({ section: sec, label: String(d.row.raw[0]) })) { d.cell.styles.fontStyle = "bold"; d.cell.styles.fillColor = [255, 240, 140]; }
+          const lbl = String(d.row.raw[0]);
+          if (/surplus/i.test(lbl) || (sec === "Estimated Balances" && /^total$/i.test(lbl))) { d.cell.styles.fontStyle = "bold"; d.cell.styles.fillColor = [236, 234, 226]; d.cell.styles.textColor = [33, 58, 99]; }
+          else if (/total/i.test(lbl) || /^projected vs/i.test(lbl)) { d.cell.styles.fontStyle = "bold"; if (/^projected vs/i.test(lbl)) d.cell.styles.textColor = [33, 58, 99]; }
+          if (sec === "Fundraising" && ovHighlight({ section: sec, label: lbl })) { d.cell.styles.fontStyle = /total/i.test(lbl) ? "bold" : "normal"; d.cell.styles.fillColor = [255, 245, 0]; d.cell.styles.textColor = [0, 0, 0]; }
           if (d.column.index === 1 && String(d.cell.raw).startsWith("-")) d.cell.styles.textColor = [179, 38, 30];
         },
-        didDrawCell: d => { if (d.section === "body") { doc.setDrawColor(220, 224, 230); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } }
+        didDrawCell: d => {
+          if (d.section !== "body") return;
+          const lbl = String(d.row.raw[0]), x1 = d.cell.x, x2 = d.cell.x + d.cell.width;
+          // A dark rule above totals and surplus lines (as on the workbook); a light line under every row
+          if (/total|surplus/i.test(lbl)) { doc.setDrawColor(33, 58, 99); doc.setLineWidth(1.1); doc.line(x1, d.cell.y, x2, d.cell.y); doc.setLineWidth(0.5); }
+          doc.setDrawColor(220, 224, 230); doc.line(x1, d.cell.y + d.cell.height, x2, d.cell.y + d.cell.height);
+        }
       });
-      y = doc.lastAutoTable.finalY + 16;
+      finals[ci] = doc.lastAutoTable.finalY; bottom = Math.max(bottom, finals[ci]);
     });
+    // Grey note bars, all on one line under the lowest of the boxes that have one (as on the workbook)
+    const withNote = band.map((sec, ci) => sec && notes[sec] && finals[ci] ? ci : -1).filter(ci => ci >= 0);
+    if (withNote.length) {
+      const top = Math.max(...withNote.map(ci => finals[ci])) + 22;
+      withNote.forEach(ci => {
+        doc.setFillColor(236, 236, 236); doc.rect(colX(ci), top, colW, 18, "F");
+        doc.setFont("helvetica", "italic"); doc.setFontSize(7.5); doc.setTextColor(94, 104, 120);
+        doc.text(notes[band[ci]], colX(ci) + colW / 2, top + 12, { align: "center" });
+      });
+      bottom = Math.max(bottom, top + 18);
+    }
+    y = bottom + 20;
   });
   doc.setFont("helvetica", "italic"); doc.setFontSize(7.5); doc.setTextColor(94, 104, 120);
-  doc.text("C3 = All-entities total - C4 - Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.", M, H - 46, { maxWidth: W - 2*M });
+  doc.text("C3 = All-entities total - C4 - Non-MCPP C3 Revenue + Other MCPP C3 Revenue.   C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.", M, Math.min(y + 4, H - 40), { maxWidth: W - 2 * M });
 }
 
 /* ===== Households ===== */
@@ -2444,13 +2476,33 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { co
 $("btn-more").onclick = () => { shown += PAGE; drawTable(); };
 $("btn-all").onclick = () => { shown = Infinity; drawTable(); };
 
-function drawHouseholds(doc) {
+/* Households in the PDF and Excel downloads: ACTIVE ONLY, always (the "Include inactive" box doesn't apply).
+   From the Overview: every active household, largest total first, ignoring the Projections Data filters.
+   From Projections Data: what's on screen (fundraiser, search and other filters), minus any inactive rows. */
+function exportRows(fromOverview) {
+  if (!fromOverview) return VIEW.filter(isActive);
+  return ROWS.filter(r => String(r.Name ?? "").trim() !== "" && isActive(r))
+    .sort((a, b) => num(b[KEYS.total]) - num(a[KEYS.total]));
+}
+// One line saying what's in the list, for the PDF heading
+function exportNote(fromOverview) {
+  const bits = ["Active households only"];
+  if (!fromOverview) {
+    const f = $("f-fundraiser").value, q = $("f-search").value.trim();
+    if (f) bits.push("Fundraiser: " + f);
+    if (q) bits.push("Search: " + q);
+    if ($("f-activity").checked) bits.push("with money in or projected");
+    if ($("f-open").checked) bits.push("with open projections");
+  }
+  return bits.join("  ·  ");
+}
+function drawHouseholds(doc, fromOverview) {
   doc.addPage();
   doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(23, 42, 73);
   doc.text("Projections Data", 18, 30);
   doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(94, 104, 120);
-  doc.text(pdfText(dataThrough()), 130, 30);
-  const rows = VIEW, cols = COLS.filter(c => !c.screenOnly);
+  doc.text(pdfText(dataThrough() + "  ·  " + exportNote(fromOverview)), 130, 30);
+  const rows = exportRows(fromOverview), cols = COLS.filter(c => !c.screenOnly);
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
   const groupNames = { Constituent: "Constituent", Projected: `${yr} Projected`, Actual: "Actual", Opportunity: "Opportunity" };
   const groups = []; cols.forEach(c => { const g = groups[groups.length - 1]; if (g && g.name === c.group) g.span++; else groups.push({ name: c.group, span: 1 }); });
@@ -2478,10 +2530,10 @@ function drawHouseholds(doc) {
     }
   });
 }
-function fullPdf() {
+function fullPdf(fromOverview) {
   const doc = newDoc();
   drawOverview(doc);
-  drawHouseholds(doc);
+  drawHouseholds(doc, fromOverview);
   const total = doc.internal.getNumberOfPages();
   for (let p = 1; p <= total; p++) { doc.setPage(p); footer(doc, p, total); }
   return doc;
@@ -2504,8 +2556,8 @@ function overviewSheet() {
   src.forEach((r, i) => { const c = ws[XLSX.utils.encode_cell({ r: i + 1, c: 2 })]; if (c && typeof c.v === "number") c.z = r.format === "pct" ? "0.0%" : "$#,##0"; });
   return ws;
 }
-function householdsSheet() {
-  const rows = VIEW;
+function householdsSheet(fromOverview) {
+  const rows = exportRows(fromOverview);
   const data = rows.map((r, i) => { const o = { "Ref #": i + 1 }; COLS.forEach(c => { o[c.pdf || c.label] = c.type === "money" ? num(r[c.key]) : c.type === "date" ? fmtDate(r[c.key]) : String(r[c.key] ?? ""); }); return o; });
   const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ "Ref #": "" }]);
   const hdr = ["Ref #", ...COLS.map(c => c.pdf || c.label)];
@@ -2514,10 +2566,10 @@ function householdsSheet() {
   ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length, c: hdr.length - 1 } }) };
   return ws;
 }
-function fullXlsx() {
+function fullXlsx(fromOverview) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, overviewSheet(), "Overview");
-  XLSX.utils.book_append_sheet(wb, householdsSheet(), "Projections Data");
+  XLSX.utils.book_append_sheet(wb, householdsSheet(fromOverview), "Projections Data");
   return wb;
 }
 const xlsxBlob = wb => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -2551,10 +2603,10 @@ function wire(btnId, make, name, fbId, kind) {
     finally { btn.disabled = false; btn.textContent = label; }
   };
 }
-wire("ov-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "ov-fb", "pdf");
-wire("ov-xlsx", fullXlsx, () => `Projections - ${fileDate()}.xlsx`, "ov-fb", "xlsx");
-wire("hh-pdf", fullPdf, () => `Projections - ${fileDate()}.pdf`, "hh-fb", "pdf");
-wire("hh-xlsx", fullXlsx, () => `Projections - ${fileDate()}.xlsx`, "hh-fb", "xlsx");
+wire("ov-pdf", () => fullPdf(true), () => `Projections - ${fileDate()}.pdf`, "ov-fb", "pdf");
+wire("ov-xlsx", () => fullXlsx(true), () => `Projections - ${fileDate()}.xlsx`, "ov-fb", "xlsx");
+wire("hh-pdf", () => fullPdf(false), () => `Projections - ${fileDate()}.pdf`, "hh-fb", "pdf");
+wire("hh-xlsx", () => fullXlsx(false), () => `Projections - ${fileDate()}.xlsx`, "hh-fb", "xlsx");
 
 /* ===== Board Slides ===== */
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
