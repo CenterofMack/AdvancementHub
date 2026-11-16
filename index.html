@@ -2717,6 +2717,8 @@ function chartQuarters(groups, label) {
       const y1 = y(acc + p), y2 = y(acc), mid = (y1 + y2) / 2;
       g += `<rect x="${bx}" y="${y1}" width="${bw}" height="${y2 - y1}" fill="${QCOLORS[qi]}" data-tip="${esc(grp.label)} Q${qi + 1}: ${grp.pcts[qi]}% · ${short(v)}"/>`;
       if (y2 - y1 >= 30) g += `<text class="lbl" text-anchor="middle" x="${bx + bw / 2}" y="${mid - 2}" style="fill:#fff;font-size:12.5px">${tspans(grp.pcts[qi] + "%\n" + short(v), bx + bw / 2, 15)}</text>`;
+      // Too short for two lines: one line inside the bar; only a sliver too thin for text goes beside it
+      else if (y2 - y1 >= 15) g += `<text class="lbl" text-anchor="middle" x="${bx + bw / 2}" y="${mid + 4}" style="fill:#fff;font-size:${y2 - y1 >= 20 ? 12.5 : 11}px">${grp.pcts[qi]}% · ${short(v)}</text>`;
       else g += `<text class="lbl" x="${bx + bw + 8}" y="${mid + 4}" style="fill:${QCOLORS[qi]};font-size:12.5px">${grp.pcts[qi]}% · ${short(v)}</text>`;
       acc += p;
     });
