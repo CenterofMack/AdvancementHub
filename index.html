@@ -469,6 +469,7 @@
   .sp-sec{margin-bottom:22px} .sp-sec h2{margin:0 0 4px}
   .sp-note2{display:block;font-size:12px;color:var(--muted);font-style:italic;margin-top:2px}
   table.sp-goals td.c{text-align:center}
+  table.sp-goals td.sp-wait{color:var(--muted);font-style:italic}
   .bs-divider{display:flex;align-items:center;gap:14px;margin:34px 0 18px;color:var(--navy-deep)}
   .bs-divider::before,.bs-divider::after{content:"";flex:1;border-top:2px solid var(--line)}
   .bs-divider span{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
@@ -3154,8 +3155,13 @@ function spRender() {
       else if (gl.live) { const r = spLive(gl, gy); if (r) { v = r.v; t = r.target; kind = r.kind; } }
       const live = v !== null && v !== undefined;
       const f = x => kind === "money" ? short(x) : Math.round(x).toLocaleString("en-US");
+      // Still waiting on the Opportunities data: show "Loading…" rather than the plan workbook's older numbers,
+      // so nobody sees a figure that then jumps. The workbook figures only appear if the live data fails.
+      const loading = !live && /^op:/.test(gl.live || "") && !OP.err;
+      if (loading) return `<tr><td class="txt"><b>${esc(gl.id)})</b> ${esc(gl.text)}${gl.note ? `<span class="sp-note2">${esc(gl.note)}</span>` : ""}</td>
+        <td class="c">${esc(gl.pri)}</td><td class="sp-wait">Loading…</td><td class="sp-wait">–</td><td class="txt sp-wait">Loading…</td><td class="txt">${esc(gl.who)}</td></tr>`;
       const chip = live ? `<span class="sp-src live">Live</span>` : `<span class="sp-src plan">Plan ${esc(upd)}</span>`;
-      const why = !live && gl.live ? (gl.live === "in" || gl.live === "c4" ? "Live figure needs Projections access." : OP.err ? "Live figure didn't load: " + OP.err + "." : "Loading the live figure…") : gl.why || "";
+      const why = !live && gl.live ? (gl.live === "in" || gl.live === "c4" ? "Live figure needs Projections access." : "Live figure didn't load: " + OP.err + ".") : gl.why || "";
       return `<tr><td class="txt"><b>${esc(gl.id)})</b> ${esc(live ? gl.text : gl.plan)}${chip}${gl.note ? `<span class="sp-note2">${esc(gl.note)}</span>` : ""}${why ? `<span class="sp-note2">${esc(why)}</span>` : ""}</td>
         <td class="c">${esc(gl.pri)}</td><td>${live ? f(v) : "–"}</td><td>${live && t ? f(t) : "–"}</td><td class="txt">${bar(live && t ? v / t : gl.prog)}</td><td class="txt">${esc(gl.who)}</td></tr>`;
     }).join("")}
