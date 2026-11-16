@@ -1689,7 +1689,7 @@ function renderOverview(rows) {
     <img class="hero-photo" src="hero-photo.jpg" alt="" aria-hidden="true"
       onerror="if(!this.dataset.f){this.dataset.f='1';this.src='https://www.mackinac.org/media/images/2026/sizes/1200w/Mike%26Joe.jpg';}else{this.remove();}">
     <div class="hero-top">
-      <div><div class="hero-kicker">In the door today</div><div class="hero-figure">${ovMoney(moneyIn)}</div>
+      <div><div class="hero-kicker">${(() => { const d = dataThrough().replace(/^(data )?through\s*/i, "").trim(); return d ? "In the door through " + esc(d) : "In the door"; })()}</div><div class="hero-figure">${ovMoney(moneyIn)}</div>
         <div class="hero-sub">${goal ? pct(moneyIn / goal) + " of the " + ovMoney(goal) + " goal" : ""} · money received so far</div></div>
       <div class="hero-pct"><div class="hero-kicker">Projected by year end</div><div class="big ${pctGoal < 1 ? "under" : ""}">${ovMoney(ye)}</div>
         <div class="hero-sub">${pct(pctGoal)} of goal · ${vsGoal >= 0 ? ovMoney(vsGoal) + " over" : ovMoney(-vsGoal) + " short"} if every projection comes in</div></div>
@@ -3109,7 +3109,7 @@ const SP_PLAN = {
   ] }
 };
 const SP = { year: "2026" };
-// Money received, all entities: the Overview's "Money in" (the same figure as the Overview's "In the door today")
+// Money received, all entities: the Overview's "Money in" (the same figure as the Overview's "In the door through …")
 function spMoneyIn() {
   const fr = OV.filter(r => r.section === "Fundraising");
   return fr.length > 2 ? num(fr[2].value) : null;
@@ -3167,7 +3167,7 @@ function spRender() {
     }).join("")}
     </tbody></table></div>
     ${sec.n === "2" ? `<p class="op-note">Goal 2 numbers match Portfolio Management › Opportunities for the whole team. 2A counts every ask under $10M, MCA asks included, leaving out Reason "C4 Gift"; 2A-1, 2A-2 and 2B count C3 proposals; 2D counts C4 / MCA asks.</p>` : ""}
-    ${sec.n === "1" ? `<p class="op-note">1A and 1B use money received so far, all entities (the Overview’s “In the door today”). 1A-1 uses C4 revenue received so far (the Overview’s C4 Operations “Money In” line).</p>` : ""}</div>`).join("")
+    ${sec.n === "1" ? `<p class="op-note">1A and 1B use money received so far, all entities (the Overview’s “In the door” figure). 1A-1 uses C4 revenue received so far (the Overview’s C4 Operations “Money In” line).</p>` : ""}</div>`).join("")
     + `<p class="op-note">Sections 3 and 4 aren't shown here, since they aren't automated. They're tracked in the plan workbook.</p>`;
 }
 $("sp-year").addEventListener("change", e => { SP.year = e.target.value; spRender(); });
