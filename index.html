@@ -1848,7 +1848,8 @@ function pyrSvg(tiers, rolled, label) {
    Live from the Donor Retention data (the "Hub Retention Export" script), which lists every household at
    every giving level, so there's no Gifts Under $1k roll-up. It does NOT follow the Through (snapshot)
    dropdown. Needs the Retention column in HubAccess. General Anonymous is left out (as on Donor Retention). */
-const BSP = { key: "cur", incProj: false };
+// Money received only: projections are left out on purpose, since smaller households aren't projected
+const BSP = { key: "cur" };
 function bsPyrMessage(title, text, retry) {
   const box = $("bs-pyr"); if (!box) return;
   const head = `<div class="card-head"><div><h2>Donor Pyramid, All Households</h2></div></div>`;
@@ -1860,10 +1861,10 @@ function bsPyrMessage(title, text, retry) {
 }
 function bsPyrRender() {
   const box = $("bs-pyr"); if (!box || !RT.loaded) return;
-  const cur = x => x.m26 + (BSP.incProj ? x.proj : 0);
+  const cur = x => x.m26;
   const opts = [
-    { k: "avg", btn: "3-yr avg", title: `Donor Pyramid, 3-year average (2024–2026${BSP.incProj ? " projected" : " so far"})`, v: x => (x.m24 + x.m25 + cur(x)) / 3 },
-    { k: "cur", btn: BSP.incProj ? "2026 projected" : "2026 so far", title: `2026 Donor Pyramid (${BSP.incProj ? "as projected" : "so far"})`, v: cur },
+    { k: "avg", btn: "3-yr avg", title: "Donor Pyramid, 3-year average (2024–2026 so far)", v: x => (x.m24 + x.m25 + cur(x)) / 3 },
+    { k: "cur", btn: "2026 so far", title: "2026 Donor Pyramid (so far)", v: cur },
     { k: "2025", btn: "2025", title: "2025 Donor Pyramid", v: x => x.m25 },
     { k: "2024", btn: "2024", title: "2024 Donor Pyramid", v: x => x.m24 }];
   const o = opts.find(x => x.k === BSP.key) || opts[1];
@@ -1874,12 +1875,10 @@ function bsPyrRender() {
   box.innerHTML = `<div class="card-head"><div><h2>${esc(o.title)}, All Households</h2>
       <div class="sub">Every household that gave, at every giving level, each counted once. Hover a level for exact figures.</div>
       <div class="bs-live">${thruTxt ? `Data through ${esc(thruTxt)} (live, not the snapshot date above)` : "Live data, not the snapshot date above"}</div></div>
-      <div class="card-tools"><div class="segbtn" role="group" aria-label="Year">${opts.map(x => `<button type="button" data-bspk="${x.k}" aria-pressed="${x.k === o.k}">${esc(x.btn)}</button>`).join("")}</div>
-      <label class="td-proj"><input type="checkbox" id="bsp-proj"${BSP.incProj ? " checked" : ""}> Include open projections</label></div></div>
+      <div class="card-tools"><div class="segbtn" role="group" aria-label="Year">${opts.map(x => `<button type="button" data-bspk="${x.k}" aria-pressed="${x.k === o.k}">${esc(x.btn)}</button>`).join("")}</div></div></div>
     <div class="pyr chart">${pyrSvg(tiers, 0, o.title + ", all households")}</div>
-    <p class="bs-note">Unlike the reports above, this chart doesn't change with the Through dropdown: it always shows the latest giving${thruTxt ? ", through " + esc(thruTxt) : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out.${BSP.incProj ? " 2026 adds open projections to money received." : " 2026 counts money received so far only" + (o.k === "avg" ? ", and the 3-year average uses that partial year" : "") + "."}</p>`;
+    <p class="bs-note">Unlike the reports above, this chart doesn't change with the Through dropdown: it always shows the latest giving${thruTxt ? ", through " + esc(thruTxt) : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out. Money received only; projections aren't included, since smaller households aren't projected.${o.k === "avg" ? " The 3-year average uses 2026 so far, a partial year." : ""}</p>`;
   box.querySelectorAll("[data-bspk]").forEach(b => b.onclick = () => { BSP.key = b.dataset.bspk; bsPyrRender(); });
-  $("bsp-proj").onchange = e => { BSP.incProj = e.target.checked; bsPyrRender(); };
 }
 
 /* --- Donor map: by state, plus Michigan by county --- */
