@@ -2519,9 +2519,10 @@ function drawHouseholds(doc, fromOverview) {
   doc.autoTable({
     head, body, foot, showFoot: "lastPage", showHead: "everyPage", theme: "plain", startY: 44,
     margin: { top: 28, left: 18, right: 18, bottom: 30 },
-    styles: { font: "helvetica", fontSize: 7, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: [28, 37, 51], overflow: "ellipsize" },
-    headStyles: { fillColor: [33, 58, 99], textColor: 255, fontStyle: "bold", overflow: "linebreak", valign: "bottom" },
-    footStyles: { fillColor: [240, 243, 248], textColor: [23, 42, 73], fontStyle: "bold" },
+    // A light border around every cell so rows and columns are easy to follow on paper
+    styles: { font: "helvetica", fontSize: 7, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: [28, 37, 51], overflow: "ellipsize", lineWidth: 0.4, lineColor: [190, 198, 210] },
+    headStyles: { fillColor: [33, 58, 99], textColor: 255, fontStyle: "bold", overflow: "linebreak", valign: "bottom", lineWidth: 0.4, lineColor: [120, 138, 165] },
+    footStyles: { fillColor: [240, 243, 248], textColor: [23, 42, 73], fontStyle: "bold", lineWidth: 0.4, lineColor: [190, 198, 210] },
     columnStyles: colStyles,
     alternateRowStyles: { fillColor: [247, 249, 252] },
     didParseCell: d => {
