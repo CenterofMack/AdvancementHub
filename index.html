@@ -2530,6 +2530,29 @@ function drawHouseholds(doc, fromOverview) {
       if (d.section === "head" && d.row.index === 1 && d.column.index === 0) d.cell.styles.halign = "right";
     }
   });
+  // Under the total row: say what the totals cover, since a filtered list gives smaller totals than the workbook
+  const note = exportTotalsNote(fromOverview);
+  if (note) {
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    doc.setFont("helvetica", "italic"); doc.setFontSize(7.5);
+    const lines = doc.splitTextToSize(pdfText(note), W - 36);
+    let y = doc.lastAutoTable.finalY + 12;
+    if (y + lines.length * 9 > H - 34) { doc.addPage(); y = 34; }
+    doc.setTextColor(94, 104, 120);
+    doc.text(lines, 18, y);
+  }
+}
+// What the PDF's total row covers. Every download leaves out inactive households; a filter leaves out more.
+function exportTotalsNote(fromOverview) {
+  const parts = ["Totals add up only the households listed above."];
+  const f = fromOverview ? "" : $("f-fundraiser").value, q = fromOverview ? "" : $("f-search").value.trim();
+  const act = !fromOverview && $("f-activity").checked, open = !fromOverview && $("f-open").checked;
+  if (act) parts.push("Because this list is limited to households with 2026 money in or projected, households that gave in earlier years but have nothing in 2026 are left out, so the prior-year totals (Money In 2025 and 2024) and the Speculative and Qualified totals are lower than the full figures. The 2026 totals are not affected.");
+  if (open) parts.push("Because it's limited to households with open projections, households whose 2026 gifts are fully in are left out, so the Money In totals are lower than the full figures.");
+  if (f) parts.push(`Totals are for ${f}'s households only.`);
+  if (q) parts.push(`Only households matching the search “${q}” are included.`);
+  parts.push("Inactive households are never included.");
+  return parts.join(" ");
 }
 function fullPdf(fromOverview) {
   const doc = newDoc();
