@@ -244,6 +244,12 @@
   tr.grp th.b-prior{border-top-color:#8A94A6}
   tr.grp th.b-opp{border-top-color:#B08A2E}
   tr.grp th.b-oth,tr.grp th.b-more{border-top-color:#A7AFBD}
+  tr.grp th.b-ask{border-top-color:#1E8449}
+  /* Recent Activity */
+  .ra-more{margin:14px 0 0;font-weight:600}
+  .ra-more a{color:var(--navy)}
+  .ra-soon{margin-top:22px;max-width:none}
+  #ra-props table.bs th.txt,#ra-props table.bs td.txt{position:static;box-shadow:none;min-width:0}
   tr.grp th.gs,.gs{border-left:1px solid #E3E7ED}
   tr.cols th{background:#F7F9FB;color:var(--muted);font-size:11.5px;font-weight:600}
   tr.cols th[aria-sort]{color:var(--navy-deep)}
@@ -638,6 +644,7 @@
   <div class="brand">Advancement Hub</div>
   <nav class="tabs" role="tablist" aria-label="Reports">
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Overview" data-access="Projections" aria-selected="true" hidden>Overview</a>
+    <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Activity" data-access="Projections" aria-selected="false" hidden>Recent Activity</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Households" data-access="Projections" aria-selected="false" hidden>Projections Data</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="BoardSlides" data-access="Board Slides" aria-selected="false" hidden>Advancement Reports</a>
     <a class="tab" role="tab" href="#" target="_blank" rel="noopener" data-tab="Portfolios" data-access="Projections" aria-selected="false" hidden>Portfolio Management</a>
@@ -673,6 +680,12 @@
     <div class="hero" id="hero"></div>
     <div class="ledgers" id="ledgers"></div>
     <p class="footnote">C3 = All-entities total − C4 − Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.</p>
+  </section>
+
+  <section class="panel" id="panel-Activity" hidden>
+    <div class="head"><div><h1>Recent Activity</h1><div class="asof" id="ra-asof"></div></div></div>
+    <div class="card" id="ra-props"></div>
+    <div class="notice ra-soon"><h2>Action reports to come</h2><p>Recent actions (visits, calls and meetings) will be added here in a future update.</p></div>
   </section>
 
   <section class="panel" id="panel-Households" hidden>
@@ -1013,6 +1026,8 @@ function selectTab(name) {
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
   if (name === "StrategicPlan") { spRender(); if (!OP.loaded && !OP.loading) opLoad(); }
+  if (name === "Activity") { raRender(); if (!OP.loaded && !OP.loading) opLoad(); }
+  if (name === "Households" && !OP.loaded && !OP.loading) opLoad();   // for the Date asked / Date funded columns
 }
 /* Tabs are real links to the Hub's page in Raiser's Edge, so right-click → "Open link in new tab"
    and middle-click work. The Hub only runs inside RE, so the link opens the Hub page, and a short
@@ -2375,6 +2390,7 @@ function buildTable(rows) {
   $("f-search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { shown = PAGE; drawTable(); }, 150); });
   $("f-allcols").addEventListener("input", () => { setCols(); drawTable(); if (!$("col-pop").hidden) buildColList(); });
   drawTable();
+  opAddAskCols();
 }
 const HIDE_KEY = "hub-hidden-columns";
 let HIDDEN = new Set();
@@ -2382,7 +2398,7 @@ try { HIDDEN = new Set(JSON.parse(localStorage.getItem(HIDE_KEY) || "[]")); } ca
 function saveHidden() { try { localStorage.setItem(HIDE_KEY, JSON.stringify([...HIDDEN])); } catch (_) {} }
 function buildColList() {
   const groups = [...new Set(ALLCOLS.filter(c => !c.extra || $("f-allcols").checked).map(c => c.group))];
-  const names = { Constituent: "Constituent", Projected: "Projected", Actual: "Money in", Opportunity: "Opportunity", Other: "Other", More: "More columns" };
+  const names = { Constituent: "Constituent", Projected: "Projected", Actual: "Money in", Opportunity: "Pipeline", Asks: "Opportunities (asks / proposals)", Other: "Other", More: "More columns" };
   $("col-list").innerHTML = groups.map(g => `<h5>${esc(names[g] || g)}</h5>` +
     ALLCOLS.filter(c => c.group === g && (!c.extra || $("f-allcols").checked)).map(c =>
       `<label><input type="checkbox" data-col="${esc(c.key)}"${HIDDEN.has(c.key) ? "" : " checked"}${c.type === "name" ? " disabled" : ""}> ${esc(c.label)}</label>`).join("")).join("");
@@ -2421,7 +2437,7 @@ function view() {
 function drawTable() {
   VIEW = view(); const t = $("hh");
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
-  const bandLabel = { con: "Constituent", proj: `${yr} projected`, cur: `${yr} money in`, prior: "Prior years", opp: "Opportunity", oth: "Other", more: "More columns" };
+  const bandLabel = { con: "Constituent", proj: `${yr} projected`, cur: `${yr} money in`, prior: "Prior years", opp: "Pipeline", ask: `${yr} opportunities (asks / proposals)`, oth: "Other", more: "More columns" };
   const bands = [];
   COLS.forEach((c, i) => { const b = bands[bands.length - 1]; if (b && b.band === c.band) b.span++; else bands.push({ band: c.band, span: 1, start: i }); });
   const starts = new Set(bands.slice(1).map(b => b.start));
@@ -2505,7 +2521,7 @@ function drawHouseholds(doc, fromOverview) {
   doc.text(pdfText(dataThrough() + "  ·  " + exportNote(fromOverview)), 130, 30);
   const rows = exportRows(fromOverview), cols = COLS.filter(c => !c.screenOnly);
   const yr = KEYS.curYear ? KEYS.curYear.replace("Money In ", "") : "";
-  const groupNames = { Constituent: "Constituent", Projected: `${yr} Projected`, Actual: "Actual", Opportunity: "Opportunity" };
+  const groupNames = { Constituent: "Constituent", Projected: `${yr} Projected`, Actual: "Actual", Opportunity: "Pipeline" };
   const groups = []; cols.forEach(c => { const g = groups[groups.length - 1]; if (g && g.name === c.group) g.span++; else groups.push({ name: c.group, span: 1 }); });
   groups[0].span += 1; // include Ref #
   const head = [
@@ -3094,7 +3110,7 @@ function opMessage(title, text, retry) {
     ? `<div class="loading">${esc(title)}</div>`
     : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="op-retry">Try again</button>' : ""}</div>`;
   if (retry) $("op-retry").onclick = opLoad;
-  if (text !== undefined) { OP.err = title; spRender(); }   // the Strategic Plan tab falls back to the plan workbook's numbers
+  if (text !== undefined) { OP.err = title; spRender(); raRender(); }   // the Strategic Plan tab falls back to the plan workbook's numbers
 }
 // Status groups: Identification (not asked yet), Open (asked, waiting), Committed (pledge, conditional pledge, DAF),
 // Funded, Declined, Closed (including No Response). "Remove" is dropped when the data loads.
@@ -3135,7 +3151,7 @@ function opLoad() {
       OP.updated = r.updated || ""; OP.loaded = true;
       $("op-msg").innerHTML = ""; $("op-body").hidden = false;
       OP.err = "";
-      opRender(); spRender();
+      opRender(); spRender(); raRender(); opAddAskCols();
     })
     .catch(() => opMessage("Opportunities didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
     .finally(() => { OP.loading = false; });
@@ -3456,6 +3472,82 @@ function opStats(list) {
   list.forEach(o => { s.ask += o.ask || 0; s.funded += o.funded || 0; if (o.group === "Open") s.open++;
     if (o.group === "Funded" || o.group === "Committed") s.won++; if (o.group === "Identification") s.ident++; if (o.flag) s.check++; });
   return s;
+}
+
+/* ===== Recent Activity =====
+   Proposals from the last 30 days: asked, funded or committed, and new ones added but not asked yet.
+   Uses the same Opportunities data as Portfolio Management › Opportunities (the "Hub – Opportunities" flow),
+   so it follows the Projections access column. Action reports will be added below later. */
+const RA_DAYS = 30;
+function raRender() {
+  const box = $("ra-props"); if (!box) return;
+  if (!OP.loaded) {
+    $("ra-asof").textContent = "";
+    box.innerHTML = OP.err
+      ? `<div class="notice err"><h2>${esc(OP.err)}</h2><p>Recent proposals couldn't be loaded.</p><button class="btn" id="ra-retry">Try again</button></div>`
+      : `<div class="loading">Loading recent proposals…</div>`;
+    if ($("ra-retry")) $("ra-retry").onclick = () => { OP.err = ""; raRender(); opLoad(); };
+    return;
+  }
+  const day = n => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10), from = day(RA_DAYS), to = day(0);
+  const ev = [];
+  OP.rows.forEach(o => {
+    if (o.askDate && o.group !== "Identification" && o.askDate.slice(0, 10) >= from) ev.push({ d: o.askDate.slice(0, 10), what: "Asked", amt: o.ask || 0, o });
+    if (o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 10) >= from) ev.push({ d: o.fundedDate.slice(0, 10), what: o.group === "Committed" ? "Committed" : "Funded", amt: o.funded, o });
+    if (!o.askDate && o.added && o.added.slice(0, 10) >= from) ev.push({ d: o.added.slice(0, 10), what: "Added, not asked yet", amt: o.ask > 1 ? o.ask : 0, o });
+  });
+  ev.sort((a, b) => b.d.localeCompare(a.d) || b.amt - a.amt);
+  const of = w => ev.filter(e => w.test(e.what)), sumOf = l => l.reduce((t, e) => t + e.amt, 0);
+  const asked = of(/^Asked/), won = of(/^(Funded|Committed)/), added = of(/^Added/);
+  $("ra-asof").textContent = `Last ${RA_DAYS} days (${opDate(from)} – ${opDate(to)})` + (OP.updated ? ` · updated from Raiser's Edge ${opDate(OP.updated.slice(0, 10))}` : "");
+  const hh = o => o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(o.householdName || o.name)}</a>` : esc(o.householdName || o.name);
+  box.innerHTML = `<div class="card-head"><div><h2>Proposals</h2><div class="sub">Asked, funded or committed, or newly added in the last ${RA_DAYS} days, newest first.</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Asked</div><div class="v">${asked.length} · ${short(sumOf(asked))}</div></div>
+      <div class="stat"><div class="k">Funded or committed</div><div class="v">${won.length} · ${short(sumOf(won))}</div></div>
+      <div class="stat"><div class="k">Added, not asked yet</div><div class="v">${added.length}</div></div>
+    </div>
+    ${ev.length ? `<div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr><th>Date</th><th class="txt">What happened</th><th class="txt">Household</th><th class="txt">Opportunity</th><th>Amount</th><th>Status</th><th class="txt">Fundraisers</th></tr></thead><tbody>
+      ${ev.map(e => `<tr><td>${opDate(e.d)}</td><td class="txt"><b>${esc(e.what)}</b></td><td class="txt">${hh(e.o)}</td>
+        <td class="txt">${esc(e.o.name)}<small>${esc(e.o.purpose || "")}${opIsC4(e.o) ? " · C4" : ""}</small></td>
+        <td>${e.amt ? money(e.amt) : "–"}</td><td><span class="op-pill op-${e.o.group}" title="${esc(e.o.status)}">${esc(e.o.group)}</span></td>
+        <td class="txt">${esc(e.o.fundraisers.join(", ") || e.o.assigned || "–")}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="notice"><p>No proposals were asked, funded or added in the last ${RA_DAYS} days.</p></div>`}
+    <p class="ra-more"><a href="${esc(HUB_PAGE_URL)}" target="_blank" rel="noopener" id="ra-more">To see more, click here: Portfolio Management › Opportunities →</a></p>`;
+  // Opens Portfolio Management › Opportunities here; right-click or Ctrl-click opens the Hub in a new tab
+  const more = $("ra-more");
+  more.addEventListener("mousedown", e => { if (e.button === 1 || e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey) markTab("Portfolios"); });
+  more.onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); PF.view = "Opps"; selectTab("Portfolios"); pfShowView(); };
+}
+
+/* Projections Data: "Date asked" and "Date funded" columns for this year, from the same Opportunities data.
+   A household with more than one proposal shows its most recent dates. Matched on the household's
+   System Record ID, or on its name when there's no ID. */
+function opAddAskCols() {
+  if (!OP.loaded || !ROWS.length || !KEYS.curYear) return;
+  const yr = KEYS.curYear.replace("Money In ", ""), kA = "Date Asked " + yr, kF = "Date Funded " + yr;
+  const bySid = {}, byName = {};
+  ROWS.forEach(r => {
+    r[kA] = ""; r[kF] = "";
+    const sid = String(r["System Record ID"] || "").trim(), nm = String(r.Name || "").trim().toLowerCase();
+    if (sid) bySid[sid] = r;
+    if (nm && !byName[nm]) byName[nm] = r;
+  });
+  const later = (a, b) => !a || b > a ? b : a;
+  OP.rows.forEach(o => {
+    const r = bySid[String(o.constituentSys || "").trim()] || byName[String(o.householdName || "").trim().toLowerCase()];
+    if (!r) return;
+    if (o.askDate && o.askDate.slice(0, 4) === yr && o.group !== "Identification") r[kA] = later(r[kA], o.askDate.slice(0, 10));
+    if (o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === yr) r[kF] = later(r[kF], o.fundedDate.slice(0, 10));
+  });
+  if (!ALLCOLS.some(c => c.key === kA)) {
+    const groups = ALLCOLS.map(c => c.group);
+    let at = groups.lastIndexOf("Opportunity"); if (at < 0) at = groups.lastIndexOf("Actual");
+    ALLCOLS.splice(at + 1, 0,
+      { key: kA, label: "Date asked", type: "date", group: "Asks", band: "ask", tint: "", screenOnly: true },
+      { key: kF, label: "Date funded", type: "date", group: "Asks", band: "ask", tint: "", screenOnly: true });
+  }
+  setCols(); drawTable();
 }
 
 /* ===== Portfolio Management ===== */
@@ -3997,7 +4089,9 @@ function openDrawer(r) {
     (KEYS.total ? kv("Money in + projected", m(KEYS.total)) : "") +
     (KEYS.original ? kv("Original projection", m(KEYS.original)) : "") +
     `<h4>Money in</h4>` + KEYS.years.map(k => kv(k.replace("Money In ", ""), m(k))).join("") +
-    `<h4>Opportunity</h4>` + ["Speculative", "Qualified Active", "Qualified Inactive"].map(k => kv(k, m(k))).join("") +
+    `<h4>Pipeline</h4>` + ["Speculative", "Qualified Active", "Qualified Inactive"].map(k => kv(k, m(k))).join("") +
+    (r["Date Asked " + yr] || r["Date Funded " + yr] ? `<h4>${esc(yr)} opportunities (asks / proposals)</h4>` +
+      kv("Last asked", fmtDate(r["Date Asked " + yr]) || "–") + kv("Last funded", fmtDate(r["Date Funded " + yr]) || "–") : "") +
     `<h4>Relationship</h4>` +
     kv("Prospect classification", r["Prospect Classification"] || "–") +
     kv("Last action", [fmtDate(r["Last Action Date"]), r["Last Action Category"], r["Last Action Type"]].filter(Boolean).join(", ") || "–") +
