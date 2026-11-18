@@ -249,7 +249,10 @@
   .ra-more{margin:14px 0 0;font-weight:600}
   .ra-more a{color:var(--navy)}
   .ra-soon{margin-top:22px;max-width:none}
-  #ra-props table.bs th.txt,#ra-props table.bs td.txt{position:static;box-shadow:none;min-width:0}
+  #ra-props table.bs th.txt,#ra-props table.bs td.txt,#ra-gifts table.bs th.txt,#ra-gifts table.bs td.txt{position:static;box-shadow:none;min-width:0}
+  #ra-gifts td.name button{background:none;border:0;padding:0;color:var(--navy-deep);cursor:pointer;font-weight:500;text-align:left}
+  #ra-gifts td.name button:hover{text-decoration:underline}
+  #ra-gifts select{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:#fff}
   tr.grp th.gs,.gs{border-left:1px solid #E3E7ED}
   tr.cols th{background:#F7F9FB;color:var(--muted);font-size:11.5px;font-weight:600}
   tr.cols th[aria-sort]{color:var(--navy-deep)}
@@ -684,7 +687,12 @@
 
   <section class="panel" id="panel-Activity" hidden>
     <div class="head"><div><h1>Recent Activity</h1><div class="asof" id="ra-asof"></div></div></div>
+    <div class="segbtn pf-views" role="group" aria-label="Activity">
+      <button type="button" data-rav="Proposals" aria-pressed="true">Proposals</button>
+      <button type="button" data-rav="Gifts" aria-pressed="false">Gifts</button>
+    </div>
     <div class="card" id="ra-props"></div>
+    <div class="card" id="ra-gifts" hidden></div>
     <div class="notice ra-soon"><h2>Action reports to come</h2><p>Recent actions (visits, calls and meetings) will be added here in a future update.</p></div>
   </section>
 
@@ -3148,6 +3156,7 @@ function opLoad() {
       // "Remove" opportunities are left out (as in RE's proposal charts); inactive ones are counted
       OP.rows = r.opportunities.filter(o => !/^remove$/i.test(String(o.status || "").trim()));
       OP.rows.forEach(o => { o.group = opGroup(o.status); o.pledge = /pledge/i.test(o.status || ""); o.flag = opFlag(o); });
+      OP.gifts = Array.isArray(r.recentGifts) ? r.recentGifts : null;   // Recent Activity › Gifts (newer script only)
       OP.updated = r.updated || ""; OP.loaded = true;
       $("op-msg").innerHTML = ""; $("op-body").hidden = false;
       OP.err = "";
@@ -3479,9 +3488,16 @@ function opStats(list) {
    Uses the same Opportunities data as Portfolio Management › Opportunities (the "Hub – Opportunities" flow),
    so it follows the Projections access column. Action reports will be added below later. */
 const RA_DAYS = 30;
-const RA = { show: "all" };   // which kind of activity the table shows
+const RA = { show: "all", view: "Proposals", gSize: "all", gFr: "" };   // what Recent Activity shows
 const RA_SHOW = [["all", "All"], ["Asked", "Asked"], ["Committed", "Committed"], ["Funded", "Funded"], ["Added", "Not asked yet"]];
+// Proposals | Gifts
+function raShowView() {
+  document.querySelectorAll("[data-rav]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rav === RA.view));
+  $("ra-props").hidden = RA.view !== "Proposals"; $("ra-gifts").hidden = RA.view !== "Gifts";
+}
+document.querySelectorAll("[data-rav]").forEach(b => b.addEventListener("click", () => { RA.view = b.dataset.rav; raRender(); }));
 function raRender() {
+  raShowView(); rgRender();
   const box = $("ra-props"); if (!box) return;
   if (!OP.loaded) {
     $("ra-asof").textContent = "";
@@ -3524,6 +3540,59 @@ function raRender() {
   const more = $("ra-more");
   more.addEventListener("mousedown", e => { if (e.button === 1 || e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey) markTab("Portfolios"); });
   more.onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); PF.view = "Opps"; selectTab("Portfolios"); pfShowView(); };
+}
+
+/* Recent Activity › Gifts
+   Every gift from the last 30 days in the Projections workbook's gift data (the Attribution table),
+   sent by the Hub Opportunities Export script as recentGifts. The Income query leaves out pledges and
+   pledge payments, so these are outright gifts; pledges will come from their own source later. */
+const RG_SIZES = [["all", "All"], ["1000", "$1K+"], ["10000", "$10K+"]];
+function rgRender() {
+  const box = $("ra-gifts"); if (!box) return;
+  if (!OP.loaded) {
+    box.innerHTML = OP.err ? `<div class="notice err"><h2>${esc(OP.err)}</h2><p>Recent gifts couldn't be loaded.</p></div>` : `<div class="loading">Loading recent gifts…</div>`;
+    return;
+  }
+  if (!Array.isArray(OP.gifts)) {
+    box.innerHTML = `<div class="notice"><h2>Gifts aren't connected yet</h2><p>This view needs the updated Hub Opportunities Export script in the Projections workbook.</p></div>`;
+    return;
+  }
+  const NOFR = "No Assigned Fundraiser", frOf = g => g.fundraiser || NOFR;
+  const from = new Date(Date.now() - RA_DAYS * 864e5).toISOString().slice(0, 10);
+  const all = OP.gifts.filter(g => g.date >= from);
+  const frs = [...new Set(all.map(frOf))].sort((a, b) => (a === NOFR) - (b === NOFR) || a.localeCompare(b));
+  if (RA.gFr && !frs.includes(RA.gFr)) RA.gFr = "";
+  const shown = all.filter(g => (RA.gSize === "all" || g.amount >= +RA.gSize) && (!RA.gFr || frOf(g) === RA.gFr))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
+  const total = shown.reduce((t, g) => t + g.amount, 0), hhN = new Set(shown.map(g => g.household)).size;
+  const big = shown.reduce((m, g) => Math.max(m, g.amount), 0);
+  const hasFund = shown.some(g => g.fund), hasApp = shown.some(g => g.appeal), hasType = shown.some(g => g.giftType);
+  // A name opens the quick look when the household is on the Projections data; otherwise it links to RE
+  const byId = {}; ROWS.forEach(r => { const id = String(r.ID || "").trim(); if (id) byId[id] = r; });
+  const POOL = [];
+  const nameCell = g => {
+    const r = byId[String(g.household)];
+    if (r) { POOL.push(r); return `<td class="txt name"><button type="button" data-rgi="${POOL.length - 1}">${esc(g.householdName || r.Name)}</button>`; }
+    return `<td class="txt">${g.sys ? `<a href="${RECORD_URL(g.sys)}" target="_top">${esc(g.householdName || g.household)}</a>` : esc(g.householdName || g.household)}`;
+  };
+  const daf = shown.some(g => g.dafPledge);
+  box.innerHTML = `<div class="card-head"><div><h2>Gifts</h2><div class="sub">Every gift in the last ${RA_DAYS} days, newest first, by household.</div></div>
+      <div class="card-tools"><div class="segbtn" role="group" aria-label="Gift size">${RG_SIZES.map(([v, l]) => `<button type="button" data-rgs="${v}" aria-pressed="${RA.gSize === v}">${l}</button>`).join("")}</div>
+        <select id="rg-fr" aria-label="Fundraiser"><option value="">All fundraisers</option>${frs.map(f => `<option${f === RA.gFr ? " selected" : ""}>${esc(f)}</option>`).join("")}</select></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Gifts</div><div class="v">${shown.length.toLocaleString("en-US")} · ${short(total)}</div></div>
+      <div class="stat"><div class="k">Households</div><div class="v">${hhN.toLocaleString("en-US")}</div></div>
+      <div class="stat"><div class="k">Largest gift</div><div class="v">${big ? short(big) : "–"}</div></div>
+    </div>
+    ${shown.length ? `<div class="bs-tablewrap" style="max-height:620px;overflow:auto"><table class="bs op-tbl"><thead><tr><th>Date</th><th class="txt">Household</th><th>Amount</th>${hasFund ? `<th class="txt">Fund</th>` : ""}${hasApp ? `<th class="txt">Appeal</th>` : ""}${hasType ? `<th class="txt">Gift type</th>` : ""}<th class="txt">Fundraiser</th></tr></thead><tbody>
+      ${shown.map(g => `<tr><td>${opDate(g.date)}</td>${nameCell(g)}${g.dafPledge ? ` <span class="tag pp">DAF pledge</span>` : ""}</td><td>${money(g.amount)}</td>
+        ${hasFund ? `<td class="txt">${esc(g.fund || "–")}</td>` : ""}${hasApp ? `<td class="txt">${esc(g.appeal || "–")}</td>` : ""}${hasType ? `<td class="txt">${esc(g.giftType || "–")}</td>` : ""}
+        <td class="txt">${esc(frOf(g))}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="notice"><p>No gifts${RA.gSize !== "all" || RA.gFr ? " match these filters" : ""} in the last ${RA_DAYS} days.</p></div>`}
+    <p class="bs-note">From the Projections workbook's gift data, the same gifts counted in Money In, credited to the household they belong to. Pledges and pledge payments aren't included, since they're left out of that data on purpose; they'll be added here from their own source later.${daf ? " A “DAF pledge” is a donor-advised fund pledge kept in the data so it counts against projections." : ""}</p>`;
+  box.querySelectorAll("[data-rgs]").forEach(b => b.onclick = () => { RA.gSize = b.dataset.rgs; rgRender(); });
+  $("rg-fr").onchange = e => { RA.gFr = e.target.value; rgRender(); };
+  box.querySelectorAll("button[data-rgi]").forEach(b => b.onclick = () => openDrawer(POOL[+b.dataset.rgi]));
 }
 
 /* Projections Data: "Date asked" and "Date funded" columns for this year, from the same Opportunities data.
