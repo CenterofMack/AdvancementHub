@@ -3479,6 +3479,8 @@ function opStats(list) {
    Uses the same Opportunities data as Portfolio Management › Opportunities (the "Hub – Opportunities" flow),
    so it follows the Projections access column. Action reports will be added below later. */
 const RA_DAYS = 30;
+const RA = { show: "all" };   // which kind of activity the table shows
+const RA_SHOW = [["all", "All"], ["Asked", "Asked"], ["Committed", "Committed"], ["Funded", "Funded"], ["Added", "Not asked yet"]];
 function raRender() {
   const box = $("ra-props"); if (!box) return;
   if (!OP.loaded) {
@@ -3498,22 +3500,26 @@ function raRender() {
   });
   ev.sort((a, b) => b.d.localeCompare(a.d) || b.amt - a.amt);
   const of = w => ev.filter(e => w.test(e.what)), sumOf = l => l.reduce((t, e) => t + e.amt, 0);
-  const asked = of(/^Asked/), won = of(/^(Funded|Committed)/), added = of(/^Added/);
+  const asked = of(/^Asked/), committed = of(/^Committed/), funded = of(/^Funded/), added = of(/^Added/);
+  const shown = RA.show === "all" ? ev : ev.filter(e => e.what.startsWith(RA.show));
   $("ra-asof").textContent = `Last ${RA_DAYS} days (${opDate(from)} – ${opDate(to)})` + (OP.updated ? ` · updated from Raiser's Edge ${opDate(OP.updated.slice(0, 10))}` : "");
   const hh = o => o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(o.householdName || o.name)}</a>` : esc(o.householdName || o.name);
-  box.innerHTML = `<div class="card-head"><div><h2>Proposals</h2><div class="sub">Asked, funded or committed, or newly added in the last ${RA_DAYS} days, newest first.</div></div></div>
+  box.innerHTML = `<div class="card-head"><div><h2>Proposals</h2><div class="sub">Asked, committed, funded, or newly added in the last ${RA_DAYS} days, newest first.</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Asked</div><div class="v">${asked.length} · ${short(sumOf(asked))}</div></div>
-      <div class="stat"><div class="k">Funded or committed</div><div class="v">${won.length} · ${short(sumOf(won))}</div></div>
+      <div class="stat"><div class="k">Committed</div><div class="v">${committed.length} · ${short(sumOf(committed))}</div></div>
+      <div class="stat"><div class="k">Funded</div><div class="v">${funded.length} · ${short(sumOf(funded))}</div></div>
       <div class="stat"><div class="k">Added, not asked yet</div><div class="v">${added.length}</div></div>
     </div>
-    ${ev.length ? `<div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr><th>Date</th><th class="txt">What happened</th><th class="txt">Household</th><th class="txt">Opportunity</th><th>Amount</th><th>Status</th><th class="txt">Fundraisers</th></tr></thead><tbody>
-      ${ev.map(e => `<tr><td>${opDate(e.d)}</td><td class="txt"><b>${esc(e.what)}</b></td><td class="txt">${hh(e.o)}</td>
+    <div class="op-filters"><div class="op-fl"><span>Show</span><div class="segbtn" role="group" aria-label="Show">${RA_SHOW.map(([v, l]) => `<button type="button" data-ras="${v}" aria-pressed="${RA.show === v}">${l}</button>`).join("")}</div></div></div>
+    ${shown.length ? `<div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr><th>Date</th><th class="txt">What happened</th><th class="txt">Household</th><th class="txt">Opportunity</th><th>Amount</th><th>Status</th><th class="txt">Fundraisers</th></tr></thead><tbody>
+      ${shown.map(e => `<tr><td>${opDate(e.d)}</td><td class="txt"><b>${esc(e.what)}</b></td><td class="txt">${hh(e.o)}</td>
         <td class="txt">${esc(e.o.name)}<small>${esc(e.o.purpose || "")}${opIsC4(e.o) ? " · C4" : ""}</small></td>
         <td>${e.amt ? money(e.amt) : "–"}</td><td><span class="op-pill op-${e.o.group}" title="${esc(e.o.status)}">${esc(e.o.group)}</span></td>
         <td class="txt">${esc(e.o.fundraisers.join(", ") || e.o.assigned || "–")}</td></tr>`).join("")}
-    </tbody></table></div>` : `<div class="notice"><p>No proposals were asked, funded or added in the last ${RA_DAYS} days.</p></div>`}
+    </tbody></table></div>` : `<div class="notice"><p>${RA.show === "all" ? "No proposals were asked, committed, funded or added" : "None " + ({ Asked: "asked", Committed: "committed", Funded: "funded", Added: "added and not yet asked" }[RA.show])} in the last ${RA_DAYS} days.</p></div>`}
     <p class="ra-more"><a href="${esc(HUB_PAGE_URL)}" target="_blank" rel="noopener" id="ra-more">To see more, click here: Portfolio Management › Opportunities →</a></p>`;
+  box.querySelectorAll("[data-ras]").forEach(b => b.onclick = () => { RA.show = b.dataset.ras; raRender(); });
   // Opens Portfolio Management › Opportunities here; right-click or Ctrl-click opens the Hub in a new tab
   const more = $("ra-more");
   more.addEventListener("mousedown", e => { if (e.button === 1 || e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey) markTab("Portfolios"); });
@@ -3523,8 +3529,19 @@ function raRender() {
 /* Projections Data: "Date asked" and "Date funded" columns for this year, from the same Opportunities data.
    A household with more than one proposal shows its most recent dates. Matched on the household's
    System Record ID, or on its name when there's no ID. */
+// Each household's proposals this year, for the quick-look panel
+let OP_HH = new Map();
+function oppPanel(r, yr, kv) {
+  const i = OP_HH.get(r); if (!i) return "";
+  return `<h4>${esc(yr)} opportunities (asks / proposals)</h4>` +
+    kv("Date asked", i.askD ? fmtDate(i.askD) : "–") + kv("Asked amount", i.askD ? money(i.askAmt) : "–") +
+    kv("Date funded", i.fundD ? fmtDate(i.fundD) : "–") + kv("Funded amount", i.fundD ? money(i.fundAmt) : "–") +
+    (i.nAsk > 1 ? kv(`All ${yr} asks`, `${i.nAsk} · ${money(i.askTot)}`) : "") +
+    (i.nFund > 1 ? kv(`All ${yr} funded`, `${i.nFund} · ${money(i.fundTot)}`) : "");
+}
 function opAddAskCols() {
   if (!OP.loaded || !ROWS.length || !KEYS.curYear) return;
+  OP_HH = new Map();
   const yr = KEYS.curYear.replace("Money In ", ""), kA = "Date Asked " + yr, kF = "Date Funded " + yr;
   const bySid = {}, byName = {};
   ROWS.forEach(r => {
@@ -3537,8 +3554,18 @@ function opAddAskCols() {
   OP.rows.forEach(o => {
     const r = bySid[String(o.constituentSys || "").trim()] || byName[String(o.householdName || "").trim().toLowerCase()];
     if (!r) return;
-    if (o.askDate && o.askDate.slice(0, 4) === yr && o.group !== "Identification") r[kA] = later(r[kA], o.askDate.slice(0, 10));
-    if (o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === yr) r[kF] = later(r[kF], o.fundedDate.slice(0, 10));
+    const i = OP_HH.get(r) || { askD: "", askAmt: 0, nAsk: 0, askTot: 0, fundD: "", fundAmt: 0, nFund: 0, fundTot: 0 };
+    if (o.askDate && o.askDate.slice(0, 4) === yr && o.group !== "Identification") {
+      const d = o.askDate.slice(0, 10); r[kA] = later(r[kA], d);
+      i.nAsk++; i.askTot += o.ask || 0;
+      if (d >= i.askD) { i.askD = d; i.askAmt = o.ask || 0; }   // the most recent ask
+    }
+    if (o.funded > 0 && o.fundedDate && o.fundedDate.slice(0, 4) === yr) {
+      const d = o.fundedDate.slice(0, 10); r[kF] = later(r[kF], d);
+      i.nFund++; i.fundTot += o.funded;
+      if (d >= i.fundD) { i.fundD = d; i.fundAmt = o.funded; }   // the most recent funded
+    }
+    if (i.nAsk || i.nFund) OP_HH.set(r, i);
   });
   if (!ALLCOLS.some(c => c.key === kA)) {
     const groups = ALLCOLS.map(c => c.group);
@@ -4090,8 +4117,7 @@ function openDrawer(r) {
     (KEYS.original ? kv("Original projection", m(KEYS.original)) : "") +
     `<h4>Money in</h4>` + KEYS.years.map(k => kv(k.replace("Money In ", ""), m(k))).join("") +
     `<h4>Pipeline</h4>` + ["Speculative", "Qualified Active", "Qualified Inactive"].map(k => kv(k, m(k))).join("") +
-    (r["Date Asked " + yr] || r["Date Funded " + yr] ? `<h4>${esc(yr)} opportunities (asks / proposals)</h4>` +
-      kv("Last asked", fmtDate(r["Date Asked " + yr]) || "–") + kv("Last funded", fmtDate(r["Date Funded " + yr]) || "–") : "") +
+    oppPanel(r, yr, kv) +
     `<h4>Relationship</h4>` +
     kv("Prospect classification", r["Prospect Classification"] || "–") +
     kv("Last action", [fmtDate(r["Last Action Date"]), r["Last Action Category"], r["Last Action Type"]].filter(Boolean).join(", ") || "–") +
