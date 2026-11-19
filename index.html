@@ -638,6 +638,27 @@
   .mp-pace .up{color:#1F6B3A;font-weight:600} .mp-pace .down{color:var(--red);font-weight:600}
   .mp-flag{background:#FBF0D8;border:1px solid #F0DDB0;color:#7A5C14;border-radius:8px;padding:9px 13px;font-size:13px;margin:0 0 16px}
   .mp-plan{margin:10px 0 0;padding-left:20px;color:var(--ink)}
+  /* ===== Tulip Feasibility Study ===== */
+  .tu-conf{margin-top:6px;font-size:12.5px;font-weight:600;color:#7A1F1A}
+  .tu-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:10px 0 4px}
+  .tu-stats .stat .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .tu-tallies{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:10px}
+  #panel-Tulip table.bs th.txt,#panel-Tulip table.bs td.txt{position:static;min-width:0;box-shadow:none}
+  #panel-Tulip table.bs td.wrap{white-space:normal;min-width:220px;max-width:340px;text-align:left}
+  #panel-Tulip table.bs td small{display:block;color:var(--muted);font-size:11.5px}
+  #panel-Tulip table.bs td.rk{color:var(--muted);text-align:center;min-width:0}
+  #panel-Tulip table.bs th{min-width:0}
+  .tu-tally th:last-child,.tu-tally td:last-child{width:70px}
+  .tu-more{margin-top:12px}
+  .tu-tools input[type="search"]{border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:210px;background:#fff}
+  .tu-plwrap{overflow:auto;max-height:min(66vh,640px)}
+  .tu-plwrap thead th{position:sticky;top:0;z-index:2}
+  .tu-faq h3{font-family:var(--serif);font-size:17px;color:var(--navy-deep);margin:22px 0 6px}
+  .tu-faq h3:first-of-type{margin-top:8px}
+  .tu-faq dl{margin:0;display:grid;grid-template-columns:minmax(150px,240px) 1fr;gap:0 20px;max-width:980px}
+  .tu-faq dt,.tu-faq dd{padding:8px 0;border-bottom:1px solid #EDF0F4;margin:0}
+  .tu-faq dt{font-weight:600}
+  @media (max-width:720px){ .tu-faq dl{grid-template-columns:1fr} .tu-faq dt{border-bottom:0;padding-bottom:0} }
   .mp-plan li{margin:4px 0}
   @media (max-width:720px){ .bar{flex-wrap:wrap;padding:0 16px;gap:8px} main{padding:18px 14px} .hero-figure{font-size:34px} .card{padding:16px} }
 </style>
@@ -658,6 +679,12 @@
       <div class="tabpop" id="other-pop" role="menu" hidden>
         <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</a>
         <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Mailing" data-access="Mailing Program" aria-selected="false" hidden>Mailing Program</a>
+      </div>
+    </div>
+    <div class="tabmenu" id="study-menu" hidden>
+      <button class="tab has-menu" type="button" id="study-btn" aria-haspopup="true" aria-controls="study-pop" aria-expanded="false" aria-selected="false">Studies</button>
+      <div class="tabpop" id="study-pop" role="menu" hidden>
+        <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Tulip" data-access="Study - Tulip" aria-selected="false" hidden>Tulip Feasibility Study</a>
       </div>
     </div>
   </nav>
@@ -885,6 +912,81 @@
       <div class="notice"><h2>External mailings are coming</h2><p>Reports for the external mailing program will appear here in a future update.</p></div>
     </div>
   </section>
+  <section class="panel" id="panel-Tulip" hidden>
+    <div class="head">
+      <div><h1>Tulip Feasibility Study</h1><div class="asof" id="tu-asof"></div>
+        <div class="tu-conf">Confidential: Advancement leadership only. Don't forward or print outside the office.</div></div>
+    </div>
+    <div id="tu-msg"></div>
+    <div id="tu-body" hidden>
+      <!-- Sub-tabs, the same as the tabs in the Tulip Tracking workbook -->
+      <div class="segbtn pf-views" role="group" aria-label="Report">
+        <button type="button" data-tuv="Highlights" aria-pressed="true">Highlights</button>
+        <button type="button" data-tuv="DeepDive" aria-pressed="false">Deep Dive</button>
+        <button type="button" data-tuv="Pipeline" aria-pressed="false">Pipeline</button>
+        <button type="button" data-tuv="FAQ" aria-pressed="false">FAQ</button>
+      </div>
+      <div class="tuv" data-tuv="Highlights"></div>
+      <div class="tuv" data-tuv="DeepDive" hidden></div>
+      <div class="tuv" data-tuv="Pipeline" hidden>
+        <div class="card">
+          <div class="card-head"><div><h2>Pipeline</h2><div class="sub" id="tu-pl-count"></div></div>
+            <div class="card-tools tu-tools">
+              <input type="search" id="tu-q" placeholder="Search name or ID" aria-label="Search the study list">
+              <label for="tu-fr">Fundraiser <select id="tu-fr"><option value="">All</option></select></label>
+              <label for="tu-stage">Show <select id="tu-stage">
+                <option value="">Everyone</option>
+                <option value="none">Not reached out yet</option>
+                <option value="out">Reached out</option>
+                <option value="int">Interested or perhaps</option>
+                <option value="sch">Visit scheduled</option>
+                <option value="done">Visit completed</option>
+                <option value="unrev">Visited, not yet reviewed</option>
+              </select></label>
+            </div></div>
+          <div class="bs-tablewrap tu-plwrap" id="tu-pl"></div>
+        </div>
+      </div>
+      <div class="tuv" data-tuv="FAQ" hidden>
+        <div class="card tu-faq">
+          <h2>How to read this study</h2>
+          <h3>The tabs</h3>
+          <dl>
+            <dt>Highlights</dt><dd>One-page summary for leadership: activity, potential, what donors told us, and the top 10.</dd>
+            <dt>Deep Dive</dt><dd>Everyone who has had a completed visit, ranked by Potential. The top 10 always show; click “Show everyone visited” for the rest.</dd>
+            <dt>Pipeline</dt><dd>The full study list, one row per constituent. It’s read from the Pipeline tab of the Tulip Tracking workbook each time you open this page; every other tab here is calculated from it.</dd>
+          </dl>
+          <h3>The numbers</h3>
+          <dl>
+            <dt>Per year</dt><dd>Every dollar amount is a one-year gift. Reviewers convert Study Indication and Assessed Capacity to per-year amounts in RE during review.</dd>
+            <dt>Study Indication (Constituent Provided)</dt><dd>What the donor indicated (the giving-chart amount from the interview form). Until the interview is reviewed it may still be a multi-year amount.</dd>
+            <dt>Assessed Capacity</dt><dd>Our read of what they could give per year, entered by the reviewer in RE. Not loaded from the form.</dd>
+            <dt>Potential</dt><dd>The higher of Study Indication and Assessed Capacity for each person. Used for ranking.</dd>
+            <dt>Reviewed vs. all</dt><dd>Highlights show reviewed interviews first (amounts confirmed per year), with the all-interviews figure underneath.</dd>
+            <dt>Not yet annualized</dt><dd>The interview has not been marked Feasibility Study - Reviewed = Yes in RE.</dd>
+            <dt>Giving 2024–2026</dt><dd>Household giving from 2026 Projections – Live (Attribution table), matching board reports. Updated whenever Projections Live is refreshed.</dd>
+            <dt>All Gifts Since Visit</dt><dd>Every gift dated on or after the visit date, including regular annual giving. Not the same as campaign commitments.</dd>
+            <dt>Gave a Study Indication</dt><dd>Visited donors with a numeric Study Indication. (Question 16, “willing to consider contributing,” is not loaded into RE.)</dd>
+          </dl>
+          <h3>Where the data comes from</h3>
+          <dl>
+            <dt>Raiser’s Edge</dt><dd>Outreach, interest, timeframe, visits and interview fields come from Study actions / 2026 Tulip Study actions in RE. To change them, update RE; edits made in the workbook are replaced on the next run of the Study: Tulip flow.</dd>
+            <dt>Hand-entered columns</dt><dd>Owner, Scheduler and Quick Notes are typed into the Pipeline tab of the Tulip Tracking workbook and are never overwritten.</dd>
+            <dt>Who is included</dt><dd>Constituents are added when they get the Tulip attribute in RE or have a study action on their record. Rows are not removed automatically.</dd>
+            <dt>Households</dt><dd>Interview actions go on the main (assigned-fundraiser) record, which is the Projections household key. A spouse or trust that rolls into a household shows $0 on its own row.</dd>
+          </dl>
+          <h3>Moving to 2027</h3>
+          <dl>
+            <dt>Switching workbooks</dt><dd>In the Study: Tulip flow, point the Household Gifts step at 2027 Projections – Live, and map Giving 2027 with sum(/r/g[y=2027]/m). The Giving 2027 column shows up on this page once it has amounts.</dd>
+          </dl>
+          <h3>Confidentiality</h3>
+          <dl>
+            <dt>Handling</dt><dd>Contains donor capacity and interview results. Internal use by Advancement leadership only. Do not forward, download to personal devices, or print outside the office.</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
     <div class="head"><div><h1 id="sp-title">Advancement: 2026 Strategic Plan</h1><div class="asof" id="sp-asof"></div></div>
       <div class="actions"><label class="bs-through" for="sp-year">Plan <select id="sp-year">
@@ -1023,7 +1125,7 @@ let ACCESS = {};
 const allowed = key => String(ACCESS[key] || "").trim().toLowerCase() === "yes";
 function selectTab(name) {
   document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
-  $("other-btn").setAttribute("aria-selected", !!document.querySelector(`#other-pop [data-tab="${name}"]`));
+  document.querySelectorAll(".tabmenu").forEach(m => m.querySelector(".has-menu").setAttribute("aria-selected", !!m.querySelector(`.tabpop [data-tab="${name}"]`)));
   closeMenu();
   document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + name);
   closeDrawer();
@@ -1032,6 +1134,7 @@ function selectTab(name) {
   if (name === "BoardSlides") { if (RT.loaded) bsPyrRender(); else if (!RT.loading) rtLoad(); }
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
+  if (name === "Tulip" && !TU.loaded && !TU.loading) tuLoad();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
   if (name === "StrategicPlan") { spRender(); if (!OP.loaded && !OP.loading) opLoad(); }
   if (name === "Activity") { raRender(); if (!OP.loaded && !OP.loading) opLoad(); }
@@ -1072,18 +1175,24 @@ document.querySelectorAll("[data-tab]").forEach(t => {
 function applyAccess(access) {
   ACCESS = access || {};
   document.querySelectorAll("[data-tab]").forEach(t => t.hidden = !allowed(t.dataset.access));
-  // The Other Reports menu only shows if at least one report in it is allowed
-  $("other-menu").hidden = ![...document.querySelectorAll("#other-pop [data-tab]")].some(x => !x.hidden);
+  // A menu (Other Reports, Studies) only shows if at least one report in it is allowed
+  document.querySelectorAll(".tabmenu").forEach(m => m.hidden = ![...m.querySelectorAll(".tabpop [data-tab]")].some(x => !x.hidden));
 }
 
-/* ===== Other Reports menu ===== */
-function closeMenu() { $("other-pop").hidden = true; $("other-btn").setAttribute("aria-expanded", "false"); }
-$("other-btn").addEventListener("click", e => {
-  e.stopPropagation();
-  const open = $("other-pop").hidden;
-  $("other-pop").hidden = !open; $("other-btn").setAttribute("aria-expanded", String(open));
+/* ===== Report menus (Other Reports, Studies) =====
+   To add a menu: copy one of the <div class="tabmenu"> blocks in the top bar. Nothing here needs to change. */
+const MENUS = [...document.querySelectorAll(".tabmenu")];
+function closeMenu() { MENUS.forEach(m => { m.querySelector(".tabpop").hidden = true; m.querySelector(".has-menu").setAttribute("aria-expanded", "false"); }); }
+MENUS.forEach(m => {
+  const btn = m.querySelector(".has-menu"), pop = m.querySelector(".tabpop");
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    const open = pop.hidden;
+    closeMenu();   // only one menu open at a time
+    pop.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+  });
 });
-document.addEventListener("click", e => { if (!$("other-menu").contains(e.target)) closeMenu(); });
+document.addEventListener("click", e => { if (!MENUS.some(m => m.contains(e.target))) closeMenu(); });
 
 /* ===== Mailing Program =====
    Data comes from the "Hub - Mailing Program" flow, which runs the Hub Export
@@ -1292,6 +1401,224 @@ function mpLineChartYears(cats, series, fmt, label) {
   });
   return svgOpen(W, H, label) + g + "</svg>";
 }
+
+/* ===== Tulip Feasibility Study =====
+   Data comes from the "Hub - Study Tulip" flow, which reads StudyTable (the Pipeline tab of the
+   Tulip Tracking workbook) and sends back { user, access, rows }: one row per constituent, every
+   value as text, dates as ISO 8601. Access is the "Study - Tulip" column in HubAccess.
+   The Hub does the math the workbook's Highlights, Deep Dive and hidden Calc tabs do:
+     visited   = Completed is "Yes"
+     reviewed  = Reviewed is "Yes"
+     potential = the higher of Study Indication and Assessed Capacity (blank = 0)
+   Deep Dive ranks visited rows by potential; ties keep the workbook's row order (as Calc does).
+   It loads the first time the tab is opened, then stays loaded. */
+const TULIP_URL = "PASTE_TULIP_FLOW_URL_HERE";
+const TU = { view: "Highlights", rows: [], loaded: false, loading: false, ddAll: false };
+const TU_TOP = 10;
+// [value in RE, label on the page]. Anything else RE sends shows under its own name.
+const TU_ORG = [["Mackinac Center for Public Policy", "MCPP (C3)"], ["Mackinac Center Action", "MCA (C4)"], ["Both", "Both"], ["Not sure / wants to discuss", "Not sure"]];
+const TU_LEAD = [["Yes, significantly", "Yes, significantly"], ["Somewhat", "Somewhat"], ["No", "No"]];
+const TU_VOL = [["Yes", "Yes"], ["Maybe", "Maybe"], ["No", "No"]];
+const tuTxt = v => String(v ?? "").trim();
+const tuHas = v => tuTxt(v) !== "";
+const tuIs = (v, want) => tuTxt(v).toLowerCase() === want.toLowerCase();
+// Study Timeframe is a month (the 1st of the month in the workbook)
+const tuMonth = v => { const d = toDate(v); return d ? MP_MON[d.getUTCMonth()] + " " + d.getUTCFullYear() : tuTxt(v); };
+
+function tuPrep(raw) {
+  return raw.filter(r => r && (tuHas(r.id) || tuHas(r.name))).map((r, i) => {
+    const ind = num(r.studyIndication), cap = num(r.assessedCapacity);
+    return { ...r, i, ind, cap, pot: Math.max(ind, cap), visited: tuIs(r.completed, "Yes"), reviewed: tuIs(r.reviewed, "Yes"),
+      g24: num(r.giving2024), g25: num(r.giving2025), g26: num(r.giving2026), g27: num(r.giving2027), since: num(r.givingSinceVisit) };
+  });
+}
+const tuRanked = () => TU.rows.filter(r => r.visited).sort((a, b) => b.pot - a.pot || a.i - b.i);
+
+function tuMessage(title, text, retry) {
+  $("tu-msg").innerHTML = text === undefined
+    ? `<div class="loading">${esc(title)}</div>`
+    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="tu-retry">Try again</button>' : ""}</div>`;
+  if (retry) $("tu-retry").onclick = tuLoad;
+}
+function tuLoad() {
+  if (/^PASTE_/.test(TULIP_URL)) { tuMessage("The Tulip study isn't connected yet", "The Hub - Study Tulip flow address hasn't been added to this page.", false); return; }
+  TU.loading = true; $("tu-body").hidden = true;
+  tuMessage("Loading the Tulip study…");
+  client.getUserIdentityToken()
+    .then(token => fetch(TULIP_URL, { method: "POST", body: token }))
+    .then(async res => {
+      if (res.status === 403) { tuMessage("You don't have access to the Tulip study", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      if (!res.ok) { tuMessage("The Tulip study didn't load", `The data service returned an error (status ${res.status}).`, true); return; }
+      let d = null; try { d = await res.json(); } catch (_) {}
+      if (!d || !Array.isArray(d.rows)) { tuMessage("The Tulip study didn't load", "The data service sent back something unexpected.", true); return; }
+      TU.rows = tuPrep(d.rows); TU.loaded = true; TU.ddAll = false;
+      $("tu-msg").innerHTML = "";
+      tuFillFundraisers();
+      tuRender();
+    })
+    .catch(() => tuMessage("The Tulip study didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
+    .finally(() => { TU.loading = false; });
+}
+
+function tuRender() {
+  document.querySelectorAll("[data-tuv]").forEach(el => {
+    if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.tuv === TU.view);
+    else el.hidden = el.dataset.tuv !== TU.view;
+  });
+  $("tu-body").hidden = !TU.loaded;
+  if (!TU.loaded) return;
+  $("tu-asof").textContent = `${TU.rows.length.toLocaleString("en-US")} on the study list · all amounts are per year · not a final report`;
+  if (TU.view === "Highlights") tuHighlights();
+  if (TU.view === "DeepDive") tuDeepDive();
+  if (TU.view === "Pipeline") tuPipeline();
+}
+document.querySelectorAll("button[data-tuv]").forEach(b => b.addEventListener("click", () => { TU.view = b.dataset.tuv; tuRender(); }));
+
+/* --- Ranked tables (Highlights top 10 and Deep Dive) --- */
+const tuStatus = r => r.reviewed ? `<span class="op-pill op-Funded">Reviewed</span>` : `<span class="op-pill op-Identification">Not yet annualized</span>`;
+const TU_COLS = {
+  rank:   ["#", "rk", (r, n) => n],
+  name:   ["Name", "txt", r => esc(r.name)],
+  fr:     ["Fundraiser", "txt", r => esc(r.fundraiser)],
+  visit:  ["Visit", "", r => esc(fmtDate(r.completedDate))],
+  loc:    ["Location", "txt", r => esc(r.location)],
+  ind:    ["Study indication / yr", "", r => money(r.ind)],
+  cap:    ["Assessed capacity / yr", "", r => money(r.cap)],
+  pot:    ["Potential / yr", "hl", r => `<b>${money(r.pot)}</b>`],
+  status: ["Status", "txt", tuStatus],
+  lead:   ["Lead-gift effect", "txt", r => esc(r.leadGiftEffect)],
+  vol:    ["Volunteer", "txt", r => esc(r.volunteer)],
+  org:    ["Which org", "txt", r => esc((TU_ORG.find(o => o[0] === tuTxt(r.whichOrg)) || [0, r.whichOrg])[1])],
+  g24:    ["Giving 2024", "", r => money(r.g24)],
+  g25:    ["Giving 2025", "", r => money(r.g25)],
+  g26:    ["Giving 2026", "", r => money(r.g26)],
+  g27:    ["Giving 2027", "", r => money(r.g27)],
+  since:  ["All gifts since visit", "", r => money(r.since)],
+  next:   ["Next step", "wrap", r => esc(r.nextStep)]
+};
+function tuRankTable(list, keys) {
+  const cols = keys.map(k => TU_COLS[k]);
+  const th = cols.map(c => `<th class="${c[1] === "wrap" ? "txt" : c[1]}">${esc(c[0])}</th>`).join("");
+  const body = list.map((r, i) => `<tr>${cols.map(c => `<td class="${c[1]}">${c[2](r, i + 1)}</td>`).join("")}</tr>`).join("");
+  return `<div class="bs-tablewrap"><table class="bs"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* --- Highlights --- */
+function tuHighlights() {
+  const R = TU.rows, V = R.filter(r => r.visited), Rv = R.filter(r => r.reviewed);
+  const cnt = f => R.filter(f).length, sum = (l, k) => l.reduce((t, r) => t + r[k], 0);
+  const n = v => v.toLocaleString("en-US");
+  const stat = (k, v, sub) => `<div class="stat"><div class="k">${esc(k)}</div><div class="v">${v}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div>`;
+  const tally = (title, field, known) => {
+    const vals = V.map(r => tuTxt(r[field]));
+    const count = v => vals.filter(x => x === v).length;
+    const rows = known.map(([v, lbl]) => [lbl, count(v)]);
+    [...new Set(vals.filter(x => x && !known.some(k => k[0] === x)))].forEach(x => rows.push([x, count(x)]));
+    rows.push(["No answer", count("")]);
+    return `<div class="bs-tablewrap"><table class="bs tu-tally"><thead><tr><th class="txt">${esc(title)}</th><th>Count</th></tr></thead>
+      <tbody>${rows.map(([l, c]) => `<tr><td class="txt">${esc(l)}</td><td>${c}</td></tr>`).join("")}</tbody></table></div>`;
+  };
+  const top = tuRanked().slice(0, TU_TOP);
+  document.querySelector('.tuv[data-tuv="Highlights"]').innerHTML = `
+    <div class="card"><h2>Activity</h2>
+      <div class="tu-stats">
+        ${stat("On the study list", n(R.length))}
+        ${stat("Reached out", n(cnt(r => tuHas(r.lastReachedOut))))}
+        ${stat("Interested in participating", n(cnt(r => tuIs(r.interest, "Interested"))), `+ ${cnt(r => tuIs(r.interest, "Perhaps Interested"))} perhaps`)}
+        ${stat("Visits scheduled", n(cnt(r => tuHas(r.scheduledDate))))}
+        ${stat("Visits completed", n(V.length), `${Rv.length} reviewed`)}
+      </div></div>
+    <div class="card"><h2>Potential, per year</h2>
+      <div class="tu-stats">
+        ${stat("Study indication, reviewed", money(sum(Rv, "ind")), `All interviews: ${money(sum(R, "ind"))}`)}
+        ${stat("Assessed capacity, reviewed", money(sum(Rv, "cap")), `All interviews: ${money(sum(R, "cap"))}`)}
+        ${stat("Potential, reviewed", money(sum(Rv, "pot")), `All visited: ${money(sum(V, "pot"))}`)}
+        ${stat("Gave a study indication", n(cnt(r => r.ind > 0)), `of ${V.length} visited`)}
+        ${stat("All gifts received since visit", money(sum(R, "since")), "Includes regular giving")}
+      </div></div>
+    <div class="card"><h2>What visited donors told us</h2>
+      <div class="tu-tallies">
+        ${tally("Which org", "whichOrg", TU_ORG)}
+        ${tally("Lead-gift effect", "leadGiftEffect", TU_LEAD)}
+        ${tally("Willing to volunteer", "volunteer", TU_VOL)}
+      </div></div>
+    <div class="card"><h2>Top ${TU_TOP} by potential, per year</h2>
+      ${top.length ? tuRankTable(top, ["rank", "name", "fr", "visit", "ind", "cap", "pot", "status"]) : `<p class="sub">No completed visits yet.</p>`}
+      <p class="bs-note">Potential is the higher of Study Indication and Assessed Capacity for each person. “Not yet annualized” rows haven’t been reviewed, so their Study Indication may still be a multi-year giving-chart amount. Everyone visited is on Deep Dive.</p>
+    </div>`;
+}
+
+/* --- Deep Dive --- */
+function tuDeepDive() {
+  const all = tuRanked(), list = TU.ddAll ? all : all.slice(0, TU_TOP);
+  const box = document.querySelector('.tuv[data-tuv="DeepDive"]');
+  const keys = ["rank", "name", "fr", "visit", "loc", "ind", "cap", "pot", "status", "lead", "vol", "org", "g24", "g25", "g26"]
+    .concat(all.some(r => r.g27) ? ["g27"] : [], ["since", "next"]);
+  box.innerHTML = `<div class="card"><div class="card-head"><div><h2>Everyone visited, ranked by potential</h2>
+      <div class="sub">${all.length} completed visit${all.length === 1 ? "" : "s"}. All amounts are per year; “Not yet annualized” means the interview hasn’t been reviewed, so Study Indication may still be the giving-chart amount.</div></div></div>
+    ${all.length ? tuRankTable(list, keys) : `<p class="sub">No completed visits yet.</p>`}
+    ${all.length > TU_TOP ? `<div class="tu-more"><button type="button" class="btn" id="tu-dd-more">${TU.ddAll ? `Show the top ${TU_TOP} only` : `Show everyone visited (${all.length})`}</button></div>` : ""}
+  </div>`;
+  if ($("tu-dd-more")) $("tu-dd-more").onclick = () => { TU.ddAll = !TU.ddAll; tuDeepDive(); };
+}
+
+/* --- Pipeline: the full study list --- */
+function tuFillFundraisers() {
+  const sel = $("tu-fr"), cur = sel.value;
+  const frs = [...new Set(TU.rows.map(r => tuTxt(r.fundraiser)).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">All</option>` + frs.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("")
+    + (TU.rows.some(r => !tuHas(r.fundraiser)) ? `<option value="__none">No assigned fundraiser</option>` : "");
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : "";
+}
+const TU_STAGE = {
+  none: r => !tuHas(r.lastReachedOut),
+  out: r => tuHas(r.lastReachedOut),
+  int: r => tuIs(r.interest, "Interested") || tuIs(r.interest, "Perhaps Interested"),
+  sch: r => tuHas(r.scheduledDate),
+  done: r => r.visited,
+  unrev: r => r.visited && !r.reviewed
+};
+function tuPipeline() {
+  const q = $("tu-q").value.trim().toLowerCase(), fr = $("tu-fr").value, st = TU_STAGE[$("tu-stage").value];
+  const list = TU.rows.filter(r =>
+    (!q || tuTxt(r.name).toLowerCase().includes(q) || tuTxt(r.id).toLowerCase().includes(q) || tuTxt(r.primaryContact).toLowerCase().includes(q)) &&
+    (!fr || (fr === "__none" ? !tuHas(r.fundraiser) : tuTxt(r.fundraiser) === fr)) &&
+    (!st || st(r)));
+  const show27 = TU.rows.some(r => r.g27);
+  const cols = [
+    ["Name", "txt", r => `${esc(r.name)}${tuHas(r.primaryContact) ? `<small>${esc(r.primaryContact)}</small>` : ""}`],
+    ["ID", "txt", r => esc(r.id)],
+    ["Fundraiser", "txt", r => esc(r.fundraiser)],
+    ["Owner", "txt", r => esc(r.owner)],
+    ["Scheduler", "txt", r => esc(r.scheduler)],
+    ["Last reached out", "", r => esc(fmtDate(r.lastReachedOut))],
+    ["Interest", "txt", r => esc(r.interest)],
+    ["Timeframe", "", r => esc(tuMonth(r.timeframe))],
+    ["Scheduled", "", r => esc(fmtDate(r.scheduledDate))],
+    ["Location", "txt", r => esc(r.location)],
+    ["Completed", "", r => r.visited ? esc(fmtDate(r.completedDate) || "Yes") : ""],
+    ["Status", "txt", r => r.visited ? tuStatus(r) : ""],
+    ["Interested in giving", "txt", r => esc(r.interestedInGiving)],
+    ["Study indication", "", r => tuHas(r.studyIndication) ? money(r.ind) : ""],
+    ["Assessed capacity", "", r => tuHas(r.assessedCapacity) ? money(r.cap) : ""],
+    ["Lead-gift effect", "txt", r => esc(r.leadGiftEffect)],
+    ["Volunteer", "txt", r => esc(r.volunteer)],
+    ["Which org", "txt", r => esc(r.whichOrg)],
+    ["Next step", "wrap", r => esc(r.nextStep)],
+    ["Quick notes", "wrap", r => esc(r.quickNotes)],
+    ["Giving 2024", "", r => money(r.g24)],
+    ["Giving 2025", "", r => money(r.g25)],
+    ["Giving 2026", "", r => money(r.g26)]
+  ].concat(show27 ? [["Giving 2027", "", r => money(r.g27)]] : [], [["Gifts since visit", "", r => r.visited ? money(r.since) : ""]]);
+  $("tu-pl-count").textContent = list.length === TU.rows.length ? `${TU.rows.length} constituents` : `Showing ${list.length} of ${TU.rows.length} constituents`;
+  $("tu-pl").innerHTML = list.length
+    ? `<table class="bs"><thead><tr>${cols.map(c => `<th class="${c[1] === "wrap" ? "txt" : c[1]}">${esc(c[0])}</th>`).join("")}</tr></thead>
+       <tbody>${list.map(r => `<tr>${cols.map(c => `<td class="${c[1]}">${c[2](r)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : `<p class="sub" style="padding:14px 16px;margin:0">No one matches these filters.</p>`;
+}
+$("tu-q").addEventListener("input", () => { if (TU.loaded) tuPipeline(); });
+$("tu-fr").addEventListener("change", () => { if (TU.loaded) tuPipeline(); });
+$("tu-stage").addEventListener("change", () => { if (TU.loaded) tuPipeline(); });
 
 /* ===== Donor Retention =====
    Data comes from the "Hub – Retention" flow, which runs the "Hub Retention Export" Office Script
