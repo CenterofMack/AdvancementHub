@@ -40,6 +40,14 @@
   .tabitem{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:9px 12px;border-radius:4px;cursor:pointer;color:var(--ink);font-weight:500;text-decoration:none}
   .tabitem:hover{background:#F0F3F8}
   .tabitem[aria-selected="true"]{color:var(--navy-deep);font-weight:600;border-left-color:var(--gold);background:#F7F9FC}
+  /* A group inside a menu (Other Reports › Studies) opens a second menu to the side */
+  .subgroup{position:relative}
+  .tabitem.has-sub{display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .tabitem.has-sub::after{content:"▸";font-size:11px;color:var(--muted)}
+  .tabitem.has-sub[aria-expanded="true"],.tabitem.has-sub[aria-selected="true"]{background:#F0F3F8}
+  .subpop{position:absolute;left:100%;top:-7px;margin-left:4px;z-index:31;min-width:240px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 28px rgba(23,42,73,.20);padding:6px}
+  .subpop.flip{left:auto;right:100%;margin-left:0;margin-right:4px}
+  @media (max-width:720px){ .subpop{position:static;margin:2px 0 4px 12px;box-shadow:none;border-width:0 0 0 2px;border-radius:0;min-width:0} }
 
   main{max-width:1320px;margin:0 auto;padding:28px}
   .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
@@ -719,13 +727,14 @@
       <div class="tabpop" id="other-pop" role="menu" hidden>
         <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="EWMC" data-access="EWMC" aria-selected="false" hidden>2027 EWMC</a>
         <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Mailing" data-access="Mailing Program" aria-selected="false" hidden>Mailing Program</a>
-      </div>
-    </div>
-    <div class="tabmenu" id="study-menu" hidden>
-      <button class="tab has-menu" type="button" id="study-btn" aria-haspopup="true" aria-controls="study-pop" aria-expanded="false" aria-selected="false">Studies</button>
-      <div class="tabpop" id="study-pop" role="menu" hidden>
-        <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Tulip" data-access="Study - Tulip" aria-selected="false" hidden>Tulip Feasibility Study</a>
-        <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Intern" data-access="Study - Intern" aria-selected="false" hidden>2026 Intern Feasibility Study</a>
+        <!-- Studies: a group with its own side menu. To add a study, add a link inside the subpop. -->
+        <div class="subgroup" hidden>
+          <button class="tabitem has-sub" type="button" role="menuitem" aria-haspopup="true" aria-expanded="false" aria-selected="false">Studies</button>
+          <div class="subpop" role="menu" hidden>
+            <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Tulip" data-access="Study - Tulip" aria-selected="false" hidden>Tulip Feasibility Study</a>
+            <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Intern" data-access="Study - Intern" aria-selected="false" hidden>2026 Intern Feasibility Study</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -1234,6 +1243,7 @@ const allowed = key => String(ACCESS[key] || "").trim().toLowerCase() === "yes";
 function selectTab(name) {
   document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === name));
   document.querySelectorAll(".tabmenu").forEach(m => m.querySelector(".has-menu").setAttribute("aria-selected", !!m.querySelector(`.tabpop [data-tab="${name}"]`)));
+  document.querySelectorAll(".subgroup").forEach(g => g.querySelector(".has-sub").setAttribute("aria-selected", !!g.querySelector(`.subpop [data-tab="${name}"]`)));
   closeMenu();
   document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== "panel-" + name);
   closeDrawer();
@@ -1285,13 +1295,28 @@ function applyAccess(access) {
   ACCESS = access || {};
   document.querySelectorAll("[data-tab]").forEach(t => t.hidden = !allowed(t.dataset.access));
   // A menu (Other Reports, Studies) only shows if at least one report in it is allowed
+  document.querySelectorAll(".subgroup").forEach(g => g.hidden = ![...g.querySelectorAll(".subpop [data-tab]")].some(x => !x.hidden));
   document.querySelectorAll(".tabmenu").forEach(m => m.hidden = ![...m.querySelectorAll(".tabpop [data-tab]")].some(x => !x.hidden));
 }
 
 /* ===== Report menus (Other Reports, Studies) =====
    To add a menu: copy one of the <div class="tabmenu"> blocks in the top bar. Nothing here needs to change. */
 const MENUS = [...document.querySelectorAll(".tabmenu")];
-function closeMenu() { MENUS.forEach(m => { m.querySelector(".tabpop").hidden = true; m.querySelector(".has-menu").setAttribute("aria-expanded", "false"); }); }
+function closeSub(g) { g.querySelector(".subpop").hidden = true; g.querySelector(".has-sub").setAttribute("aria-expanded", "false"); }
+function closeMenu() { MENUS.forEach(m => { m.querySelector(".tabpop").hidden = true; m.querySelector(".has-menu").setAttribute("aria-expanded", "false"); m.querySelectorAll(".subgroup").forEach(closeSub); }); }
+// Side menus (Other Reports › Studies): open on hover, or on click/Enter for touch and keyboard
+document.querySelectorAll(".subgroup").forEach(g => {
+  const btn = g.querySelector(".has-sub"), pop = g.querySelector(".subpop");
+  // Opens to the right, or to the left when there isn't room on the screen
+  const open = () => { pop.classList.remove("flip"); pop.hidden = false; btn.setAttribute("aria-expanded", "true");
+    if (getComputedStyle(pop).position === "absolute" && pop.getBoundingClientRect().right > window.innerWidth - 8) pop.classList.add("flip"); };
+  let t = null;
+  g.addEventListener("mouseenter", () => { clearTimeout(t); open(); });
+  g.addEventListener("mouseleave", () => { t = setTimeout(() => closeSub(g), 250); });
+  btn.addEventListener("click", e => { e.stopPropagation(); pop.hidden ? open() : closeSub(g); });
+  btn.addEventListener("keydown", e => { if (e.key === "ArrowRight") { e.preventDefault(); open(); const first = pop.querySelector("[data-tab]:not([hidden])"); if (first) first.focus(); } });
+  pop.addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "Escape") { e.preventDefault(); closeSub(g); btn.focus(); } });
+});
 MENUS.forEach(m => {
   const btn = m.querySelector(".has-menu"), pop = m.querySelector(".tabpop");
   btn.addEventListener("click", e => {
