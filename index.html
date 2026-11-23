@@ -638,6 +638,25 @@
   .mp-pace .up{color:#1F6B3A;font-weight:600} .mp-pace .down{color:var(--red);font-weight:600}
   .mp-flag{background:#FBF0D8;border:1px solid #F0DDB0;color:#7A5C14;border-radius:8px;padding:9px 13px;font-size:13px;margin:0 0 16px}
   .mp-plan{margin:10px 0 0;padding-left:20px;color:var(--ink)}
+  /* ===== 2026 Intern Feasibility Study ===== */
+  .in-hero{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;align-items:center;padding:2px 0 16px;margin-bottom:6px;border-bottom:1px solid #EDF0F4}
+  .in-big{font-family:var(--serif);font-weight:700;font-size:56px;line-height:1;color:var(--navy-deep);font-variant-numeric:tabular-nums}
+  .in-hero p{margin:0;max-width:62ch;font-size:15px;line-height:1.5}
+  .in-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:10px 0 4px}
+  .in-stats .stat .s{font-size:12px;color:var(--muted);margin-top:2px}
+  #panel-Intern table.bs th{min-width:0}
+  #panel-Intern table.bs td{font-variant-numeric:tabular-nums}
+  #panel-Intern table.bs td.txt small{display:block;color:var(--muted);font-size:11.5px}
+  #panel-Intern table.bs.in-sum th.txt,#panel-Intern table.bs.in-sum td.txt{position:static;box-shadow:none;min-width:150px;white-space:normal}
+  #panel-Intern table.bs td.wrap{white-space:normal;text-align:left;min-width:200px;max-width:320px;color:var(--muted)}
+  .in-rate{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+  .in-rate .op-bar{min-width:80px;flex:0 0 80px}
+  .in-tools{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .in-tools label{font-size:13px;color:var(--muted)}
+  .in-tools input[type="search"]{border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:210px;background:#fff}
+  .in-plwrap{overflow:auto;max-height:min(66vh,640px)}
+  .in-plwrap thead th{position:sticky;top:0;z-index:2}
+  @media (max-width:640px){.in-hero{grid-template-columns:1fr}.in-big{font-size:44px}}
   /* ===== Tulip Feasibility Study ===== */
   .tu-conf{margin-top:6px;font-size:12.5px;font-weight:600;color:#7A1F1A}
   .tu-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:10px 0 4px}
@@ -685,6 +704,7 @@
       <button class="tab has-menu" type="button" id="study-btn" aria-haspopup="true" aria-controls="study-pop" aria-expanded="false" aria-selected="false">Studies</button>
       <div class="tabpop" id="study-pop" role="menu" hidden>
         <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Tulip" data-access="Study - Tulip" aria-selected="false" hidden>Tulip Feasibility Study</a>
+        <a class="tabitem" role="menuitem" href="#" target="_blank" rel="noopener" data-tab="Intern" data-access="Study - Intern" aria-selected="false" hidden>2026 Intern Feasibility Study</a>
       </div>
     </div>
   </nav>
@@ -987,6 +1007,73 @@
       </div>
     </div>
   </section>
+  <section class="panel" id="panel-Intern" hidden>
+    <div class="head">
+      <div><h1>2026 Intern Feasibility Study</h1><div class="asof" id="in-asof"></div>
+        <div class="tu-conf">Confidential: internal use only. Don't forward or print outside the office.</div></div>
+    </div>
+    <div id="in-msg"></div>
+    <div id="in-body" hidden>
+      <div class="segbtn pf-views" role="group" aria-label="Report">
+        <button type="button" data-inv="Overview" aria-pressed="true">Overview</button>
+        <button type="button" data-inv="ByIntern" aria-pressed="false">By intern</button>
+        <button type="button" data-inv="List" aria-pressed="false">Full list</button>
+        <button type="button" data-inv="FAQ" aria-pressed="false">FAQ</button>
+      </div>
+      <div class="inv" data-inv="Overview"></div>
+      <div class="inv" data-inv="ByIntern" hidden></div>
+      <div class="inv" data-inv="List" hidden>
+        <div class="card">
+          <div class="card-head"><div><h2>Everyone reached out to</h2><div class="sub" id="in-pl-count"></div></div>
+            <div class="card-tools in-tools">
+              <input type="search" id="in-q" placeholder="Search name or ID" aria-label="Search the study list">
+              <label for="in-fr">Intern <select id="in-fr"><option value="">All</option></select></label>
+              <label for="in-st">Status <select id="in-st"><option value="">All</option></select></label>
+              <label for="in-touch">Show <select id="in-touch">
+                <option value="">Everyone</option>
+                <option value="met">Had a meeting</option>
+                <option value="softyes">Soft ask: Yes</option>
+                <option value="declined">Declined</option>
+                <option value="mailonly">Mail only</option>
+                <option value="gave">Gave since outreach</option>
+              </select></label>
+            </div></div>
+          <div class="bs-tablewrap in-plwrap" id="in-pl"></div>
+        </div>
+      </div>
+      <div class="inv" data-inv="FAQ" hidden>
+        <div class="card tu-faq">
+          <h2>How to read this study</h2>
+          <h3>Who is counted</h3>
+          <dl>
+            <dt>The study list</dt><dd>Everyone with a Study, Study/First Visit or Study Decline action from the intern outreach (RE query 49312). Other action types on the same records, like Stewardship or General Correspondence, aren't counted.</dd>
+            <dt>Counted by person</dt><dd>Mailed, Emailed, Called and Met count people, not actions. Someone mailed twice counts once.</dd>
+            <dt>Meetings</dt><dd>Actions with the Meeting category and a type of Study or Study/First Visit. A Study Decline counts as a decline, not a meeting.</dd>
+            <dt>Intern</dt><dd>The fundraiser on the person's first study action.</dd>
+          </dl>
+          <h3>Giving</h3>
+          <dl>
+            <dt>Before outreach</dt><dd>Household gifts from January 1, 2024 up to the day before the person's first study action.</dd>
+            <dt>Since outreach</dt><dd>Household gifts on or after the first study action, including regular giving that might have come in anyway.</dd>
+            <dt>Households</dt><dd>Gifts come from 2026 Projections - Live (Attribution), so a spouse's or trust's gift counts for the household. Dollar totals count each household once.</dd>
+            <dt>Last gift</dt><dd>From RE, for the person's own record, soft credits included. Shows when people with no gifts since 2024 last gave.</dd>
+          </dl>
+          <h3>Status</h3>
+          <dl>
+            <dt>Renewed</dt><dd>Gave before outreach (2024 on) and again after.</dd>
+            <dt>Reactivated</dt><dd>No gifts from 2024 until outreach, then gave.</dd>
+            <dt>Lapsed</dt><dd>Gave before outreach, nothing since.</dd>
+            <dt>No Gifts Since 2024</dt><dd>No gifts on either side of outreach.</dd>
+            <dt>Renewal rate</dt><dd>Renewed ÷ (Renewed + Lapsed): of the people who were giving before outreach, the share who gave again.</dd>
+          </dl>
+          <h3>When it updates</h3>
+          <dl>
+            <dt>Refresh</dt><dd>The 2026 Intern Feasibility Study - Scheduled Update flow rewrites Intern Study Tracking.xlsx from RE and Projections. This page reads that workbook each time it's opened.</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
   <section class="panel" id="panel-StrategicPlan" hidden>
     <div class="head"><div><h1 id="sp-title">Advancement: 2026 Strategic Plan</h1><div class="asof" id="sp-asof"></div></div>
       <div class="actions"><label class="bs-through" for="sp-year">Plan <select id="sp-year">
@@ -1135,6 +1222,7 @@ function selectTab(name) {
   if (name === "EWMC") { if (!EW.loaded && !EW.loading) ewLoad(); else requestAnimationFrame(ewDrawTicks); }
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Tulip" && !TU.loaded && !TU.loading) tuLoad();
+  if (name === "Intern" && !IN.loaded && !IN.loading) inLoad();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
   if (name === "StrategicPlan") { spRender(); if (!OP.loaded && !OP.loading) opLoad(); }
   if (name === "Activity") { raRender(); if (!OP.loaded && !OP.loading) opLoad(); }
@@ -1619,6 +1707,203 @@ function tuPipeline() {
 $("tu-q").addEventListener("input", () => { if (TU.loaded) tuPipeline(); });
 $("tu-fr").addEventListener("change", () => { if (TU.loaded) tuPipeline(); });
 $("tu-stage").addEventListener("change", () => { if (TU.loaded) tuPipeline(); });
+
+/* ===== 2026 Intern Feasibility Study =====
+   Data comes from the "Hub - 2026 Intern Feasibility Study" flow, which reads InternTable in
+   Intern Study Tracking.xlsx and sends back { user, access, rows }: one row per constituent, every
+   value as text. Access is the "Study - Intern" column in HubAccess.
+   The workbook is filled by the "2026 Intern Feasibility Study - Scheduled Update" flow, which
+   counts each person's study actions and sums household gifts from Projections before and after
+   their first study action. Dollar totals here count each household once.
+   It loads the first time the tab is opened, then stays loaded. */
+const INTERN_URL = "PASTE_INTERN_FLOW_URL_HERE";
+const IN = { view: "Overview", rows: [], loaded: false, loading: false };
+// [status, pill style, meaning]
+const IN_STATUS = [
+  ["Renewed", "op-Funded", "Gave before outreach (2024 on) and again after"],
+  ["Reactivated", "op-Open", "No gifts from 2024 until outreach, then gave"],
+  ["Lapsed", "op-Declined", "Gave before outreach, nothing since"],
+  ["No Gifts Since 2024", "op-Closed", "No gifts either side of outreach"]
+];
+// Deepest contact each person had, most personal first
+const IN_TOUCH = [["Met", "Had a meeting"], ["Called", "Phone call, no meeting"], ["Emailed", "Email, no call or meeting"], ["Mail only", "Mail only"], ["Other", "Other contact only"]];
+const inPill = s => { const m = IN_STATUS.find(x => x[0] === s); return s ? `<span class="op-pill ${m ? m[1] : "op-Closed"}">${esc(s)}</span>` : ""; };
+const inN = v => v.toLocaleString("en-US");
+const inRateOf = L => { const ren = L.filter(r => r.status === "Renewed").length, lap = L.filter(r => r.status === "Lapsed").length; return { ren, lap, rate: ren + lap ? ren / (ren + lap) : null }; };
+const inBar = v => v === null ? "–" : `<span class="in-rate"><span>${pct(v)}</span><span class="op-bar"><i style="width:${Math.round(v * 100)}%"></i></span></span>`;
+// Dollars by household: two people in one household share the same gifts, so count it once
+function inHHSum(L, k) {
+  const m = new Map();
+  L.forEach(r => m.set(r.hh, Math.max(m.get(r.hh) || 0, r[k])));
+  return [...m.values()].reduce((t, v) => t + v, 0);
+}
+
+function inPrep(raw) {
+  return raw.filter(r => r && tuHas(r.id)).map(r => {
+    const x = { id: tuTxt(r.id), name: tuTxt(r.name), hh: tuTxt(r.household) || tuTxt(r.id), fr: tuTxt(r.fundraiser) || "No intern listed",
+      first: r.firstOutreach, last: r.lastOutreach, mail: num(r.mailings), email: num(r.emails), call: num(r.calls), meet: num(r.meetings),
+      declined: tuIs(r.declined, "Yes"), soft: tuTxt(r.softAsk), before: num(r.givingBefore), since: num(r.givingSince), gifts: num(r.giftsSince),
+      lastGift: r.lastGift, status: tuTxt(r.status) };
+    x.touch = x.meet ? "Met" : x.call ? "Called" : x.email ? "Emailed" : x.mail ? "Mail only" : "Other";
+    return x;
+  }).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function inMessage(title, text, retry) {
+  $("in-msg").innerHTML = text === undefined
+    ? `<div class="loading">${esc(title)}</div>`
+    : `<div class="notice${retry ? " err" : ""}"><h2>${esc(title)}</h2><p>${esc(text)}</p>${retry ? '<button class="btn" id="in-retry">Try again</button>' : ""}</div>`;
+  if (retry) $("in-retry").onclick = inLoad;
+}
+function inLoad() {
+  if (/^PASTE_/.test(INTERN_URL)) { inMessage("The Intern study isn't connected yet", "The Hub - 2026 Intern Feasibility Study flow address hasn't been added to this page.", false); return; }
+  IN.loading = true; $("in-body").hidden = true;
+  inMessage("Loading the Intern study…");
+  client.getUserIdentityToken()
+    .then(token => fetch(INTERN_URL, { method: "POST", body: token }))
+    .then(async res => {
+      let d = null; try { d = await res.json(); } catch (_) {}
+      if (res.status === 403) { inMessage("You don't have access to the Intern study", `Ask ${OWNER} to add you to the Advancement Hub access list.`, false); return; }
+      // Demo view answers any report it has no made-up data for with this note, so real names never show
+      if (res.status === 404 && d && typeof d.error === "string" && /demo view/i.test(d.error)) { inMessage("Not available in demo view", "This study has no made-up data, so it stays hidden while demo view is on.", false); return; }
+      if (!res.ok) { inMessage("The Intern study didn't load", `The data service returned an error (status ${res.status}).`, true); return; }
+      if (!d || !Array.isArray(d.rows)) { inMessage("The Intern study didn't load", "The data service sent back something unexpected.", true); return; }
+      IN.rows = inPrep(d.rows); IN.loaded = true;
+      $("in-msg").innerHTML = "";
+      inFillFilters();
+      inRender();
+    })
+    .catch(() => inMessage("The Intern study didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
+    .finally(() => { IN.loading = false; });
+}
+// Demo view (and anything else that clears the Hub) sends "hub:reset": forget what's loaded
+document.addEventListener("hub:reset", () => {
+  IN.loaded = false; IN.loading = false; IN.rows = [];
+  ["in-q", "in-fr", "in-st", "in-touch"].forEach(id => { const el = $(id); if (el) el.value = ""; });
+  document.querySelectorAll('.inv[data-inv="Overview"], .inv[data-inv="ByIntern"]').forEach(el => el.innerHTML = "");
+  $("in-pl").innerHTML = ""; $("in-asof").textContent = ""; $("in-msg").innerHTML = ""; $("in-body").hidden = true;
+});
+
+function inRender() {
+  document.querySelectorAll("[data-inv]").forEach(el => {
+    if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.inv === IN.view);
+    else el.hidden = el.dataset.inv !== IN.view;
+  });
+  $("in-body").hidden = !IN.loaded;
+  if (!IN.loaded) return;
+  const firsts = IN.rows.map(r => toDate(r.first)).filter(Boolean).sort((a, b) => a - b);
+  const lasts = IN.rows.map(r => toDate(r.last)).filter(Boolean).sort((a, b) => a - b);
+  $("in-asof").textContent = `${inN(IN.rows.length)} people reached out to` +
+    (firsts.length ? `, ${fmtDate(firsts[0].toISOString())} to ${fmtDate(lasts[lasts.length - 1].toISOString())}` : "") +
+    ". Giving is as of the latest Projections update.";
+  if (IN.view === "Overview") inOverview();
+  if (IN.view === "ByIntern") inByIntern();
+  if (IN.view === "List") inList();
+}
+document.querySelectorAll("button[data-inv]").forEach(b => b.addEventListener("click", () => { IN.view = b.dataset.inv; inRender(); }));
+
+/* --- Overview --- */
+function inOverview() {
+  const R = IN.rows, cnt = f => R.filter(f).length;
+  const { ren, lap, rate } = inRateOf(R);
+  const gave = R.filter(r => r.since > 0), react = cnt(r => r.status === "Reactivated");
+  const met = R.filter(r => r.meet > 0);
+  const stat = (k, v, sub) => `<div class="stat"><div class="k">${esc(k)}</div><div class="v">${v}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div>`;
+  const share = v => R.length ? pct(v / R.length) : "";
+  const touchRows = IN_TOUCH.map(([key, label]) => {
+    const L = R.filter(r => r.touch === key); if (!L.length) return "";
+    const g = L.filter(r => r.since > 0).length, rr = inRateOf(L).rate;
+    return `<tr><td class="txt">${esc(label)}</td><td>${inN(L.length)}</td><td>${inN(g)}</td><td>${inBar(g / L.length)}</td><td>${inBar(rr)}</td><td>${money(inHHSum(L, "since"))}</td></tr>`;
+  }).join("");
+  document.querySelector('.inv[data-inv="Overview"]').innerHTML = `
+    <div class="card"><h2>Did they give again?</h2>
+      <div class="in-hero"><div class="in-big">${rate === null ? "–" : pct(rate)}</div>
+        <p>Of the <b>${inN(ren + lap)}</b> people who gave in 2024 or later before the interns reached out, <b>${inN(ren)}</b> have given again since. ${inN(lap)} haven't given since outreach.</p></div>
+      <div class="in-stats">
+        ${stat("Gave since outreach", inN(gave.length), `${share(gave.length)} of everyone reached`)}
+        ${stat("Dollars since outreach", money(inHHSum(R, "since")), "By household, all gifts")}
+        ${stat("Gifts since outreach", inN(R.reduce((t, r) => t + r.gifts, 0)))}
+        ${stat("Reactivated", inN(react), "No gifts from 2024 until outreach, then gave")}
+      </div></div>
+    <div class="card"><h2>Outreach</h2>
+      <div class="in-stats">
+        ${stat("Reached out to", inN(R.length))}
+        ${stat("Mailed", inN(cnt(r => r.mail > 0)), `${inN(cnt(r => r.touch === "Mail only"))} mail only`)}
+        ${stat("Emailed", inN(cnt(r => r.email > 0)))}
+        ${stat("Called", inN(cnt(r => r.call > 0)))}
+        ${stat("Met", inN(met.length), `Soft ask: ${inN(met.filter(r => tuIs(r.soft, "Yes")).length)} yes, ${inN(met.filter(r => tuIs(r.soft, "No")).length)} no`)}
+        ${stat("Declined", inN(cnt(r => r.declined)))}
+      </div></div>
+    <div class="card"><h2>Status</h2>
+      <div class="bs-tablewrap"><table class="bs in-sum"><thead><tr><th class="txt">Status</th><th>People</th><th>Share</th><th class="txt">Meaning</th></tr></thead>
+        <tbody>${IN_STATUS.map(([s, , m]) => { const k = cnt(r => r.status === s); return `<tr><td class="txt">${inPill(s)}</td><td>${inN(k)}</td><td>${share(k)}</td><td class="wrap">${esc(m)}</td></tr>`; }).join("")}</tbody></table></div></div>
+    <div class="card"><h2>Giving by closest contact</h2>
+      <div class="sub">Each person is counted once, under the most personal contact they had.</div>
+      <div class="bs-tablewrap"><table class="bs in-sum"><thead><tr><th class="txt">Closest contact</th><th>People</th><th>Gave since</th><th>Share who gave</th><th>Renewal rate</th><th>Dollars since</th></tr></thead>
+        <tbody>${touchRows}</tbody></table></div>
+      <p class="bs-note">Interns could only call or meet people who answered, so these groups aren't alike to begin with. Read the differences as a signal, not proof that a call or meeting caused the gift.</p>
+    </div>`;
+}
+
+/* --- By intern --- */
+function inByIntern() {
+  const R = IN.rows, frs = [...new Set(R.map(r => r.fr))].sort();
+  const line = (label, L) => {
+    const { ren, lap, rate } = inRateOf(L), g = L.filter(r => r.since > 0).length;
+    return [esc(label), inN(L.length), inN(L.filter(r => r.mail > 0).length), inN(L.filter(r => r.email > 0).length), inN(L.filter(r => r.call > 0).length),
+      inN(L.filter(r => r.meet > 0).length), inN(L.filter(r => tuIs(r.soft, "Yes")).length), inN(L.filter(r => r.declined).length),
+      inN(g), L.length ? pct(g / L.length) : "–", inN(ren), inN(L.filter(r => r.status === "Reactivated").length), inN(lap), rate === null ? "–" : pct(rate), money(inHHSum(L, "since"))];
+  };
+  const head = ["Intern", "People", "Mailed", "Emailed", "Called", "Met", "Soft ask yes", "Declined", "Gave since", "Share who gave", "Renewed", "Reactivated", "Lapsed", "Renewal rate", "Dollars since"];
+  const tr = (cells, tag) => `<tr>${cells.map((c, i) => `<${tag} class="${i ? "" : "txt"}">${c}</${tag}>`).join("")}</tr>`;
+  document.querySelector('.inv[data-inv="ByIntern"]').innerHTML = `<div class="card"><div class="card-head"><div><h2>By intern</h2>
+      <div class="sub">People are counted under the intern on their first study action. Mailed, Emailed, Called and Met count people, not actions.</div></div></div>
+    <div class="bs-tablewrap"><table class="bs in-sum"><thead>${tr(head, "th")}</thead>
+      <tbody>${frs.map(f => tr(line(f, R.filter(r => r.fr === f)), "td")).join("")}</tbody>
+      <tfoot>${tr(line("All interns", R), "td")}</tfoot></table></div>
+    <p class="bs-note">Dollars since outreach count each household once, so an intern's total can include a gift another intern's contact shares.</p></div>`;
+}
+
+/* --- Full list --- */
+function inFillFilters() {
+  const fill = (id, vals) => { const sel = $(id), cur = sel.value; sel.innerHTML = `<option value="">All</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join(""); sel.value = [...sel.options].some(o => o.value === cur) ? cur : ""; };
+  fill("in-fr", [...new Set(IN.rows.map(r => r.fr))].sort());
+  const known = IN_STATUS.map(x => x[0]);
+  fill("in-st", known.concat([...new Set(IN.rows.map(r => r.status).filter(s => s && !known.includes(s)))]));
+}
+const IN_SHOW = {
+  met: r => r.meet > 0, softyes: r => tuIs(r.soft, "Yes"), declined: r => r.declined,
+  mailonly: r => r.touch === "Mail only", gave: r => r.since > 0
+};
+function inList() {
+  const q = $("in-q").value.trim().toLowerCase(), fr = $("in-fr").value, st = $("in-st").value, sh = IN_SHOW[$("in-touch").value];
+  const list = IN.rows.filter(r => (!q || r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q)) &&
+    (!fr || r.fr === fr) && (!st || r.status === st) && (!sh || sh(r)));
+  const cnt = v => v ? inN(v) : "";
+  const cols = [
+    ["Name", "txt", r => `${esc(r.name)}<small>${esc(r.id)}${r.hh !== r.id ? ` · household ${esc(r.hh)}` : ""}</small>`],
+    ["Intern", "", r => esc(r.fr)],
+    ["First outreach", "", r => esc(fmtDate(r.first))],
+    ["Last outreach", "", r => esc(fmtDate(r.last))],
+    ["Mailings", "", r => cnt(r.mail)],
+    ["Emails", "", r => cnt(r.email)],
+    ["Calls", "", r => cnt(r.call)],
+    ["Meetings", "", r => cnt(r.meet)],
+    ["Declined", "", r => r.declined ? "Yes" : ""],
+    ["Soft ask", "", r => esc(r.soft)],
+    ["Given before", "", r => r.before ? money(r.before) : ""],
+    ["Given since", "", r => r.since ? money(r.since) : ""],
+    ["Gifts since", "", r => cnt(r.gifts)],
+    ["Last gift", "", r => esc(fmtDate(r.lastGift))],
+    ["Status", "", r => inPill(r.status)]
+  ];
+  $("in-pl-count").textContent = list.length === IN.rows.length ? `${inN(IN.rows.length)} people` : `Showing ${inN(list.length)} of ${inN(IN.rows.length)} people`;
+  $("in-pl").innerHTML = list.length
+    ? `<table class="bs"><thead><tr>${cols.map(c => `<th class="${c[1]}">${esc(c[0])}</th>`).join("")}</tr></thead>
+       <tbody>${list.map(r => `<tr>${cols.map(c => `<td class="${c[1]}">${c[2](r)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : `<p class="sub" style="padding:14px 16px;margin:0">No one matches these filters.</p>`;
+}
+["in-q", "in-fr", "in-st", "in-touch"].forEach(id => $(id).addEventListener(id === "in-q" ? "input" : "change", () => { if (IN.loaded) inList(); }));
 
 /* ===== Donor Retention =====
    Data comes from the "Hub – Retention" flow, which runs the "Hub Retention Export" Office Script
