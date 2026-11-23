@@ -664,9 +664,12 @@
   .in-tools input[type="search"]{border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:210px;background:#fff}
   .in-plwrap{overflow:auto;max-height:min(66vh,640px)}
   .in-plwrap thead th{position:sticky;top:0;z-index:2}
-  .in-legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:4px 0 14px}
-  .in-legend span{display:inline-flex;align-items:center;gap:6px}
-  .in-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .in-key{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 18px;margin:8px 0 16px;padding:10px 12px;background:#F7F9FC;border-radius:8px}
+  .in-key div{display:grid;grid-template-columns:14px 1fr;gap:1px 8px;align-items:start}
+  .in-key i{width:14px;height:14px;border-radius:3px;margin-top:2px}
+  .in-key b{font-size:13px;color:var(--ink)}
+  .in-key span{grid-column:2;font-size:12px;color:var(--muted);line-height:1.35}
+  .in-term{border-bottom:1px dotted var(--muted);cursor:help}
   .in-hb{display:grid;grid-template-columns:minmax(130px,210px) 1fr minmax(96px,auto);gap:10px 14px;align-items:center}
   .in-hb .lbl{font-weight:600;color:var(--ink);line-height:1.25}
   .in-hb .lbl small{display:block;font-weight:400;color:var(--muted);font-size:12px}
@@ -1090,11 +1093,11 @@
           </dl>
           <h3>Status</h3>
           <dl>
-            <dt>Renewed</dt><dd>Gave before outreach (2024 on) and again after.</dd>
-            <dt>Reactivated</dt><dd>No gifts from 2024 until outreach, then gave.</dd>
-            <dt>Lapsed</dt><dd>Gave before outreach, nothing since.</dd>
-            <dt>No Gifts Since 2024</dt><dd>No gifts on either side of outreach.</dd>
-            <dt>Renewal rate</dt><dd>Renewed ÷ (Renewed + Lapsed): of the people who were giving before outreach, the share who gave again.</dd>
+            <dt>Kept giving</dt><dd>Was already giving (2024 or later) and gave again after we reached out. Called Renewed in the workbook.</dd>
+            <dt>Came back</dt><dd>Hadn't given since 2023 or earlier, then gave after we reached out. Called Reactivated in the workbook.</dd>
+            <dt>Not since outreach</dt><dd>Was giving before we reached out, but hasn't given since. Called Lapsed in the workbook.</dd>
+            <dt>No recent gifts</dt><dd>Hasn't given since 2024, before or after we reached out. Called No Gifts Since 2024 in the workbook.</dd>
+            <dt>Kept-giving rate</dt><dd>Of the people who were already giving before we reached out, the share who gave again: Kept giving ÷ (Kept giving + Not since outreach).</dd>
           </dl>
           <h3>When it updates</h3>
           <dl>
@@ -1764,22 +1767,27 @@ $("tu-stage").addEventListener("change", () => { if (TU.loaded) tuPipeline(); })
    It loads the first time the tab is opened, then stays loaded. */
 const INTERN_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/04/workflows/07d64ec74b024033a8c969a460796d4a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=po9NbpH1QdpEtAtTtzILJqLEYrgmJ6NiWOOpxL1yvJ0";
 const IN = { view: "Overview", rows: [], loaded: false, loading: false };
-// [status, pill style, meaning]
+// [status in the workbook, pill style, what it means in plain words, color]
 const IN_STATUS = [
-  ["Renewed", "op-Funded", "Gave before outreach (2024 on) and again after", "#2E7D4F"],
-  ["Reactivated", "op-Open", "No gifts from 2024 until outreach, then gave", "#006C85"],
-  ["Lapsed", "op-Declined", "Gave before outreach, nothing since", "#D9A441"],
-  ["No Gifts Since 2024", "op-Closed", "No gifts either side of outreach", "#C9CFD8"]
+  ["Renewed", "op-Funded", "Was already giving (2024 or later) and gave again after we reached out", "#2E7D4F"],
+  ["Reactivated", "op-Open", "Hadn't given since 2023 or earlier, then gave after we reached out", "#006C85"],
+  ["Lapsed", "op-Declined", "Was giving before we reached out, but hasn't given since", "#D9A441"],
+  ["No Gifts Since 2024", "op-Closed", "Hasn't given since 2024, before or after we reached out", "#C9CFD8"]
 ];
-const IN_STATUS_LABEL = { "Renewed": "Gave again", "Reactivated": "Came back", "Lapsed": "Gave before, not since", "No Gifts Since 2024": "No gifts since 2024" };
+// What each status is called on this page
+const IN_STATUS_LABEL = { "Renewed": "Kept giving", "Reactivated": "Came back", "Lapsed": "Not since outreach", "No Gifts Since 2024": "No recent gifts" };
+const inLbl = s => IN_STATUS_LABEL[s] || s;
+const inMeaning = s => (IN_STATUS.find(x => x[0] === s) || [])[2] || "";
+// A term with its meaning on hover
+const inTerm = (label, tip) => `<span class="in-term" data-tip="${esc(tip)}">${esc(label)}</span>`;
 // One full-width bar per row, split by status, so rows of different sizes compare by share
 function inStatusBars(groups, scaleTo) {
-    return `<div class="in-legend">${IN_STATUS.map(([s, , , c]) => `<span><i style="background:${c}"></i>${esc(IN_STATUS_LABEL[s])}</span>`).join("")}</div>
+    return `<div class="in-key">${IN_STATUS.map(([s, , m, c]) => `<div><i style="background:${c}"></i><b>${esc(inLbl(s))}</b><span>${esc(m)}</span></div>`).join("")}</div>
     <div class="in-hb">${groups.map(g => {
       if (g.sep) return `<div class="sep"></div>`;
       const L = g.L, gave = L.filter(r => r.since > 0).length;
       const segs = IN_STATUS.map(([s, , , c]) => { const k = L.filter(r => r.status === s).length;
-        return k ? `<i style="width:${(k / L.length * 100).toFixed(2)}%;background:${c}" data-tip="${esc(g.label)}, ${esc(IN_STATUS_LABEL[s])}: ${inN(k)} ${k === 1 ? "person" : "people"}"></i>` : ""; }).join("");
+        return k ? `<i style="width:${(k / L.length * 100).toFixed(2)}%;background:${c}" data-tip="${esc(g.label)}, ${esc(inLbl(s))}: ${inN(k)} ${k === 1 ? "person" : "people"}"></i>` : ""; }).join("");
       return `<div class="lbl${g.all ? " all" : ""}">${esc(g.label)}${g.sub ? `<small>${esc(g.sub)}</small>` : ""}</div>
         <div class="in-track" role="img" aria-label="${esc(g.label)}: ${gave} of ${L.length} gave since outreach">${segs}</div>
         <div class="val"><b>${L.length ? pct(gave / L.length) : "–"}</b> gave<br>${inN(gave)} of ${inN(L.length)}</div>`;
@@ -1787,7 +1795,7 @@ function inStatusBars(groups, scaleTo) {
 }
 // Deepest contact each person had, most personal first
 const IN_TOUCH = [["Met", "Had a meeting"], ["Called", "Phone call, no meeting"], ["Emailed", "Email, no call or meeting"], ["Mail only", "Mail only"], ["Other", "Other contact only"]];
-const inPill = s => { const m = IN_STATUS.find(x => x[0] === s); return s ? `<span class="op-pill ${m ? m[1] : "op-Closed"}">${esc(s)}</span>` : ""; };
+const inPill = s => { const m = IN_STATUS.find(x => x[0] === s); return s ? `<span class="op-pill ${m ? m[1] : "op-Closed"}" data-tip="${esc(inMeaning(s))}">${esc(inLbl(s))}</span>` : ""; };
 const inN = v => v.toLocaleString("en-US");
 const inRateOf = L => { const ren = L.filter(r => r.status === "Renewed").length, lap = L.filter(r => r.status === "Lapsed").length; return { ren, lap, rate: ren + lap ? ren / (ren + lap) : null }; };
 const inBar = v => v === null ? "–" : `<span class="in-rate"><span>${pct(v)}</span><span class="op-bar"><i style="width:${Math.round(v * 100)}%"></i></span></span>`;
@@ -1872,8 +1880,8 @@ function inOverview() {
     const g = L.filter(r => r.since > 0).length, rr = inRateOf(L);
     return `<div class="in-side${on ? " on" : ""}"><h3>${esc(title)}</h3>
       <div class="pv">${L.length ? pct(g / L.length) : "–"}</div><div class="pl">gave after outreach (${inN(g)} of ${inN(L.length)})</div>
-      <dl><dt>Gave again, of those already giving</dt><dd>${rr.rate === null ? "–" : pct(rr.rate)}</dd>
-        <dt>Came back after no gifts since 2024</dt><dd>${inN(L.filter(r => r.status === "Reactivated").length)}</dd>
+      <dl><dt>${inTerm("Kept giving", "Of the people who were already giving before we reached out, the share who gave again")}</dt><dd>${rr.rate === null ? "–" : pct(rr.rate)}</dd>
+        <dt>${inTerm("Came back", "Hadn't given since 2023 or earlier, then gave after we reached out")}</dt><dd>${inN(L.filter(r => r.status === "Reactivated").length)}</dd>
         <dt>Dollars since outreach</dt><dd>${money(inHHSum(L, "since"))}</dd>
         <dt>Average per person</dt><dd>${L.length ? money(inHHSum(L, "since") / L.length) : "–"}</dd></dl></div>`;
   };
@@ -1883,8 +1891,8 @@ function inOverview() {
       <div class="in-hero"><div class="in-big">${R.length ? pct(gave.length / R.length) : "–"}</div>
         <p><b>${inN(gave.length)}</b> of the <b>${inN(R.length)}</b> people the interns reached have given since their first contact, <b>${money(inHHSum(R, "since"))}</b> in all.</p></div>
       <div class="in-stats">
-        ${stat("Gave again", rate === null ? "–" : pct(rate), `${inN(ren)} of ${inN(ren + lap)} people who were already giving`)}
-        ${stat("Came back", inN(cnt(r => r.status === "Reactivated")), "No gifts from 2024 until outreach, then gave")}
+        ${stat("Kept giving", rate === null ? "–" : pct(rate), `Of the ${inN(ren + lap)} people already giving before we reached out, ${inN(ren)} gave again`)}
+        ${stat("Came back", inN(cnt(r => r.status === "Reactivated")), "Hadn't given since 2023 or earlier, then gave after we reached out")}
         ${stat("Gifts since outreach", inN(R.reduce((t, r) => t + r.gifts, 0)))}
       </div></div>
     <div class="card"><h2>Meeting vs. no meeting</h2>
@@ -1914,7 +1922,10 @@ function inByIntern() {
       inN(L.filter(r => r.meet > 0).length), inN(L.filter(r => tuIs(r.soft, "Yes")).length), inN(L.filter(r => r.declined).length),
       inN(g), L.length ? pct(g / L.length) : "–", inN(ren), inN(L.filter(r => r.status === "Reactivated").length), inN(lap), rate === null ? "–" : pct(rate), money(inHHSum(L, "since"))];
   };
-  const head = ["Intern", "People", "Mailed", "Emailed", "Called", "Met", "Soft ask yes", "Declined", "Gave since", "Share who gave", "Renewed", "Reactivated", "Lapsed", "Renewal rate", "Dollars since"];
+  const head = ["Intern", "People", "Mailed", "Emailed", "Called", "Met", "Soft ask yes", "Declined",
+    inTerm("Gave since", "People who gave on or after their first contact"), "Share who gave",
+    inTerm("Kept giving", inMeaning("Renewed")), inTerm("Came back", inMeaning("Reactivated")), inTerm("Not since outreach", inMeaning("Lapsed")),
+    inTerm("Kept-giving rate", "Of the people who were already giving before we reached out, the share who gave again"), "Dollars since"];
   const tr = (cells, tag) => `<tr>${cells.map((c, i) => `<${tag} class="${i ? "" : "txt"}">${c}</${tag}>`).join("")}</tr>`;
   const chart = `<div class="card"><h2>Who gave, by intern</h2>
       <div class="sub">Each bar shows how the people that intern reached split.</div>
@@ -1929,10 +1940,10 @@ function inByIntern() {
 
 /* --- Full list --- */
 function inFillFilters() {
-  const fill = (id, vals) => { const sel = $(id), cur = sel.value; sel.innerHTML = `<option value="">All</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join(""); sel.value = [...sel.options].some(o => o.value === cur) ? cur : ""; };
+  const fill = (id, vals, show) => { const sel = $(id), cur = sel.value; sel.innerHTML = `<option value="">All</option>` + vals.map(v => `<option value="${esc(v)}">${esc(show ? show(v) : v)}</option>`).join(""); sel.value = [...sel.options].some(o => o.value === cur) ? cur : ""; };
   fill("in-fr", [...new Set(IN.rows.map(r => r.fr))].sort());
   const known = IN_STATUS.map(x => x[0]);
-  fill("in-st", known.concat([...new Set(IN.rows.map(r => r.status).filter(s => s && !known.includes(s)))]));
+  fill("in-st", known.concat([...new Set(IN.rows.map(r => r.status).filter(s => s && !known.includes(s)))]), inLbl);
 }
 const IN_SHOW = {
   met: r => r.meet > 0, softyes: r => tuIs(r.soft, "Yes"), declined: r => r.declined,
