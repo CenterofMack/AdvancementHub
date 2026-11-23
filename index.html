@@ -1887,6 +1887,15 @@ function inOverview() {
   };
   const tiers = IN_TOUCH.map(([key, label]) => ({ label, L: R.filter(r => r.touch === key) })).filter(g => g.L.length);
   document.querySelector('.inv[data-inv="Overview"]').innerHTML = `
+    <div class="card"><h2>Outreach</h2>
+      <div class="in-stats">
+        ${stat("Reached out to", inN(R.length))}
+        ${stat("Mailed", inN(cnt(r => r.mail > 0)), `${inN(cnt(r => r.touch === "Mail only"))} mail only`)}
+        ${stat("Emailed", inN(cnt(r => r.email > 0)))}
+        ${stat("Called", inN(cnt(r => r.call > 0)))}
+        ${stat("Met", inN(met.length), `Soft ask: ${inN(met.filter(r => tuIs(r.soft, "Yes")).length)} yes, ${inN(met.filter(r => tuIs(r.soft, "No")).length)} no`)}
+        ${stat("Declined", inN(cnt(r => r.declined)))}
+      </div></div>
     <div class="card"><h2>Did people give after we reached out?</h2>
       <div class="in-hero"><div class="in-big">${R.length ? pct(gave.length / R.length) : "–"}</div>
         <p><b>${inN(gave.length)}</b> of the <b>${inN(R.length)}</b> people the interns reached have given since their first contact, <b>${money(inHHSum(R, "since"))}</b> in all.</p></div>
@@ -1902,15 +1911,7 @@ function inOverview() {
       <div class="sub">Each person counts once, under the most personal contact they had. Each bar shows how that group split.</div>
       ${inStatusBars(tiers.concat([{ sep: true }, { label: "Everyone", L: R, all: true }]))}
     </div>
-    <div class="card"><h2>Outreach</h2>
-      <div class="in-stats">
-        ${stat("Reached out to", inN(R.length))}
-        ${stat("Mailed", inN(cnt(r => r.mail > 0)), `${inN(cnt(r => r.touch === "Mail only"))} mail only`)}
-        ${stat("Emailed", inN(cnt(r => r.email > 0)))}
-        ${stat("Called", inN(cnt(r => r.call > 0)))}
-        ${stat("Met", inN(met.length), `Soft ask: ${inN(met.filter(r => tuIs(r.soft, "Yes")).length)} yes, ${inN(met.filter(r => tuIs(r.soft, "No")).length)} no`)}
-        ${stat("Declined", inN(cnt(r => r.declined)))}
-      </div></div>`;
+`;
 }
 
 /* --- By intern --- */
