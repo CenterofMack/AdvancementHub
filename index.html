@@ -656,7 +656,28 @@
   .in-tools input[type="search"]{border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:210px;background:#fff}
   .in-plwrap{overflow:auto;max-height:min(66vh,640px)}
   .in-plwrap thead th{position:sticky;top:0;z-index:2}
-  @media (max-width:640px){.in-hero{grid-template-columns:1fr}.in-big{font-size:44px}}
+  .in-legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:4px 0 14px}
+  .in-legend span{display:inline-flex;align-items:center;gap:6px}
+  .in-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .in-hb{display:grid;grid-template-columns:minmax(130px,210px) 1fr minmax(96px,auto);gap:10px 14px;align-items:center}
+  .in-hb .lbl{font-weight:600;color:var(--ink);line-height:1.25}
+  .in-hb .lbl small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .in-hb .lbl.all{color:var(--navy-deep)}
+  .in-track{height:24px;background:#EDF0F4;border-radius:5px;overflow:hidden;display:flex}
+  .in-track i{display:block;height:100%}
+  .in-track i+i{box-shadow:inset 1px 0 0 rgba(255,255,255,.7)}
+  .in-hb .val{font-variant-numeric:tabular-nums;text-align:right;font-size:13px;color:var(--muted)}
+  .in-hb .val b{color:var(--ink);font-size:14px}
+  .in-hb .sep{grid-column:1/-1;border-top:1px solid #EDF0F4;height:0}
+  .in-vs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:6px 0 4px}
+  .in-side{border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:#F7F9FC}
+  .in-side.on{background:#EEF4FC;border-color:#BFD0EA}
+  .in-side h3{margin:0 0 6px;font-size:14px;color:var(--navy-deep)}
+  .in-side .pv{font-family:var(--serif);font-weight:700;font-size:38px;line-height:1.05;color:var(--navy-deep);font-variant-numeric:tabular-nums}
+  .in-side .pl{font-size:13px;color:var(--muted);margin:2px 0 10px}
+  .in-side dl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:0;font-size:13px}
+  .in-side dt{color:var(--muted)} .in-side dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  @media (max-width:640px){.in-hero{grid-template-columns:1fr}.in-big{font-size:44px}.in-hb{grid-template-columns:1fr auto}.in-hb .in-track{grid-column:1/-1;grid-row:auto}}
   /* ===== Tulip Feasibility Study ===== */
   .tu-conf{margin-top:6px;font-size:12.5px;font-weight:600;color:#7A1F1A}
   .tu-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:10px 0 4px}
@@ -1720,11 +1741,25 @@ const INTERN_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment
 const IN = { view: "Overview", rows: [], loaded: false, loading: false };
 // [status, pill style, meaning]
 const IN_STATUS = [
-  ["Renewed", "op-Funded", "Gave before outreach (2024 on) and again after"],
-  ["Reactivated", "op-Open", "No gifts from 2024 until outreach, then gave"],
-  ["Lapsed", "op-Declined", "Gave before outreach, nothing since"],
-  ["No Gifts Since 2024", "op-Closed", "No gifts either side of outreach"]
+  ["Renewed", "op-Funded", "Gave before outreach (2024 on) and again after", "#2E7D4F"],
+  ["Reactivated", "op-Open", "No gifts from 2024 until outreach, then gave", "#006C85"],
+  ["Lapsed", "op-Declined", "Gave before outreach, nothing since", "#D9A441"],
+  ["No Gifts Since 2024", "op-Closed", "No gifts either side of outreach", "#C9CFD8"]
 ];
+const IN_STATUS_LABEL = { "Renewed": "Gave again", "Reactivated": "Came back", "Lapsed": "Gave before, not since", "No Gifts Since 2024": "No gifts since 2024" };
+// One full-width bar per row, split by status, so rows of different sizes compare by share
+function inStatusBars(groups, scaleTo) {
+    return `<div class="in-legend">${IN_STATUS.map(([s, , , c]) => `<span><i style="background:${c}"></i>${esc(IN_STATUS_LABEL[s])}</span>`).join("")}</div>
+    <div class="in-hb">${groups.map(g => {
+      if (g.sep) return `<div class="sep"></div>`;
+      const L = g.L, gave = L.filter(r => r.since > 0).length;
+      const segs = IN_STATUS.map(([s, , , c]) => { const k = L.filter(r => r.status === s).length;
+        return k ? `<i style="width:${(k / L.length * 100).toFixed(2)}%;background:${c}" data-tip="${esc(g.label)}, ${esc(IN_STATUS_LABEL[s])}: ${inN(k)} ${k === 1 ? "person" : "people"}"></i>` : ""; }).join("");
+      return `<div class="lbl${g.all ? " all" : ""}">${esc(g.label)}${g.sub ? `<small>${esc(g.sub)}</small>` : ""}</div>
+        <div class="in-track" role="img" aria-label="${esc(g.label)}: ${gave} of ${L.length} gave since outreach">${segs}</div>
+        <div class="val"><b>${L.length ? pct(gave / L.length) : "–"}</b> gave<br>${inN(gave)} of ${inN(L.length)}</div>`;
+    }).join("")}</div>`;
+}
 // Deepest contact each person had, most personal first
 const IN_TOUCH = [["Met", "Had a meeting"], ["Called", "Phone call, no meeting"], ["Emailed", "Email, no call or meeting"], ["Mail only", "Mail only"], ["Other", "Other contact only"]];
 const inPill = s => { const m = IN_STATUS.find(x => x[0] === s); return s ? `<span class="op-pill ${m ? m[1] : "op-Closed"}">${esc(s)}</span>` : ""; };
@@ -1806,25 +1841,34 @@ document.querySelectorAll("button[data-inv]").forEach(b => b.addEventListener("c
 function inOverview() {
   const R = IN.rows, cnt = f => R.filter(f).length;
   const { ren, lap, rate } = inRateOf(R);
-  const gave = R.filter(r => r.since > 0), react = cnt(r => r.status === "Reactivated");
-  const met = R.filter(r => r.meet > 0);
+  const gave = R.filter(r => r.since > 0), met = R.filter(r => r.meet > 0), notMet = R.filter(r => !(r.meet > 0));
   const stat = (k, v, sub) => `<div class="stat"><div class="k">${esc(k)}</div><div class="v">${v}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div>`;
-  const share = v => R.length ? pct(v / R.length) : "";
-  const touchRows = IN_TOUCH.map(([key, label]) => {
-    const L = R.filter(r => r.touch === key); if (!L.length) return "";
-    const g = L.filter(r => r.since > 0).length, rr = inRateOf(L).rate;
-    return `<tr><td class="txt">${esc(label)}</td><td>${inN(L.length)}</td><td>${inN(g)}</td><td>${inBar(g / L.length)}</td><td>${inBar(rr)}</td><td>${money(inHHSum(L, "since"))}</td></tr>`;
-  }).join("");
+  const side = (title, L, on) => {
+    const g = L.filter(r => r.since > 0).length, rr = inRateOf(L);
+    return `<div class="in-side${on ? " on" : ""}"><h3>${esc(title)}</h3>
+      <div class="pv">${L.length ? pct(g / L.length) : "–"}</div><div class="pl">gave after outreach (${inN(g)} of ${inN(L.length)})</div>
+      <dl><dt>Gave again, of those already giving</dt><dd>${rr.rate === null ? "–" : pct(rr.rate)}</dd>
+        <dt>Came back after no gifts since 2024</dt><dd>${inN(L.filter(r => r.status === "Reactivated").length)}</dd>
+        <dt>Dollars since outreach</dt><dd>${money(inHHSum(L, "since"))}</dd>
+        <dt>Average per person</dt><dd>${L.length ? money(inHHSum(L, "since") / L.length) : "–"}</dd></dl></div>`;
+  };
+  const tiers = IN_TOUCH.map(([key, label]) => ({ label, L: R.filter(r => r.touch === key) })).filter(g => g.L.length);
   document.querySelector('.inv[data-inv="Overview"]').innerHTML = `
-    <div class="card"><h2>Did they give again?</h2>
-      <div class="in-hero"><div class="in-big">${rate === null ? "–" : pct(rate)}</div>
-        <p>Of the <b>${inN(ren + lap)}</b> people who gave in 2024 or later before the interns reached out, <b>${inN(ren)}</b> have given again since. ${inN(lap)} haven't given since outreach.</p></div>
+    <div class="card"><h2>Did people give after we reached out?</h2>
+      <div class="in-hero"><div class="in-big">${R.length ? pct(gave.length / R.length) : "–"}</div>
+        <p><b>${inN(gave.length)}</b> of the <b>${inN(R.length)}</b> people the interns reached have given since their first contact, <b>${money(inHHSum(R, "since"))}</b> in all.</p></div>
       <div class="in-stats">
-        ${stat("Gave since outreach", inN(gave.length), `${share(gave.length)} of everyone reached`)}
-        ${stat("Dollars since outreach", money(inHHSum(R, "since")), "By household, all gifts")}
+        ${stat("Gave again", rate === null ? "–" : pct(rate), `${inN(ren)} of ${inN(ren + lap)} people who were already giving`)}
+        ${stat("Came back", inN(cnt(r => r.status === "Reactivated")), "No gifts from 2024 until outreach, then gave")}
         ${stat("Gifts since outreach", inN(R.reduce((t, r) => t + r.gifts, 0)))}
-        ${stat("Reactivated", inN(react), "No gifts from 2024 until outreach, then gave")}
       </div></div>
+    <div class="card"><h2>Meeting vs. no meeting</h2>
+      <div class="in-vs">${side("Had a meeting", met, true)}${side("No meeting", notMet, false)}</div>
+      <p class="bs-note">People who agreed to meet were often already closer to the Center, so the two groups weren't alike before outreach. Read the gap as a signal, not proof that the meeting caused the gift.</p></div>
+    <div class="card"><h2>Who gave, by how we reached them</h2>
+      <div class="sub">Each person counts once, under the most personal contact they had. Each bar shows how that group split.</div>
+      ${inStatusBars(tiers.concat([{ sep: true }, { label: "Everyone", L: R, all: true }]))}
+    </div>
     <div class="card"><h2>Outreach</h2>
       <div class="in-stats">
         ${stat("Reached out to", inN(R.length))}
@@ -1833,16 +1877,7 @@ function inOverview() {
         ${stat("Called", inN(cnt(r => r.call > 0)))}
         ${stat("Met", inN(met.length), `Soft ask: ${inN(met.filter(r => tuIs(r.soft, "Yes")).length)} yes, ${inN(met.filter(r => tuIs(r.soft, "No")).length)} no`)}
         ${stat("Declined", inN(cnt(r => r.declined)))}
-      </div></div>
-    <div class="card"><h2>Status</h2>
-      <div class="bs-tablewrap"><table class="bs in-sum"><thead><tr><th class="txt">Status</th><th>People</th><th>Share</th><th class="txt">Meaning</th></tr></thead>
-        <tbody>${IN_STATUS.map(([s, , m]) => { const k = cnt(r => r.status === s); return `<tr><td class="txt">${inPill(s)}</td><td>${inN(k)}</td><td>${share(k)}</td><td class="wrap">${esc(m)}</td></tr>`; }).join("")}</tbody></table></div></div>
-    <div class="card"><h2>Giving by closest contact</h2>
-      <div class="sub">Each person is counted once, under the most personal contact they had.</div>
-      <div class="bs-tablewrap"><table class="bs in-sum"><thead><tr><th class="txt">Closest contact</th><th>People</th><th>Gave since</th><th>Share who gave</th><th>Renewal rate</th><th>Dollars since</th></tr></thead>
-        <tbody>${touchRows}</tbody></table></div>
-      <p class="bs-note">Interns could only call or meet people who answered, so these groups aren't alike to begin with. Read the differences as a signal, not proof that a call or meeting caused the gift.</p>
-    </div>`;
+      </div></div>`;
 }
 
 /* --- By intern --- */
@@ -1856,7 +1891,10 @@ function inByIntern() {
   };
   const head = ["Intern", "People", "Mailed", "Emailed", "Called", "Met", "Soft ask yes", "Declined", "Gave since", "Share who gave", "Renewed", "Reactivated", "Lapsed", "Renewal rate", "Dollars since"];
   const tr = (cells, tag) => `<tr>${cells.map((c, i) => `<${tag} class="${i ? "" : "txt"}">${c}</${tag}>`).join("")}</tr>`;
-  document.querySelector('.inv[data-inv="ByIntern"]').innerHTML = `<div class="card"><div class="card-head"><div><h2>By intern</h2>
+  const chart = `<div class="card"><h2>Who gave, by intern</h2>
+      <div class="sub">Each bar shows how the people that intern reached split.</div>
+      ${inStatusBars(frs.map(f => ({ label: f, L: R.filter(r => r.fr === f) })))}</div>`;
+  document.querySelector('.inv[data-inv="ByIntern"]').innerHTML = chart + `<div class="card"><div class="card-head"><div><h2>The numbers</h2>
       <div class="sub">People are counted under the intern on their first study action. Mailed, Emailed, Called and Met count people, not actions.</div></div></div>
     <div class="bs-tablewrap"><table class="bs in-sum"><thead>${tr(head, "th")}</thead>
       <tbody>${frs.map(f => tr(line(f, R.filter(r => r.fr === f)), "td")).join("")}</tbody>
