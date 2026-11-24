@@ -2409,10 +2409,11 @@ function bsShowView(v) {
   $("bs-asof").hidden = v !== "Slides";
   bsOtherThru();
 }
-// The Other tab's date: the YTD Through date from the latest Projections update
+// The Other tab's date: the same "through" date as the Overview, from the latest Projections run.
+// (The workbook's YTD Through column is the month-end used for year-to-date comparisons, so it isn't used here.)
 function bsOtherThru() {
-  const thru = RT.loaded ? RT.rows.map(x => x.thru).find(v => toDate(v)) : null;
-  $("bs-other-thru").textContent = thru ? `Data through ${fmtDate(thru)} · latest Projections update` : "From the latest Projections update";
+  const t = dataThrough();
+  $("bs-other-thru").textContent = t ? `${t} · latest Projections update` : "From the latest Projections update";
 }
 document.querySelectorAll("button[data-bsv]").forEach(b => b.addEventListener("click", () => bsShowView(b.dataset.bsv)));
 document.addEventListener("hub:reset", () => bsShowView("Slides"));
@@ -2722,14 +2723,13 @@ function bsPyrRender() {
     [x => x.m24, x => x.m25, cur].forEach(f => fill(tiers, f));
     tiers.forEach(t => { t.n = Math.round(t.n / 3); t.amt /= 3; });
   } else fill(tiers, o.v);
-  const thru = RT.rows.map(x => x.thru).find(v => toDate(v));
-  const thruTxt = thru ? fmtDate(thru) : "";
+  const thruTxt = dataThrough();
   box.innerHTML = `<div class="card-head"><div><h2>${esc(o.title)}, All Households</h2>
       <div class="sub">Every household that gave, at every giving level, each counted once. Hover a level for exact figures.</div>
 </div>
       <div class="card-tools"><div class="segbtn" role="group" aria-label="Year">${opts.map(x => `<button type="button" data-bspk="${x.k}" aria-pressed="${x.k === o.k}">${esc(x.btn)}</button>`).join("")}</div></div></div>
     <div class="pyr chart">${pyrSvg(tiers, 0, o.title + ", all households")}</div>
-    <p class="bs-note">This chart doesn't change with the Board Slides Through dropdown: it always shows giving as of the latest Projections update${thruTxt ? ", through " + esc(thruTxt) : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out. Money received only; projections aren't included, since smaller households aren't projected.${o.k === "avg" ? " The 3-year average is the average of the 2024, 2025 and 2026-so-far pyramids: each level's households and dollars in each year, averaged and rounded. 2026 is a partial year, so it pulls the average down." : ""}</p>`;
+    <p class="bs-note">This chart doesn't change with the Board Slides Through dropdown: it always shows giving as of the latest Projections update${thruTxt ? " (" + esc(thruTxt.replace(/^\w/, c => c.toLowerCase())) + ")" : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out. Money received only; projections aren't included, since smaller households aren't projected.${o.k === "avg" ? " The 3-year average is the average of the 2024, 2025 and 2026-so-far pyramids: each level's households and dollars in each year, averaged and rounded. 2026 is a partial year, so it pulls the average down." : ""}</p>`;
   box.querySelectorAll("[data-bspk]").forEach(b => b.onclick = () => { BSP.key = b.dataset.bspk; bsPyrRender(); });
 }
 
