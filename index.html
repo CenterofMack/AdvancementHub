@@ -261,6 +261,8 @@
   #ra-gifts td.name button{background:none;border:0;padding:0;color:var(--navy-deep);cursor:pointer;font-weight:500;text-align:left}
   #ra-gifts td.name button:hover{text-decoration:underline}
   #ra-gifts select{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:#fff}
+  .ra-review{margin:0 0 14px;padding:10px 14px;background:#FBF7EC;border:1px solid #EADFC2;border-left:4px solid var(--gold);border-radius:6px;font-size:13.5px;line-height:1.5;color:var(--ink);max-width:900px}
+  .ra-review b{color:var(--navy-deep)}
   tr.grp th.gs,.gs{border-left:1px solid #E3E7ED}
   tr.cols th{background:#F7F9FB;color:var(--muted);font-size:11.5px;font-weight:600}
   tr.cols th[aria-sort]{color:var(--navy-deep)}
@@ -763,6 +765,8 @@
     <div class="hero" id="hero"></div>
     <div class="ledgers" id="ledgers"></div>
     <p class="footnote">C3 = All-entities total − C4 − Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.</p>
+    <!-- Revenue by month: page-only, not part of the Excel or PDF downloads -->
+    <div class="card" id="ov-rev" style="margin-top:18px" hidden></div>
   </section>
 
   <section class="panel" id="panel-Activity" hidden>
@@ -771,6 +775,9 @@
       <button type="button" data-rav="Proposals" aria-pressed="true">Proposals</button>
       <button type="button" data-rav="Gifts" aria-pressed="false">Gifts</button>
     </div>
+    <!-- Review timing notes: one shows with each view -->
+    <p class="ra-review" id="ra-note-props"><b>Review timing:</b> Proposals are reviewed by Reporting on a monthly basis. If you notice an error before then, please let Reporting know.</p>
+    <p class="ra-review" id="ra-note-gifts" hidden><b>Review timing:</b> Although these are the recent gifts, Reporting reserves a two-week window to allow for back-end processes. If you notice an error within that window, please bring it to our attention, but understand that review processes take time.</p>
     <div class="card" id="ra-props"></div>
     <div class="card" id="ra-gifts" hidden></div>
     <div class="notice ra-soon"><h2>Action reports to come</h2><p>Recent actions (visits, calls and meetings) will be added here in a future update.</p></div>
@@ -1257,6 +1264,7 @@ function selectTab(name) {
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Tulip" && !TU.loaded && !TU.loading) tuLoad();
   if (name === "Intern" && !IN.loaded && !IN.loading) inLoad();
+  if (name === "Overview") ovRevenue();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
   if (name === "StrategicPlan") { spRender(); if (!OP.loaded && !OP.loading) opLoad(); }
   if (name === "Activity") { raRender(); if (!OP.loaded && !OP.loading) opLoad(); }
@@ -2075,7 +2083,7 @@ function rtLoad() {
       rtRender(); bsPyrRender();
     })
     .catch(() => rtMessage("Donor Retention didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
-    .finally(() => { RT.loading = false; });
+    .finally(() => { RT.loading = false; ovRevenue(); });
 }
 
 // The two amounts being compared for a household, and their labels
@@ -2377,6 +2385,60 @@ function load() {
     })
     .catch(() => showNotice("Projections didn't load", "The data service couldn't be reached. Check your connection and try again.", true, true));
 }
+
+/* ===== Overview: revenue by month =====
+   Running total of giving by gift date for each year since 2024, plus each month on its own.
+   It borrows the month-by-month giving that Donor Retention already loads (the "Hub – Retention"
+   flow), so it shows for people with Retention access and needs no flow changes.
+   It's drawn on the page only; the Overview's Excel and PDF downloads don't include it. */
+const OVREV = { tried: false };
+function ovRevenue() {
+  const box = $("ov-rev"); if (!box) return;
+  const tab = document.querySelector('[data-tab="Retention"]');
+  if (!tab || tab.hidden) { box.hidden = true; return; }
+  box.hidden = false;
+  if (!RT.loaded) {
+    if (RT.loading || !OVREV.tried) {
+      box.innerHTML = `<h2>Revenue by month</h2><div class="loading">Loading monthly giving…</div>`;
+      if (!RT.loading) { OVREV.tried = true; rtLoad(); }
+    } else {
+      box.innerHTML = `<h2>Revenue by month</h2><p class="bs-note">Monthly giving didn't load.</p><button class="btn" id="ov-rev-retry">Try again</button>`;
+      $("ov-rev-retry").onclick = () => { OVREV.tried = false; ovRevenue(); };
+    }
+    return;
+  }
+  if (!RT.hasMonthly) { box.innerHTML = `<h2>Revenue by month</h2><p class="bs-note">This chart needs version 2 of the Hub Retention Export script in the Projections workbook.</p>`; return; }
+  // Add up every household's giving by year and month
+  const tot = {};
+  Object.values(RT.monthly).forEach(h => Object.keys(h).forEach(y => {
+    const t = tot[y] = tot[y] || Array(12).fill(0); h[y].forEach((v, i) => t[i] += v);
+  }));
+  const years = Object.keys(tot).map(Number).filter(y => y >= 2024).sort((a, b) => a - b).slice(-3);
+  if (!years.length) { box.innerHTML = `<h2>Revenue by month</h2><p class="bs-note">No monthly giving came back yet.</p>`; return; }
+  const curY = years[years.length - 1];
+  // This year runs through the latest month with gifts (that month is still in progress)
+  let stop = 0; tot[curY].forEach((v, i) => { if (v > 0) stop = i + 1; });
+  const colors = [{ color: "#A7AFBD", width: 2 }, { color: "#D9A23A", width: 2 }, { color: "var(--navy-deep)", width: 3 }];
+  const style = i => colors[colors.length - years.length + i];
+  const cum = (y, end) => { let t = 0; return tot[y].map((v, i) => { if (i >= end) return null; t += v; return t; }); };
+  const running = years.map((y, i) => ({ name: String(y), ...style(i), values: cum(y, y === curY ? stop : 12) }));
+  const monthly = years.map((y, i) => ({ name: String(y), ...style(i), values: tot[y].map((v, m) => y === curY && m >= stop ? null : v) }));
+  // Pace: this year so far vs. last year through the same month
+  const at = (y, n) => tot[y] ? tot[y].slice(0, n).reduce((a, b) => a + b, 0) : 0;
+  const now = at(curY, stop), prev = at(curY - 1, stop), chg = prev ? (now - prev) / prev : null;
+  const pc = chg === null ? "" : `<span class="${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "+" : ""}${(chg * 100).toFixed(0)}% vs. ${curY - 1}</span>`;
+  const thruMonth = stop ? MP_MONTH_FULL[stop - 1] : "";
+  box.innerHTML = `<div class="card-head"><div><h2>Revenue by month</h2>
+      <div class="sub">Giving by gift date from the Projections workbook, ${years[0]} on.${stop ? ` ${curY} runs through ${esc(thruMonth)}, which is still in progress.` : ""}</div></div></div>
+    ${stop ? `<div class="mp-pace"><span>${curY} through ${esc(thruMonth)} so far: <b>${money(now)}</b> ${pc}</span>
+      <span>${curY - 1} through ${esc(thruMonth)}: <b>${money(prev)}</b></span></div>` : ""}
+    <div class="mp-grid">
+      <div class="mp-chart chart"><h4>Running total, year to date</h4><p class="sub" style="margin:0 0 6px">Is this year ahead of or behind the years before?</p>${mpLineChart(running, mpMoney, "Revenue year to date by month")}</div>
+      <div class="mp-chart chart"><h4>Each month on its own</h4><p class="sub" style="margin:0 0 6px">Giving received in each month</p>${mpBarChart(MP_MON, monthly, mpMoney, "Revenue by month")}</div>
+    </div>${mpLegend(running)}
+    <p class="bs-note">Every gift counted in the Projections workbook, by household, including General Anonymous. That's fundraising activity, so it won't match the cash-flow figures above. The current month is partial, so it will look low until the month ends.</p>`;
+}
+document.addEventListener("hub:reset", () => { OVREV.tried = false; const b = $("ov-rev"); if (b) { b.innerHTML = ""; b.hidden = true; } });
 
 /* ===== Overview ===== */
 // The two yellow rows on the Projections workbook: the fundraising goal and the all-entities year-end total
@@ -4181,6 +4243,7 @@ const RA_SHOW = [["all", "All"], ["Asked", "Asked"], ["Committed", "Committed"],
 function raShowView() {
   document.querySelectorAll("[data-rav]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rav === RA.view));
   $("ra-props").hidden = RA.view !== "Proposals"; $("ra-gifts").hidden = RA.view !== "Gifts";
+  $("ra-note-props").hidden = RA.view !== "Proposals"; $("ra-note-gifts").hidden = RA.view !== "Gifts";
 }
 document.querySelectorAll("[data-rav]").forEach(b => b.addEventListener("click", () => { RA.view = b.dataset.rav; raRender(); }));
 function raRender() {
