@@ -322,6 +322,22 @@
   .op-Open{background:#E4EEFB;color:#1F4E8C}.op-Committed{background:#EEE6F8;color:#5B3A8C}.op-Identification{background:#FFF4D6;color:#8A5A00}.op-Funded{background:#E3F2E8;color:#1E6B3A}
   .op-Declined{background:#FBE7E6;color:#9B2C24}.op-Closed{background:#EEF0F3;color:#5A6474}
   .op-flag{color:#9A5B00;font-weight:600;font-size:12px}
+  /* Check data: on/off switch, Mark OK / Undo */
+  .chk-switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--navy-deep);user-select:none}
+  .chk-switch input{position:absolute;opacity:0;width:1px;height:1px}
+  .chk-switch .tr{width:34px;height:20px;border-radius:10px;background:#C9CFD8;position:relative;transition:background .15s}
+  .chk-switch .tr::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+  .chk-switch input:checked + .tr{background:var(--teal,#006C85)}
+  .chk-switch input:checked + .tr::after{left:16px}
+  .chk-switch input:focus-visible + .tr{outline:2px solid var(--gold);outline-offset:2px}
+  .chk-ok{color:var(--muted);font-size:12px;font-weight:600}
+  .chk-btn{display:inline-block;margin-top:4px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--navy-deep);cursor:pointer}
+  .chk-btn:hover{background:#F0F3F8}
+  .chk-btn.link{border:0;background:none;padding:2px 0;text-decoration:underline;color:var(--muted);font-weight:500}
+  .chk-form{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+  .chk-form input{border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px;width:100%;box-sizing:border-box}
+  .chk-form div{display:flex;gap:6px}
+  .chk-err{color:#B3261E;font-size:11.5px;margin-top:3px}
   .op-tbl td small{display:block;color:var(--muted);font-size:11.5px}
   .op-tbl{width:100%}
   .op-tbl td,.op-tbl th{white-space:normal}
@@ -3840,7 +3856,7 @@ document.addEventListener("mousemove", e => {
    (Attribution). Access is the Projections column in HubAccess. Window: asked in 2024 or later, or added
    in 2024 or later with no ask date. Assignments are today's. */
 const OPPS_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/03/workflows/41fe442712a548dba0a3ed77aeb939a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XCuRNixloc6ww5lEvMPVtJIls3fBbHVKryp8cv70MhU";
-const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, basis: "listed",
+const OP = { rows: [], loaded: false, loading: false, updated: "", year: String(new Date().getFullYear()), status: "", check: false, chk: false, basis: "listed",
   ent: "all", metric: "amount", frs: new Set(), lastPF: null, why: "", q: "", sortK: "date", sortD: -1, dr: null };
 // Strategic Plan targets for proposals (Goal 2). Add a year's targets here when the plan is set.
 const OP_GOALS = {
@@ -3930,6 +3946,89 @@ function opFlag(o) {
   if (live && since && since < yearAgo) return o.group === "Identification" ? "In identification over a year" : "Open over a year";
   return "";
 }
+/* ===== Data checks: "Reviewed: OK" marks =====
+   The "Hub - Data Checks" flow reads and saves marks in /Permissions/Hub Data Checks.xlsx (table ChecksOK).
+   A mark hides one flag on one record: its key is Type|ID|Flag, so a different flag on the same record still shows.
+   Anyone with Projections access sees the marks; only Edit Permissions (Projections) can add or remove them.
+   The Hub sends a small JSON package as plain text (token, action, record), so no extra browser check is needed. */
+const DATACHECK_URL = "https://default3877db98b5154133ac939a6ce4072c.91.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/08/workflows/786a095b686e414b9dfa5f23bf66a546/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=d3pqsLH9mgBNtOiqXHwxOaqNJjdcdIge6W7aLO4IoAc";
+const CHK = { marks: new Map(), canEdit: false, loaded: false, loading: false, editing: "", busy: "", err: {} };
+// An opportunity's ID for marks: RE's ID if the export sends one, otherwise household + opportunity name + date added
+const opId = o => String(o.id || o.opportunityId || o.opportunity_id || [o.constituentSys || o.householdName || "", o.name || "", o.added || ""].join("~"));
+const chkKey = (type, id, flag) => `${type}|${id}|${flag}`;
+const opKey = o => chkKey("Opportunity", opId(o), o.flag);
+const opNeeds = o => !!o.flag && !CHK.marks.has(opKey(o));   // flagged and not marked OK
+function chkPost(payload) {
+  return client.getUserIdentityToken().then(token => fetch(DATACHECK_URL, { method: "POST", body: JSON.stringify(Object.assign({ token }, payload)) }));
+}
+function chkLoad() {
+  if (CHK.loading) return; CHK.loading = true;
+  chkPost({ action: "read" })
+    .then(async res => {
+      if (!res.ok) return;
+      const d = await res.json();
+      CHK.marks = new Map((d && Array.isArray(d.marks) ? d.marks : []).filter(m => m && m.key).map(m => [m.key, m]));
+      CHK.canEdit = !!(d && d.canEdit === true);
+      CHK.loaded = true;
+      if (OP.loaded) opRender();
+    })
+    .catch(() => {})
+    .finally(() => { CHK.loading = false; });
+}
+const chkWhen = v => { const t = String(v || ""); const d = toDate(t.slice(0, 10)); return d ? fmtDate(t.slice(0, 10)) : t; };
+// The Check column for one opportunity
+function opChkCell(o) {
+  if (!o.flag) return "";
+  const k = opKey(o), m = CHK.marks.get(k), busy = CHK.busy === k, err = CHK.err[k] ? `<div class="chk-err">${esc(CHK.err[k])}</div>` : "";
+  if (m) {
+    const tip = [m.note ? `Note: ${m.note}` : "", m.by ? `Marked by ${m.by}` : "", m.on ? `on ${chkWhen(m.on)}` : ""].filter(Boolean).join(" · ");
+    return `<span class="chk-ok" data-tip="${esc(o.flag + (tip ? " · " + tip : ""))}">✓ Reviewed OK</span>${m.note ? `<small>${esc(m.note)}</small>` : ""}
+      ${CHK.canEdit ? `<button type="button" class="chk-btn link" data-chk-undo="${esc(k)}"${busy ? " disabled" : ""}>${busy ? "Undoing…" : "Undo"}</button>` : ""}${err}`;
+  }
+  if (CHK.editing === k) return `<span class="op-flag">${esc(o.flag)}</span>
+    <div class="chk-form"><input type="text" maxlength="200" placeholder="Note (optional), e.g. always has multiple pledges" data-chk-note="${esc(k)}" aria-label="Note for this mark">
+      <div><button type="button" class="chk-btn" data-chk-save="${esc(k)}"${busy ? " disabled" : ""}>${busy ? "Saving…" : "Save as OK"}</button><button type="button" class="chk-btn link" data-chk-cancel="1">Cancel</button></div></div>${err}`;
+  return `<span class="op-flag">${esc(o.flag)}</span>${CHK.canEdit ? `<br><button type="button" class="chk-btn" data-chk-mark="${esc(k)}">Mark OK</button>` : ""}${err}`;
+}
+function chkSave(k, note) {
+  const o = OP.rows.find(x => x.flag && opKey(x) === k); if (!o) return;
+  CHK.busy = k; delete CHK.err[k]; opRenderAll();
+  chkPost({ action: "mark", type: "Opportunity", id: opId(o), name: o.householdName || o.name, flag: o.flag, note: note || "" })
+    .then(async res => {
+      if (res.status === 403) throw new Error("You don't have permission to mark checks.");
+      if (!res.ok) throw new Error("Didn't save. Try again.");
+      CHK.marks.set(k, { key: k, note: note || "", by: "you", on: "just now" }); CHK.editing = "";
+    })
+    .catch(e => { CHK.err[k] = e.message || "Didn't save. Try again."; })
+    .finally(() => { CHK.busy = ""; opRender(); });
+}
+function chkUndo(k) {
+  CHK.busy = k; delete CHK.err[k]; opRenderAll();
+  chkPost({ action: "unmark", key: k })
+    .then(res => {
+      if (res.status === 403) throw new Error("You don't have permission to undo checks.");
+      if (!res.ok) throw new Error("Didn't undo. Try again.");
+      CHK.marks.delete(k);
+    })
+    .catch(e => { CHK.err[k] = e.message || "Didn't undo. Try again."; })
+    .finally(() => { CHK.busy = ""; opRender(); });
+}
+// One click handler for the whole opportunities list
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-chk-mark],[data-chk-save],[data-chk-cancel],[data-chk-undo]");
+  if (!b || !b.closest("#op-all")) return;
+  if (b.dataset.chkMark) { CHK.editing = b.dataset.chkMark; opRenderAll(); const n = document.querySelector(`[data-chk-note="${CSS.escape(CHK.editing)}"]`); if (n) n.focus(); }
+  else if (b.dataset.chkCancel) { CHK.editing = ""; opRenderAll(); }
+  else if (b.dataset.chkSave) { const n = document.querySelector(`[data-chk-note="${CSS.escape(b.dataset.chkSave)}"]`); chkSave(b.dataset.chkSave, n ? n.value.trim() : ""); }
+  else if (b.dataset.chkUndo) chkUndo(b.dataset.chkUndo);
+});
+document.addEventListener("keydown", e => {
+  const n = e.target.closest && e.target.closest("[data-chk-note]"); if (!n) return;
+  if (e.key === "Enter") { e.preventDefault(); chkSave(n.dataset.chkNote, n.value.trim()); }
+  if (e.key === "Escape") { CHK.editing = ""; opRenderAll(); }
+});
+document.addEventListener("hub:reset", () => { CHK.marks = new Map(); CHK.canEdit = false; CHK.loaded = false; CHK.loading = false; CHK.editing = ""; CHK.busy = ""; CHK.err = {}; OP.chk = false; });
+
 function opEnsure() { if (OP.loaded) opRender(); else if (!OP.loading) opLoad(); }
 function opLoad() {
   OP.loading = true;
@@ -3949,6 +4048,7 @@ function opLoad() {
       $("op-msg").innerHTML = ""; $("op-body").hidden = false;
       OP.err = "";
       opRender(); spRender(); raRender(); opAddAskCols();
+      if (!CHK.loaded) chkLoad();
     })
     .catch(() => opMessage("Opportunities didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
     .finally(() => { OP.loading = false; });
@@ -4111,7 +4211,7 @@ function opRender() {
       <div class="stat"><div class="k">Funded, ${esc(gy)}</div><div class="v">${funded.length} · ${short(sum(funded, o => o.funded))}</div></div>
       <div class="stat"><div class="k">Asked, still open</div><div class="v">${live.filter(o => o.group === "Open").length}</div></div>
       <div class="stat"><div class="k">Not asked yet</div><div class="v">${live.filter(o => o.group === "Identification").length}</div></div>
-      <div class="stat"><div class="k">To check</div><div class="v">${live.filter(o => o.flag).length}</div></div>
+      ${OP.chk ? `<div class="stat"><div class="k">To check</div><div class="v">${live.filter(opNeeds).length}</div></div>` : ""}
     </div>
     <p class="op-note" style="margin-top:2px">${OP.basis === "listed"
       ? `<b>Involved in opportunity:</b> ${OP.frs.size ? "opportunities the checked fundraisers are listed on, whoever's household it is." : "pick fundraisers to see the opportunities they're listed on, whoever's household it is."} That includes whoever made the ask (determined by the notes) and whoever wrote the proposal. In 2027, reporting will work on a new process to separate the person who wrote a grant from the person who made the ask.`
@@ -4200,7 +4300,7 @@ function opDrawerDraw() {
     <div class="op-dr-list">${list.map(o => `<div class="op-dr-item">
         <div class="op-dr-top"><b>${o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(o.householdName || o.name)}</a>` : esc(o.householdName || o.name)}</b><span>${money(amtOf(o) || 0)}</span></div>
         <div>${esc(o.name)}</div>
-        <div class="op-dr-meta"><span class="op-pill op-${o.group}">${esc(o.group)}</span> ${opDate(dateOf(o))}${o.funded && d.amt !== "funded" ? " · funded " + short(o.funded) : ""} · ${esc(o.fundraisers.join(", ") || "no fundraiser listed")}${o.flag ? ` · <span class="op-flag">${esc(o.flag)}</span>` : ""}</div>
+        <div class="op-dr-meta"><span class="op-pill op-${o.group}">${esc(o.group)}</span> ${opDate(dateOf(o))}${o.funded && d.amt !== "funded" ? " · funded " + short(o.funded) : ""} · ${esc(o.fundraisers.join(", ") || "no fundraiser listed")}${OP.chk && opNeeds(o) ? ` · <span class="op-flag">${esc(o.flag)}</span>` : ""}</div>
       </div>`).join("") || `<p class="op-note">None.</p>`}</div>`;
   el.hidden = false; $("op-chartwrap").classList.add("dr");
   el.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -4218,8 +4318,8 @@ function opRenderByFr() {
     return { n, s, extra: extra.length, notListed: mine.filter(o => !o.fundraisers.includes(n)).length };
   }).filter(x => x.s.n || x.extra).sort((a, b) => b.s.n - a.s.n || b.extra - a.extra);
   $("op-byfr").innerHTML = `<p class="op-note" style="margin:0 0 8px">${esc(OP.year === "all" ? "All years" : OP.year)}, ${OP.ent === "c3" ? "C3" : OP.ent === "c4" ? "C4" : "C3 and C4"}. Click a name to check that fundraiser in the filter.</p>
-    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>On their households</th><th>Asked</th><th>Funded</th><th>Open</th><th>Not asked yet</th><th>Not involved in</th><th>Involved, others' households</th><th>To check</th></tr></thead><tbody>
-    ${rows.map(x => `<tr class="pick${OP.frs.has(x.n) ? " sel" : ""}" data-f="${esc(x.n)}"><td class="txt">${esc(x.n)}</td><td>${x.s.n}</td><td>${short(x.s.ask)}</td><td>${short(x.s.funded)}</td><td>${x.s.open}</td><td>${x.s.ident || "–"}</td><td>${x.notListed || "–"}</td><td>${x.extra || "–"}</td><td>${x.s.check || "–"}</td></tr>`).join("")}
+    <div class="bs-tablewrap"><table class="bs"><thead><tr><th class="txt">Fundraiser</th><th>On their households</th><th>Asked</th><th>Funded</th><th>Open</th><th>Not asked yet</th><th>Not involved in</th><th>Involved, others' households</th>${OP.chk ? "<th>To check</th>" : ""}</tr></thead><tbody>
+    ${rows.map(x => `<tr class="pick${OP.frs.has(x.n) ? " sel" : ""}" data-f="${esc(x.n)}"><td class="txt">${esc(x.n)}</td><td>${x.s.n}</td><td>${short(x.s.ask)}</td><td>${short(x.s.funded)}</td><td>${x.s.open}</td><td>${x.s.ident || "–"}</td><td>${x.notListed || "–"}</td><td>${x.extra || "–"}</td>${OP.chk ? `<td>${x.s.check || "–"}</td>` : ""}</tr>`).join("")}
     </tbody></table></div>
     <p class="op-note"><b>On their households</b>: every opportunity on a household assigned to them today (portfolio), involved or not. <b>Not involved in</b>: how many of those don't list them. <b>Involved, others' households</b>: opportunities they're listed on (made the ask or wrote the proposal) for someone else's household.</p>`;
   $("op-byfr").querySelectorAll("tr.pick").forEach(tr => tr.onclick = () => opSetFrs(new Set([tr.dataset.f])));
@@ -4228,7 +4328,7 @@ function opRenderByFr() {
 // ----- Dropdown section: all opportunities -----
 function opRenderAll() {
   let list = OP.rows.filter(o => opInYear(o) && opEntOk(o) && (!OP.frs.size || opWhy(o)) &&
-    (!OP.status || o.group === OP.status) && (!OP.check || o.flag) &&
+    (!OP.status || o.group === OP.status) && (!OP.chk || !OP.check || opNeeds(o)) &&
     (!OP.why || opWhy(o) === OP.why || (OP.why === "portfolio" && opWhy(o) === "both")));
   const q = (OP.q || "").trim().toLowerCase();
   if (q) list = list.filter(o => [o.name, o.householdName, o.assigned, o.status, o.purpose, ...o.fundraisers].join(" ").toLowerCase().includes(q));
@@ -4241,10 +4341,11 @@ function opRenderAll() {
       <input type="search" id="op-q" placeholder="Search names, households, fundraisers…" value="${esc(OP.q || "")}">
       <label>Status <select id="op-status">${[["", "All"], ["Identification", "Identification (not asked yet)"], ["Open", "Open (asked, waiting)"], ["Committed", "Committed"], ["Funded", "Funded"], ["Declined", "Declined"], ["Closed", "Closed"]].map(([v, l]) => `<option value="${v}"${OP.status === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
       ${OP.frs.size ? `<label>Show <select id="op-why"><option value="">Involved or in their portfolio</option><option value="portfolio"${OP.why === "portfolio" ? " selected" : ""}>Their portfolio</option><option value="listed"${OP.why === "listed" ? " selected" : ""}>Involved, someone else's household</option></select></label>` : ""}
-      <label><input type="checkbox" id="op-check"${OP.check ? " checked" : ""}> Only ones to check</label>
+      <label class="chk-switch" title="Show data checks: records that may need fixing in RE"><input type="checkbox" id="op-chk"${OP.chk ? " checked" : ""}><span class="tr"></span>Check data</label>
+      ${OP.chk ? `<label><input type="checkbox" id="op-check"${OP.check ? " checked" : ""}> Only ones to check</label>` : ""}
       <span class="op-note" style="margin:0">${list.length} shown</span>
     </div>
-    <div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr>${th("hh", "Household", "txt")}${th("name", "Opportunity", "txt")}${th("status", "Status")}${th("date", "Asked")}${th("ask", "Amount")}${th("funded", "Funded")}<th class="txt">Fundraisers on it</th>${OP.frs.size ? `<th class="txt">How it's theirs</th>` : `<th class="txt">Assigned</th>`}<th class="chk">Check</th></tr></thead><tbody>
+    <div class="bs-tablewrap"><table class="bs op-tbl"><thead><tr>${th("hh", "Household", "txt")}${th("name", "Opportunity", "txt")}${th("status", "Status")}${th("date", "Asked")}${th("ask", "Amount")}${th("funded", "Funded")}<th class="txt">Fundraisers on it</th>${OP.frs.size ? `<th class="txt">How it's theirs</th>` : `<th class="txt">Assigned</th>`}${OP.chk ? `<th class="chk">Check</th>` : ""}</tr></thead><tbody>
     ${list.map(o => `<tr>
       <td class="txt">${o.constituentSys ? `<a href="${RECORD_URL(o.constituentSys)}" target="_top">${esc(o.householdName || o.name)}</a>` : esc(o.householdName || o.name)}</td>
       <td class="txt">${esc(o.name)}<small>${esc(o.purpose)}${opIsC4(o) ? " · C4" : ""}</small></td>
@@ -4254,12 +4355,13 @@ function opRenderAll() {
       <td>${o.funded ? money(o.funded) : (o.group === "Funded" || o.group === "Committed" ? "$0" : "–")}<small>${[o.fundedDate ? opDate(o.fundedDate) : "", o.pledge ? "pledge" : "", o.linked ? `${o.linked} gift${o.linked === 1 ? "" : "s"} linked` : ""].filter(Boolean).join(" · ")}</small></td>
       <td class="txt">${o.fundraisers.length ? esc(o.fundraisers.join(", ")) : '<span class="nl">None listed</span>'}</td>
       <td class="txt">${OP.frs.size ? esc(whyLbl[opWhy(o)] || "") : esc(o.assigned || "No assigned fundraiser")}</td>
-      <td class="chk">${o.flag ? `<span class="op-flag">${esc(o.flag)}</span>` : ""}</td></tr>`).join("")}
+      ${OP.chk ? `<td class="chk">${opChkCell(o)}</td>` : ""}</tr>`).join("")}
     </tbody></table></div>`;
   const qEl = $("op-q");
   qEl.oninput = () => { OP.q = qEl.value; const pos = qEl.selectionStart; opRenderAll(); const n = $("op-q"); n.focus(); n.setSelectionRange(pos, pos); };
   $("op-status").onchange = e => { OP.status = e.target.value; opRenderAll(); };
-  $("op-check").onchange = e => { OP.check = e.target.checked; opRenderAll(); };
+  if ($("op-check")) $("op-check").onchange = e => { OP.check = e.target.checked; opRenderAll(); };
+  $("op-chk").onchange = e => { OP.chk = e.target.checked; CHK.editing = ""; if (OP.chk && !CHK.loaded) chkLoad(); opRender(); };
   if ($("op-why")) $("op-why").onchange = e => { OP.why = e.target.value; opRenderAll(); };
   $("op-all").querySelectorAll("th.op-sort").forEach(h => h.onclick = () => {
     const nk = h.dataset.opk; OP.sortD = OP.sortK === nk ? -(OP.sortD || -1) : (nk === "hh" || nk === "name" || nk === "status" ? 1 : -1); OP.sortK = nk; opRenderAll(); });
@@ -4267,7 +4369,7 @@ function opRenderAll() {
 function opStats(list) {
   const s = { n: list.length, ask: 0, funded: 0, open: 0, won: 0, check: 0, ident: 0 };
   list.forEach(o => { s.ask += o.ask || 0; s.funded += o.funded || 0; if (o.group === "Open") s.open++;
-    if (o.group === "Funded" || o.group === "Committed") s.won++; if (o.group === "Identification") s.ident++; if (o.flag) s.check++; });
+    if (o.group === "Funded" || o.group === "Committed") s.won++; if (o.group === "Identification") s.ident++; if (opNeeds(o)) s.check++; });
   return s;
 }
 
