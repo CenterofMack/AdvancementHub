@@ -837,8 +837,8 @@
       </div>
     </div>
     <div class="bsv" data-bsv="Other" hidden>
-      <!-- Live from the Donor Retention data, not the monthly snapshot -->
-      <div class="bs-divider" role="separator" style="margin-top:6px"><span>Live data · not part of the monthly snapshot</span></div>
+      <!-- From the Donor Retention data as of the latest Projections update, not the monthly snapshot -->
+      <div class="bs-divider" role="separator" style="margin-top:6px"><span id="bs-other-thru">From the latest Projections update</span></div>
       <div class="card" id="bs-rev" hidden></div>
       <div class="card" id="bs-pyr"></div>
     </div>
@@ -2396,7 +2396,8 @@ function load() {
 
 /* ===== Advancement Reports sub-tabs =====
    Board Slides: the monthly snapshot, with the "Through" month picker.
-   Other Advancement Reports: live charts (revenue by month, donor pyramid); the picker hides there. */
+   Other Advancement Reports: charts as of the latest Projections update (revenue by month, donor pyramid);
+   the picker and the snapshot's "Through" date hide there. */
 const BSV = { view: "Slides" };
 function bsShowView(v) {
   BSV.view = v;
@@ -2405,6 +2406,13 @@ function bsShowView(v) {
     else el.hidden = el.dataset.bsv !== v;
   });
   $("bs-through-wrap").hidden = v !== "Slides";
+  $("bs-asof").hidden = v !== "Slides";
+  bsOtherThru();
+}
+// The Other tab's date: the YTD Through date from the latest Projections update
+function bsOtherThru() {
+  const thru = RT.loaded ? RT.rows.map(x => x.thru).find(v => toDate(v)) : null;
+  $("bs-other-thru").textContent = thru ? `Data through ${fmtDate(thru)} · latest Projections update` : "From the latest Projections update";
 }
 document.querySelectorAll("button[data-bsv]").forEach(b => b.addEventListener("click", () => bsShowView(b.dataset.bsv)));
 document.addEventListener("hub:reset", () => bsShowView("Slides"));
@@ -2413,10 +2421,11 @@ document.addEventListener("hub:reset", () => bsShowView("Slides"));
    Running total of giving by gift date for each year since 2024, plus each month on its own.
    It borrows the month-by-month giving that Donor Retention already loads (the "Hub – Retention"
    flow), so it shows for people with Retention access and needs no flow changes.
-   It's live data: the "Through" month picker (the monthly snapshot) doesn't change it. */
+   It's as of the latest Projections update: the "Through" month picker (the monthly snapshot) doesn't change it. */
 const BSREV = { tried: false };
 function bsRevenue() {
   const box = $("bs-rev"); if (!box) return;
+  bsOtherThru();
   const tab = document.querySelector('[data-tab="Retention"]');
   if (!tab || tab.hidden) { box.hidden = true; return; }
   box.hidden = false;
@@ -2704,16 +2713,23 @@ function bsPyrRender() {
     { k: "2025", btn: "2025", title: "2025 Donor Pyramid", v: x => x.m25 },
     { k: "2024", btn: "2024", title: "2024 Donor Pyramid", v: x => x.m24 }];
   const o = opts.find(x => x.k === BSP.key) || opts[1];
+  // Count households into levels for one year's giving
+  const fill = (tiers, f) => RT.rows.forEach(x => { const v = Math.max(0, f(x)); if (!(v > 0)) return; const t = tiers.find(t => v >= t.min); t.n++; t.amt += v; });
   const tiers = TD_TIERS.map(t => ({ ...t, n: 0, amt: 0 }));
-  RT.rows.forEach(x => { const v = Math.max(0, o.v(x)); if (!(v > 0)) return; const t = tiers.find(t => v >= t.min); t.n++; t.amt += v; });
+  if (o.k === "avg") {
+    // The average of the three yearly pyramids: each year's households and dollars per level, averaged.
+    // (Averaging each household's giving first would drop a $1M donor who gave in only one year.)
+    [x => x.m24, x => x.m25, cur].forEach(f => fill(tiers, f));
+    tiers.forEach(t => { t.n = Math.round(t.n / 3); t.amt /= 3; });
+  } else fill(tiers, o.v);
   const thru = RT.rows.map(x => x.thru).find(v => toDate(v));
   const thruTxt = thru ? fmtDate(thru) : "";
   box.innerHTML = `<div class="card-head"><div><h2>${esc(o.title)}, All Households</h2>
       <div class="sub">Every household that gave, at every giving level, each counted once. Hover a level for exact figures.</div>
-      <div class="bs-live">${thruTxt ? `Data through ${esc(thruTxt)} (live, not the snapshot date above)` : "Live data, not the snapshot date above"}</div></div>
+</div>
       <div class="card-tools"><div class="segbtn" role="group" aria-label="Year">${opts.map(x => `<button type="button" data-bspk="${x.k}" aria-pressed="${x.k === o.k}">${esc(x.btn)}</button>`).join("")}</div></div></div>
     <div class="pyr chart">${pyrSvg(tiers, 0, o.title + ", all households")}</div>
-    <p class="bs-note">Unlike the reports above, this chart doesn't change with the Through dropdown: it always shows the latest giving${thruTxt ? ", through " + esc(thruTxt) : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out. Money received only; projections aren't included, since smaller households aren't projected.${o.k === "avg" ? " The 3-year average uses 2026 so far, a partial year." : ""}</p>`;
+    <p class="bs-note">This chart doesn't change with the Board Slides Through dropdown: it always shows giving as of the latest Projections update${thruTxt ? ", through " + esc(thruTxt) : ""}. Counted by household, from the same data as Donor Retention; General Anonymous is left out. Money received only; projections aren't included, since smaller households aren't projected.${o.k === "avg" ? " The 3-year average is the average of the 2024, 2025 and 2026-so-far pyramids: each level's households and dollars in each year, averaged and rounded. 2026 is a partial year, so it pulls the average down." : ""}</p>`;
   box.querySelectorAll("[data-bspk]").forEach(b => b.onclick = () => { BSP.key = b.dataset.bspk; bsPyrRender(); });
 }
 
