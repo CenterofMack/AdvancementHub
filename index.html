@@ -765,8 +765,6 @@
     <div class="hero" id="hero"></div>
     <div class="ledgers" id="ledgers"></div>
     <p class="footnote">C3 = All-entities total − C4 − Non-MCPP C3 Revenue + Other MCPP C3 Revenue. C3 + C4 does not equal the all-entities total: DAF gifts and in-kind are left out of operations, and operations income and DAF grants are added.</p>
-    <!-- Revenue by month: page-only, not part of the Excel or PDF downloads -->
-    <div class="card" id="ov-rev" style="margin-top:18px" hidden></div>
   </section>
 
   <section class="panel" id="panel-Activity" hidden>
@@ -824,16 +822,26 @@
         <label class="bs-through" for="bs-month">Through <select id="bs-month" aria-label="Report through"></select></label>
       </div>
     </div>
-    <div id="bs-msg"></div>
-    <div id="bs-body" hidden>
-      <div class="card" id="bs-revenue"></div>
-      <div class="card" id="bs-volume"></div>
-      <div class="card" id="bs-societies"></div>
-      <div class="card" id="bs-quarterly"></div>
+    <!-- Two sub-tabs: the monthly Board Slides snapshot, and live reports that aren't part of it -->
+    <div class="segbtn pf-views" role="group" aria-label="Report">
+      <button type="button" data-bsv="Slides" aria-pressed="true">Board Slides</button>
+      <button type="button" data-bsv="Other" aria-pressed="false">Other Advancement Reports</button>
     </div>
-    <!-- All-households donor pyramid: live from the Donor Retention data, not the monthly snapshot -->
-    <div class="bs-divider" role="separator"><span>Live data · not part of the monthly snapshot</span></div>
-    <div class="card" id="bs-pyr"></div>
+    <div class="bsv" data-bsv="Slides">
+      <div id="bs-msg"></div>
+      <div id="bs-body" hidden>
+        <div class="card" id="bs-revenue"></div>
+        <div class="card" id="bs-volume"></div>
+        <div class="card" id="bs-societies"></div>
+        <div class="card" id="bs-quarterly"></div>
+      </div>
+    </div>
+    <div class="bsv" data-bsv="Other" hidden>
+      <!-- Live from the Donor Retention data, not the monthly snapshot -->
+      <div class="bs-divider" role="separator" style="margin-top:6px"><span>Live data · not part of the monthly snapshot</span></div>
+      <div class="card" id="bs-rev" hidden></div>
+      <div class="card" id="bs-pyr"></div>
+    </div>
   </section>
   <section class="panel" id="panel-Portfolios" hidden>
     <div class="head">
@@ -1264,7 +1272,7 @@ function selectTab(name) {
   if (name === "Mailing" && !MP.loaded && !MP.loading) mpLoad();
   if (name === "Tulip" && !TU.loaded && !TU.loading) tuLoad();
   if (name === "Intern" && !IN.loaded && !IN.loading) inLoad();
-  if (name === "Overview") ovRevenue();
+  if (name === "BoardSlides") bsRevenue();
   if (name === "Retention" && !RT.loaded && !RT.loading) rtLoad();
   if (name === "StrategicPlan") { spRender(); if (!OP.loaded && !OP.loading) opLoad(); }
   if (name === "Activity") { raRender(); if (!OP.loaded && !OP.loading) opLoad(); }
@@ -2083,7 +2091,7 @@ function rtLoad() {
       rtRender(); bsPyrRender();
     })
     .catch(() => rtMessage("Donor Retention didn't load", "The data service couldn't be reached. Check your connection and try again.", true))
-    .finally(() => { RT.loading = false; ovRevenue(); });
+    .finally(() => { RT.loading = false; bsRevenue(); });
 }
 
 // The two amounts being compared for a household, and their labels
@@ -2386,24 +2394,39 @@ function load() {
     .catch(() => showNotice("Projections didn't load", "The data service couldn't be reached. Check your connection and try again.", true, true));
 }
 
-/* ===== Overview: revenue by month =====
+/* ===== Advancement Reports sub-tabs =====
+   Board Slides: the monthly snapshot, with the "Through" month picker.
+   Other Advancement Reports: live charts (revenue by month, donor pyramid); the picker hides there. */
+const BSV = { view: "Slides" };
+function bsShowView(v) {
+  BSV.view = v;
+  document.querySelectorAll("[data-bsv]").forEach(el => {
+    if (el.tagName === "BUTTON") el.setAttribute("aria-pressed", el.dataset.bsv === v);
+    else el.hidden = el.dataset.bsv !== v;
+  });
+  $("bs-through-wrap").hidden = v !== "Slides";
+}
+document.querySelectorAll("button[data-bsv]").forEach(b => b.addEventListener("click", () => bsShowView(b.dataset.bsv)));
+document.addEventListener("hub:reset", () => bsShowView("Slides"));
+
+/* ===== Advancement Reports: revenue by month =====
    Running total of giving by gift date for each year since 2024, plus each month on its own.
    It borrows the month-by-month giving that Donor Retention already loads (the "Hub – Retention"
    flow), so it shows for people with Retention access and needs no flow changes.
-   It's drawn on the page only; the Overview's Excel and PDF downloads don't include it. */
-const OVREV = { tried: false };
-function ovRevenue() {
-  const box = $("ov-rev"); if (!box) return;
+   It's live data: the "Through" month picker (the monthly snapshot) doesn't change it. */
+const BSREV = { tried: false };
+function bsRevenue() {
+  const box = $("bs-rev"); if (!box) return;
   const tab = document.querySelector('[data-tab="Retention"]');
   if (!tab || tab.hidden) { box.hidden = true; return; }
   box.hidden = false;
   if (!RT.loaded) {
-    if (RT.loading || !OVREV.tried) {
+    if (RT.loading || !BSREV.tried) {
       box.innerHTML = `<h2>Revenue by month</h2><div class="loading">Loading monthly giving…</div>`;
-      if (!RT.loading) { OVREV.tried = true; rtLoad(); }
+      if (!RT.loading) { BSREV.tried = true; rtLoad(); }
     } else {
-      box.innerHTML = `<h2>Revenue by month</h2><p class="bs-note">Monthly giving didn't load.</p><button class="btn" id="ov-rev-retry">Try again</button>`;
-      $("ov-rev-retry").onclick = () => { OVREV.tried = false; ovRevenue(); };
+      box.innerHTML = `<h2>Revenue by month</h2><p class="bs-note">Monthly giving didn't load.</p><button class="btn" id="bs-rev-retry">Try again</button>`;
+      $("bs-rev-retry").onclick = () => { BSREV.tried = false; bsRevenue(); };
     }
     return;
   }
@@ -2433,12 +2456,12 @@ function ovRevenue() {
     ${stop ? `<div class="mp-pace"><span>${curY} through ${esc(thruMonth)} so far: <b>${money(now)}</b> ${pc}</span>
       <span>${curY - 1} through ${esc(thruMonth)}: <b>${money(prev)}</b></span></div>` : ""}
     <div class="mp-grid">
-      <div class="mp-chart chart"><h4>Running total, year to date</h4><p class="sub" style="margin:0 0 6px">Is this year ahead of or behind the years before?</p>${mpLineChart(running, mpMoney, "Revenue year to date by month")}</div>
-      <div class="mp-chart chart"><h4>Each month on its own</h4><p class="sub" style="margin:0 0 6px">Giving received in each month</p>${mpBarChart(MP_MON, monthly, mpMoney, "Revenue by month")}</div>
-    </div>${mpLegend(running)}
-    <p class="bs-note">Every gift counted in the Projections workbook, by household, including General Anonymous. That's fundraising activity, so it won't match the cash-flow figures above. The current month is partial, so it will look low until the month ends.</p>`;
+      <div class="mp-chart chart"><h4>Running total, year to date</h4><p class="sub" style="margin:0 0 6px">Is this year ahead of or behind the years before?</p>${mpLineChart(running, mpMoney, "Revenue year to date by month")}${mpLegend(running)}</div>
+      <div class="mp-chart chart"><h4>Each month on its own</h4><p class="sub" style="margin:0 0 6px">Giving received in each month</p>${mpBarChart(MP_MON, monthly, mpMoney, "Revenue by month")}${mpLegend(monthly)}</div>
+    </div>
+    <p class="bs-note">Every gift counted in the Projections workbook, by household, including General Anonymous. That's fundraising activity, so it may not match the Advancement Revenue chart above. The current month is partial, so it will look low until the month ends.</p>`;
 }
-document.addEventListener("hub:reset", () => { OVREV.tried = false; const b = $("ov-rev"); if (b) { b.innerHTML = ""; b.hidden = true; } });
+document.addEventListener("hub:reset", () => { BSREV.tried = false; const b = $("bs-rev"); if (b) { b.innerHTML = ""; b.hidden = true; } });
 
 /* ===== Overview ===== */
 // The two yellow rows on the Projections workbook: the fundraising goal and the all-entities year-end total
