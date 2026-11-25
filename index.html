@@ -126,21 +126,7 @@
   .hero-quote{text-align:right;font-family:var(--serif);font-style:italic;font-size:13px;color:var(--muted);margin-top:6px}
   .hero-kicker{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .seg .lbl{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
-  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:56px 0 4px}
-  /* Notches every step along the bar, with amounts underneath */
-  .notch{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.55);box-shadow:1px 0 0 rgba(33,58,99,.12);pointer-events:none}
-  .seg .lbl{z-index:2}
-  .ticks{position:relative;height:16px;margin-bottom:2px}
-  .tick{position:absolute;top:0;width:1px;height:4px;background:#9AA6B6}
-  .tick.major{height:6px;background:#6B778A}
-  .tick span{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--muted);white-space:nowrap}
-  /* The rib goal: Chris brings in the smoker if money in the door reaches it */
-  .goal.meat{background:#7A3B1F;top:-30px}
-  .goal.meat span{top:-16px;color:#7A3B1F}
-  .goal.meat.won{box-shadow:0 0 6px 2px rgba(214,110,40,.6)}
-  .meat-row{font-size:13px;color:var(--muted);margin-top:8px}
-  .meat-row b{color:var(--ink);font-weight:600}
-  .meat-row .won{color:#A4471B;font-weight:700}
+  .track{position:relative;height:26px;background:#EEF2F7;border-radius:5px;margin:32px 0 8px}
   .seg{position:absolute;top:0;bottom:0}
   .seg.in{background:var(--navy);border-radius:5px 0 0 5px}
   .seg.proj{background:repeating-linear-gradient(135deg,var(--sky) 0 7px,#A7C3E7 7px 14px)}
@@ -2530,15 +2516,7 @@ function renderOverview(rows) {
   $("hh-asof").textContent = dataThrough();
   const fr = OV.filter(r => r.section === "Fundraising"); const v = i => num(fr[i] && fr[i].value);
   const goal = v(1), moneyIn = v(2), projected = v(3), ye = v(4), vsGoal = v(5), pctGoal = v(6);
-  // Stretch goal: ribs from Chris's smoker if MONEY IN THE DOOR reaches it (projections don't count, they gotta earn it)
-  const MEAT_GOAL = 14e6, meatWon = moneyIn >= MEAT_GOAL;
-  const scale = Math.max(goal, ye, MEAT_GOAL) * 1.08 || 1;
-  // Notch spacing: the smallest step that keeps it to about 16 notches; amounts on every notch or every other one
-  const step = [100e3, 250e3, 500e3, 1e6, 2e6, 5e6, 10e6, 25e6].find(s => scale / s <= 16) || 50e6;
-  const nN = Math.floor(scale / step), every = nN > 8 ? 2 : 1;
-  const notchList = Array.from({ length: nN + 1 }, (_, i) => i * step);
-  const notches = notchList.slice(1).map(a => `<div class="notch" style="left:${a/scale*100}%"></div>`).join("");
-  const ticks = notchList.map((a, i) => `<div class="tick${i % every ? "" : " major"}" style="left:${a/scale*100}%">${i % every ? "" : `<span>${a >= 1e6 ? "$" + +(a/1e6).toFixed(2) + "M" : a ? "$" + Math.round(a/1e3) + "K" : "$0"}</span>`}</div>`).join("");
+  const scale = Math.max(goal, ye) * 1.08 || 1;
   $("hero").innerHTML = `
     <!-- Photo: read from the repo (hero-photo.jpg); until that file exists it borrows the one on mackinac.org -->
     <img class="hero-photo" src="hero-photo.jpg" alt="" aria-hidden="true"
@@ -2549,23 +2527,17 @@ function renderOverview(rows) {
       <div class="hero-pct"><div class="hero-kicker">Projected by year end</div><div class="big ${pctGoal < 1 ? "under" : ""}">${ovMoney(ye)}</div>
         <div class="hero-sub">${pct(pctGoal)} of goal · ${vsGoal >= 0 ? ovMoney(vsGoal) + " over" : ovMoney(-vsGoal) + " short"} if every projection comes in</div></div>
     </div>
-    <div class="track" role="img" aria-label="${short(moneyIn)} in, ${short(projected)} projected, goal ${short(goal)}, Meat Spectacular ${short(MEAT_GOAL)}">
+    <div class="track" role="img" aria-label="${short(moneyIn)} in, ${short(projected)} projected, goal ${short(goal)}">
       <div class="seg in" style="left:0;width:${moneyIn/scale*100}%">${moneyIn / scale > 0.18 ? `<span class="lbl">In the door ${ovMoney(moneyIn)}</span>` : ""}</div>
       <div class="seg proj" style="left:${moneyIn/scale*100}%;width:${projected/scale*100}%"></div>
-      ${notches}
       <div class="goal" style="left:calc(${goal/scale*100}% - 1px)"><span>Goal</span></div>
-      <div class="goal meat${meatWon ? " won" : ""}" style="left:calc(${MEAT_GOAL/scale*100}% - 1px)"><span>🍖 Meat Spectacular</span></div>
     </div>
-    <div class="ticks" aria-hidden="true">${ticks}</div>
     <div class="legend">
       <span><i class="sw" style="background:var(--navy)"></i>Money in <b>${ovMoney(moneyIn)}</b></span>
       <span><i class="sw" style="background:var(--sky)"></i>Projected, not yet in <b>${ovMoney(projected)}</b></span>
       <span><i class="sw" style="background:var(--gold)"></i>Fundraising goal <b>${ovMoney(goal)}</b></span>
       <span>Original projection <b>${ovMoney(v(0))}</b></span>
     </div>
-    <div class="meat-row"><i class="sw" style="background:#7A3B1F"></i>Meat Spectacular <b>${ovMoney(MEAT_GOAL)}</b> · ${meatWon
-      ? `<span class="won">🔥 Unlocked. Chris is firing up the smoker.</span>`
-      : `<b>${ovMoney(MEAT_GOAL - moneyIn)}</b> more in the door and Chris smokes ribs. Projections don't count.`}</div>
     <div class="hero-quote">“You best keep fundraising.”</div>`;
   const order = [...new Set(OV.filter(r => r.section !== "Header").map(r => r.section))];
   $("ledgers").innerHTML = order.map(sec => `<div class="ledger"><h3>${esc(sec)}</h3><dl>` +
@@ -5222,12 +5194,14 @@ function saveEdit(r) {
   const creditRaw = $("ed-credit").value.trim().replace(/[$,\s]/g, "");
   if (creditRaw !== "" && !isFinite(Number(creditRaw))) { msg.className = "msg bad"; msg.textContent = "Contractor credit must be a number."; return; }
   btn.disabled = true; msg.className = "msg"; msg.textContent = "Saving…";
-  const q = "&tab=" + encodeURIComponent(EDIT_ACCESS) + "&id=" + encodeURIComponent(String(r.ID).trim()) +
-    "&contractor=" + encodeURIComponent(contractor) + "&credit=" + encodeURIComponent(creditRaw) + "&notes=" + encodeURIComponent(notes);
+  // Everything travels in the request body (sent as plain text, so no extra browser check), not the web address.
+  // The Hub - Save Edits flow checks the sign-in, Edit Permissions (Projections), the ID and the credit itself.
+  const body = (token) => JSON.stringify({ token, id: String(r.ID).trim(), contractor, credit: creditRaw, notes });
   client.getUserIdentityToken()
-    .then(token => fetch(EDIT_URL + q, { method: "POST", body: token }))
+    .then(token => fetch(EDIT_URL, { method: "POST", body: body(token) }))
     .then(res => {
       if (res.status === 403) { msg.className = "msg bad"; msg.textContent = "You don't have edit rights for Projections."; return; }
+      if (res.status === 400) { msg.className = "msg bad"; msg.textContent = "The save service turned this down: contractor credit must be a number."; return; }
       if (!res.ok) { msg.className = "msg bad"; msg.textContent = `Didn't save (status ${res.status}). Try again.`; return; }
       r.Contractor = contractor; r["Contractor Credit"] = creditRaw; r.Notes = notes;
       msg.className = "msg ok"; msg.textContent = "Saved ✓";
